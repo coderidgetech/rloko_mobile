@@ -30,15 +30,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.muted,
+      backgroundColor: AppTheme.mutedColor(context),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => context.pop(),
         ),
         title: const Text('Order Details'),
-        backgroundColor: AppTheme.background,
-        foregroundColor: AppTheme.foreground,
+        backgroundColor: AppTheme.backgroundColor(context),
+        foregroundColor: AppTheme.foregroundColor(context),
       ),
       body: BlocConsumer<OrderDetailBloc, OrderDetailState>(
         listener: (context, state) {
@@ -65,7 +65,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     Text(
                       state.message,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppTheme.mutedForeground),
+                      style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
                     ),
                     const SizedBox(height: 16),
                     FilledButton(
@@ -183,13 +183,13 @@ class _OrderStatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isInTransit = order.status == 'shipped' || order.status == 'in-transit';
     final isDelivered = order.status == 'delivered';
-    final (bgColor, textColor, icon) = _statusStyle(order.status);
+    final (bgColor, textColor, icon) = _statusStyle(context, order.status);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.background,
+        color: AppTheme.backgroundColor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
@@ -209,7 +209,7 @@ class _OrderStatusCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     'Placed on ${_formatDateShort(order.createdAt)}',
-                    style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.5)),
+                    style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
                   ),
                 ],
               ),
@@ -240,25 +240,25 @@ class _OrderStatusCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.05),
+                color: AppTheme.primaryColor(context).withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.local_shipping, size: 18, color: AppTheme.primary),
+                      Icon(Icons.local_shipping, size: 18, color: AppTheme.primaryColor(context)),
                       const SizedBox(width: 8),
-                      Text('Estimated Delivery', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary)),
+                      Text('Estimated Delivery', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context))),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Text('${_estimatedDelivery(order.createdAt)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                   if (order.trackingNumber != null && order.trackingNumber!.isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text('Tracking: ${order.trackingNumber}', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6))),
+                    Text('Tracking: ${order.trackingNumber}', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
                   ],
                 ],
               ),
@@ -284,7 +284,7 @@ class _OrderStatusCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text('Delivered on ${_formatDateShort(order.updatedAt)}', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6))),
+                  Text('Delivered on ${_formatDateShort(order.updatedAt)}', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
                 ],
               ),
             ),
@@ -294,7 +294,7 @@ class _OrderStatusCard extends StatelessWidget {
     );
   }
 
-  (Color, Color, IconData) _statusStyle(String status) {
+  (Color, Color, IconData) _statusStyle(BuildContext context, String status) {
     switch (status) {
       case 'delivered':
         return (Colors.green.shade50, Colors.green.shade700, Icons.check_circle);
@@ -306,7 +306,7 @@ class _OrderStatusCard extends StatelessWidget {
       case 'cancelled':
         return (Colors.red.shade50, Colors.red.shade700, Icons.cancel);
       default:
-        return (AppTheme.foreground.withValues(alpha: 0.05), AppTheme.foreground.withValues(alpha: 0.6), Icons.receipt);
+        return (AppTheme.foregroundColor(context).withValues(alpha: 0.05), AppTheme.foregroundColor(context).withValues(alpha: 0.6), Icons.receipt);
     }
   }
 }
@@ -321,9 +321,9 @@ class _OrderItemsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.background,
+        color: AppTheme.backgroundColor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
@@ -331,7 +331,7 @@ class _OrderItemsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.inventory_2_outlined, size: 18, color: AppTheme.foreground),
+              Icon(Icons.inventory_2_outlined, size: 18, color: AppTheme.foregroundColor(context)),
               const SizedBox(width: 8),
               Text('Order Items (${items.length})', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ],
@@ -359,7 +359,7 @@ class _OrderItemsCard extends StatelessWidget {
                             : Container(
                                 width: 80,
                                 height: 80,
-                                color: AppTheme.muted,
+                                color: AppTheme.mutedColor(context),
                                 child: const Icon(Icons.image),
                               ),
                       ),
@@ -375,12 +375,12 @@ class _OrderItemsCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            Text('Size: ${item.size}', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+                            Text('Size: ${item.size}', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
                             const SizedBox(height: 8),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Qty: ${item.quantity}', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+                                Text('Qty: ${item.quantity}', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
                                 Text(
                                   '\$${(item.price * item.quantity).toStringAsFixed(2)}',
                                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -394,7 +394,7 @@ class _OrderItemsCard extends StatelessWidget {
                   ),
                   if (showBorder) ...[
                     const SizedBox(height: 12),
-                    Divider(height: 1, color: AppTheme.foreground.withValues(alpha: 0.08)),
+                    Divider(height: 1, color: AppTheme.foregroundColor(context).withValues(alpha: 0.08)),
                     const SizedBox(height: 12),
                   ],
                 ],
@@ -417,9 +417,9 @@ class _ShippingAddressCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.background,
+        color: AppTheme.backgroundColor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
@@ -427,7 +427,7 @@ class _ShippingAddressCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 18, color: AppTheme.foreground),
+              Icon(Icons.location_on_outlined, size: 18, color: AppTheme.foregroundColor(context)),
               const SizedBox(width: 8),
               const Text('Shipping Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ],
@@ -436,7 +436,7 @@ class _ShippingAddressCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.muted.withValues(alpha: 0.5),
+              color: AppTheme.mutedColor(context).withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -444,15 +444,15 @@ class _ShippingAddressCard extends StatelessWidget {
               children: [
                 Text('${shipping.firstName} ${shipping.lastName}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text(shipping.address, style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6))),
-                Text('${shipping.city}, ${shipping.state} ${shipping.zipCode}', style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6))),
+                Text(shipping.address, style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
+                Text('${shipping.city}, ${shipping.state} ${shipping.zipCode}', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
                 if (shipping.phone.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.phone_outlined, size: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                      Icon(Icons.phone_outlined, size: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                       const SizedBox(width: 6),
-                      Text(shipping.phone, style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6))),
+                      Text(shipping.phone, style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
                     ],
                   ),
                 ],
@@ -475,9 +475,9 @@ class _PaymentMethodCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.background,
+        color: AppTheme.backgroundColor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
@@ -485,7 +485,7 @@ class _PaymentMethodCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.credit_card_outlined, size: 18, color: AppTheme.foreground),
+              Icon(Icons.credit_card_outlined, size: 18, color: AppTheme.foregroundColor(context)),
               const SizedBox(width: 8),
               const Text('Payment Method', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
             ],
@@ -494,7 +494,7 @@ class _PaymentMethodCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.muted.withValues(alpha: 0.5),
+              color: AppTheme.mutedColor(context).withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -505,7 +505,7 @@ class _PaymentMethodCard extends StatelessWidget {
                     children: [
                       Text(paymentMethod.isNotEmpty ? paymentMethod : '—', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                       const SizedBox(height: 2),
-                      Text('**** **** **** ****', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+                      Text('**** **** **** ****', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
                     ],
                   ),
                 ),
@@ -529,9 +529,9 @@ class _OrderSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.background,
+        color: AppTheme.backgroundColor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
@@ -548,13 +548,13 @@ class _OrderSummaryCard extends StatelessWidget {
           ),
           _SummaryRow(label: 'Tax', value: '\$${order.tax.toStringAsFixed(2)}'),
           const SizedBox(height: 10),
-          Divider(height: 1, color: AppTheme.foreground.withValues(alpha: 0.12)),
+          Divider(height: 1, color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              Text('\$${order.total.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+              Text('\$${order.total.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
             ],
           ),
         ],
@@ -576,7 +576,7 @@ class _SummaryRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6))),
+          Text(label, style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
           Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: valueGreen ? Colors.green.shade600 : null)),
         ],
       ),
@@ -593,7 +593,7 @@ class _OrderActionButtons extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: () {},
+            onPressed: () => context.push('/help'),
             icon: const Icon(Icons.phone, size: 18),
             label: const Text('Contact Support'),
             style: FilledButton.styleFrom(
@@ -606,12 +606,17 @@ class _OrderActionButtons extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Request your invoice via Contact Us')),
+              );
+              context.push('/contact');
+            },
             icon: const Icon(Icons.download, size: 18),
             label: const Text('Download Invoice'),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
-              side: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
+              side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
             ),
           ),
@@ -657,7 +662,7 @@ class _TrackingSection extends StatelessWidget {
                           height: 12,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: AppTheme.primary,
+                            color: AppTheme.primaryColor(context),
                           ),
                         ),
                         if (!isLast)
@@ -665,7 +670,7 @@ class _TrackingSection extends StatelessWidget {
                             child: Container(
                               width: 2,
                               margin: const EdgeInsets.symmetric(vertical: 2),
-                              color: AppTheme.mutedForeground,
+                              color: AppTheme.mutedForegroundColor(context),
                             ),
                           ),
                       ],
@@ -688,7 +693,7 @@ class _TrackingSection extends StatelessWidget {
                                 u.description!,
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: AppTheme.mutedForeground,
+                                  color: AppTheme.mutedForegroundColor(context),
                                 ),
                               ),
                             if (u.location != null && u.location!.isNotEmpty)
@@ -696,14 +701,14 @@ class _TrackingSection extends StatelessWidget {
                                 u.location!,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.mutedForeground,
+                                  color: AppTheme.mutedForegroundColor(context),
                                 ),
                               ),
                             Text(
                               _formatDate(u.createdAt),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.mutedForeground,
+                                color: AppTheme.mutedForegroundColor(context),
                               ),
                             ),
                           ],

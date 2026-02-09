@@ -9,7 +9,7 @@ class NotFoundPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       body: SafeArea(
         child: Center(
           child: Padding(
@@ -20,7 +20,7 @@ class NotFoundPage extends StatelessWidget {
                 Icon(
                   Icons.error_outline,
                   size: 80,
-                  color: AppTheme.mutedForeground,
+                  color: AppTheme.mutedForegroundColor(context),
                 ),
                 const SizedBox(height: 24),
                 const Text(
@@ -36,7 +36,7 @@ class NotFoundPage extends StatelessWidget {
                   'The page you\'re looking for doesn\'t exist or has been moved.',
                   style: TextStyle(
                     fontSize: 16,
-                    color: AppTheme.mutedForeground,
+                    color: AppTheme.mutedForegroundColor(context),
                   ),
                   textAlign: TextAlign.center,
                 ),

@@ -10,7 +10,7 @@ class StaticContentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SafeArea(
         child: Padding(
@@ -25,7 +25,7 @@ class StaticContentPage extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'Content coming soon.',
-                style: TextStyle(fontSize: 16, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 16, color: AppTheme.mutedForegroundColor(context)),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
 import '../../features/cart/presentation/bloc/cart_bloc.dart';
+import '../../features/config/presentation/bloc/config_bloc.dart';
 import '../../features/wishlist/presentation/bloc/wishlist_bloc.dart';
 
 /// Common header matching React MobileSubPageHeader: Logo, Search, Wishlist (fav), Cart.
@@ -24,8 +25,8 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: AppTheme.background,
-      foregroundColor: AppTheme.foreground,
+      backgroundColor: AppTheme.backgroundColor(context),
+      foregroundColor: AppTheme.foregroundColor(context),
       elevation: 0,
       scrolledUnderElevation: 0,
       leading: showBackButton
@@ -44,17 +45,23 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             )
           : null,
       leadingWidth: showBackButton ? 48 : null,
-      title: GestureDetector(
-        onTap: () => context.go('/'),
-        behavior: HitTestBehavior.opaque,
-        child: const Text(
-          'Rloco',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.foreground,
-          ),
-        ),
+      title: BlocBuilder<ConfigBloc, ConfigState>(
+        buildWhen: (a, b) => b is ConfigLoaded,
+        builder: (context, state) {
+          final siteName = state is ConfigLoaded ? state.config.general.siteName : 'Rloco';
+          return GestureDetector(
+            onTap: () => context.go('/'),
+            behavior: HitTestBehavior.opaque,
+            child: Text(
+              siteName,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.foregroundColor(context),
+              ),
+            ),
+          );
+        },
       ),
       titleSpacing: showBackButton ? 0 : 16,
       centerTitle: false,
@@ -63,7 +70,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           icon: const Icon(Icons.search, size: 24),
           onPressed: () => context.push('/search'),
           style: IconButton.styleFrom(
-            foregroundColor: AppTheme.foreground.withValues(alpha: 0.8),
+            foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
@@ -77,7 +84,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   icon: const Icon(Icons.favorite_border, size: 24),
                   onPressed: () => context.push('/wishlist'),
                   style: IconButton.styleFrom(
-                    foregroundColor: AppTheme.foreground.withValues(alpha: 0.8),
+                    foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
@@ -91,7 +98,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                       decoration: BoxDecoration(
                         color: AppTheme.destructive,
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.background, width: 2),
+                        border: Border.all(color: AppTheme.backgroundColor(context), width: 2),
                       ),
                       child: Center(
                         child: Text(
@@ -119,7 +126,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   icon: const Icon(Icons.shopping_bag_outlined, size: 24),
                   onPressed: () => context.push('/cart'),
                   style: IconButton.styleFrom(
-                    foregroundColor: AppTheme.foreground.withValues(alpha: 0.8),
+                    foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
@@ -133,7 +140,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                       decoration: BoxDecoration(
                         color: AppTheme.destructive,
                         shape: BoxShape.circle,
-                        border: Border.all(color: AppTheme.background, width: 2),
+                        border: Border.all(color: AppTheme.backgroundColor(context), width: 2),
                       ),
                       child: Center(
                         child: Text(

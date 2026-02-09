@@ -10,7 +10,7 @@ class ReviewsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: Center(
         child: Padding(
@@ -18,16 +18,16 @@ class ReviewsPage extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.star_border, size: 64, color: AppTheme.mutedForeground),
+              Icon(Icons.star_border, size: 64, color: AppTheme.mutedForegroundColor(context)),
               const SizedBox(height: 16),
               Text(
                 'No reviews yet',
-                style: TextStyle(fontSize: 18, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 18, color: AppTheme.mutedForegroundColor(context)),
               ),
               const SizedBox(height: 8),
               Text(
                 'Reviews you write for orders will appear here.',
-                style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                 textAlign: TextAlign.center,
               ),
             ],

@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'app/router/app_router.dart';
 import 'core/di/injection.dart';
 import 'core/network/dio_client.dart';
 import 'core/theme/app_theme.dart';
+import 'features/config/domain/entities/site_config.dart';
+import 'features/config/utils/config_theme_builder.dart';
 import 'features/auth/domain/usecases/get_me_usecase.dart';
 import 'features/auth/domain/usecases/login_usecase.dart';
 import 'features/auth/domain/usecases/logout_usecase.dart';
@@ -36,6 +41,8 @@ void main() async {
   await initInjection();
   runApp(const RlocoApp());
 }
+
+final GoRouter _appRouter = createAppRouter();
 
 class RlocoApp extends StatelessWidget {
   const RlocoApp({super.key});
@@ -115,10 +122,17 @@ class RlocoApp extends StatelessWidget {
               // Orders and addresses load when user navigates to those pages (avoids duplicate requests / 401 race)
             }
           },
-          child: MaterialApp.router(
-            title: 'Rloco',
-            theme: AppTheme.light,
-            routerConfig: createAppRouter(),
+          child: BlocBuilder<ConfigBloc, ConfigState>(
+            buildWhen: (a, b) => b is ConfigLoaded,
+            builder: (context, state) {
+              final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
+              final theme = ConfigThemeBuilder.build(config.design);
+              return MaterialApp.router(
+                title: config.general.siteName,
+                theme: theme,
+                routerConfig: _appRouter,
+              );
+            },
           ),
         ),
       ),
@@ -127,6 +141,7 @@ class RlocoApp extends StatelessWidget {
 }
 
 /// When app resumes from background, re-check auth from stored token so session is restored.
+/// Also refreshes site config on resume and every 30 seconds (matching web app behavior).
 class _AppLifecycleHandler extends StatefulWidget {
   const _AppLifecycleHandler({required this.child});
   final Widget child;
@@ -137,16 +152,28 @@ class _AppLifecycleHandler extends StatefulWidget {
 
 class _AppLifecycleHandlerState extends State<_AppLifecycleHandler>
     with WidgetsBindingObserver {
+  Timer? _configRefreshTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _startConfigRefreshTimer();
   }
 
   @override
   void dispose() {
+    _configRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _startConfigRefreshTimer() {
+    _configRefreshTimer?.cancel();
+    _configRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (!mounted) return;
+      context.read<ConfigBloc>().add(const ConfigLoadRequested());
+    });
   }
 
   @override
@@ -157,6 +184,7 @@ class _AppLifecycleHandlerState extends State<_AppLifecycleHandler>
     if (authBloc.shouldTryRestoreFromToken) {
       authBloc.add(const AuthCheckRequested());
     }
+    context.read<ConfigBloc>().add(const ConfigLoadRequested());
   }
 
   @override

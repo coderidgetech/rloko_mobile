@@ -6,7 +6,10 @@ Use this list to verify each Flutter page matches the corresponding React mobile
 - [x] **Wishlist** – 2-col grid, card rounded-2xl, image aspect 3/4, Trash top-right, Add to Cart rounded-full
 - [x] **Cart** – Item layout (96×128 image), quantity circles, Move to Wishlist (heart), Trash, coupon section, fixed bottom summary
 - [x] **Product detail** – Full-bleed image, swipe, dots, rating badge, thumbnails, Buy Now + Add to Bag, Delivery & Services, accordions, recommendations, wishlist heart on image
-- [x] **Product grid tile** – Wishlist heart on image (all listing pages)
+- [x] **Product grid tile** – Pin-to-pin with MobileProductGrid: aspect 3/4 image, rounded-2xl (16px), wishlist top-right w-8 h-8, SALE/NEW badges, rating, name line-clamp-2, category uppercase, price (primary color)
+- [x] **ProductListPage** (New Arrivals, Sale, All Products) – Filter pills, stats bar, Sort bottom sheet, sale banner (Sale), empty state with Sparkles (New Arrivals)
+- [x] **CategoryProductsPage** – Subcategory pills, stats bar, QuickActions (Filter+Sort), Sort/Filter bottom sheets
+- [x] **Sort/Filter bottom sheets** – rounded-t-3xl, handle bar, barrier black/40
 
 ## 📋 To verify / align
 

@@ -5,11 +5,15 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/bottom_nav.dart';
 import '../../../../core/widgets/safe_network_image.dart';
+import '../../../config/domain/entities/site_config.dart';
+import '../../../config/presentation/bloc/config_bloc.dart';
+import '../../../config/utils/config_category_utils.dart';
 import '../../domain/entities/category_entity.dart';
 import '../bloc/category_list_bloc.dart';
 
-/// Categories from API (CategoryListBloc); layout matches React MobileCategoriesPage.
+/// Categories from API (CategoryListBloc); fallback to config when API returns empty.
 String _slugify(String s) =>
     s.toLowerCase().replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(RegExp(r'\s+'), '-');
 
@@ -30,7 +34,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: false),
       body: BlocBuilder<CategoryListBloc, CategoryListState>(
         builder: (context, state) {
@@ -44,12 +48,17 @@ class _CategoriesPageState extends State<CategoriesPage> {
                 child: Text(
                   state.message,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.foreground.withValues(alpha: 0.6)),
+                  style: TextStyle(color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                 ),
               ),
             );
           }
-          final categories = state is CategoryListLoaded ? state.categories : <CategoryEntity>[];
+          var categories = state is CategoryListLoaded ? state.categories : <CategoryEntity>[];
+          if (categories.isEmpty) {
+            final configState = context.watch<ConfigBloc>().state;
+            final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
+            categories = categoriesFromConfig(config.categories);
+          }
           return SingleChildScrollView(
             padding: const EdgeInsets.only(bottom: 80),
             child: Column(
@@ -68,7 +77,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                       const SizedBox(height: 8),
                       Text(
                         'Discover our curated collections',
-                        style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                        style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                       ),
                     ],
                   ),
@@ -109,7 +118,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                   end: Alignment.centerRight,
                                   colors: [
                                     Colors.transparent,
-                                    AppTheme.border.withValues(alpha: 0.4),
+                                    AppTheme.borderColor(context).withValues(alpha: 0.4),
                                     Colors.transparent,
                                   ],
                                 ),
@@ -134,13 +143,13 @@ class _CategoriesPageState extends State<CategoriesPage> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              AppTheme.primary.withValues(alpha: 0.05),
+                              AppTheme.primaryColor(context).withValues(alpha: 0.05),
                               Colors.transparent,
                             ],
                           ),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                           ),
                         ),
                         child: Row(
@@ -153,7 +162,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w500,
-                                      color: AppTheme.primary,
+                                      color: AppTheme.primaryColor(context),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -163,7 +172,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                     style: TextStyle(
                                       fontSize: 11,
                                       height: 1.3,
-                                      color: AppTheme.foreground.withValues(alpha: 0.6),
+                                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -172,7 +181,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                             Container(
                               width: 1,
                               height: 48,
-                              color: AppTheme.border.withValues(alpha: 0.3),
+                              color: AppTheme.borderColor(context).withValues(alpha: 0.3),
                             ),
                             Expanded(
                               child: Column(
@@ -182,7 +191,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w500,
-                                      color: AppTheme.primary,
+                                      color: AppTheme.primaryColor(context),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -192,7 +201,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                     style: TextStyle(
                                       fontSize: 11,
                                       height: 1.3,
-                                      color: AppTheme.foreground.withValues(alpha: 0.6),
+                                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -201,7 +210,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                             Container(
                               width: 1,
                               height: 48,
-                              color: AppTheme.border.withValues(alpha: 0.3),
+                              color: AppTheme.borderColor(context).withValues(alpha: 0.3),
                             ),
                             Expanded(
                               child: Column(
@@ -211,7 +220,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                     style: TextStyle(
                                       fontSize: 24,
                                       fontWeight: FontWeight.w500,
-                                      color: AppTheme.primary,
+                                      color: AppTheme.primaryColor(context),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -221,7 +230,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                                     style: TextStyle(
                                       fontSize: 11,
                                       height: 1.3,
-                                      color: AppTheme.foreground.withValues(alpha: 0.6),
+                                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -240,7 +249,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                           width: 56,
                           height: 56,
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Center(
@@ -263,7 +272,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppTheme.foreground.withValues(alpha: 0.6),
+                              color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                             ),
                           ),
                         ),
@@ -294,7 +303,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
       );
           },
         ),
-      bottomNavigationBar: _BottomNav(currentIndex: 1),
+      bottomNavigationBar: const BottomNav(currentIndex: 1),
     );
   }
 }
@@ -310,7 +319,7 @@ class _CategoryCard extends StatelessWidget {
     final link = '/category/${entity.gender}/${entity.slug}';
     final imageUrl = entity.image.isNotEmpty
         ? entity.image
-        : placeholderImageUrl;
+        : fallbackImageForCategory(entity.gender, entity.slug);
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Material(
@@ -327,11 +336,11 @@ class _CategoryCard extends StatelessWidget {
                   imageUrl: safeImageUrl(imageUrl),
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
-                    color: AppTheme.muted,
+                    color: AppTheme.mutedColor(context),
                     child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                   ),
                   errorWidget: (_, __, ___) => Container(
-                    color: AppTheme.muted,
+                    color: AppTheme.mutedColor(context),
                     child: const Icon(Icons.image, size: 48),
                   ),
                 ),
@@ -435,7 +444,7 @@ class _SubcategoryRow extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: AppTheme.foreground.withValues(alpha: 0.12),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.12),
               ),
             ),
           ),
@@ -445,7 +454,7 @@ class _SubcategoryRow extends StatelessWidget {
                 width: 4,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.5),
+                  color: AppTheme.primaryColor(context).withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -463,42 +472,12 @@ class _SubcategoryRow extends StatelessWidget {
               Icon(
                 Icons.chevron_right,
                 size: 16,
-                color: AppTheme.foreground.withValues(alpha: 0.3),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.3),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({required this.currentIndex});
-
-  final int currentIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: currentIndex,
-      selectedItemColor: AppTheme.primary,
-      unselectedItemColor: AppTheme.mutedForeground,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'Categories'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-        BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Cart'),
-      ],
-      onTap: (i) {
-        if (i == 0) context.go('/');
-        if (i == 1) context.go('/categories');
-        if (i == 2) context.go('/search');
-        if (i == 3) context.go('/account');
-        if (i == 4) context.go('/cart');
-      },
     );
   }
 }

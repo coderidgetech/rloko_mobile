@@ -165,6 +165,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
           _placing = false;
           _error = message;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppTheme.destructive,
+          ),
+        );
       }
     }
   }
@@ -181,7 +187,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         }
         if (authState is! AuthAuthenticated) {
           return Scaffold(
-            backgroundColor: AppTheme.background,
+            backgroundColor: AppTheme.backgroundColor(context),
             appBar: AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new),
@@ -201,10 +207,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.lock_outline,
                       size: 48,
-                      color: AppTheme.mutedForeground,
+                      color: AppTheme.mutedForegroundColor(context),
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -219,7 +225,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     Text(
                       'You need to be signed in to place an order.',
                       style: TextStyle(
-                        color: AppTheme.mutedForeground,
+                        color: AppTheme.mutedForegroundColor(context),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -237,7 +243,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         }
 
         return Scaffold(
-          backgroundColor: AppTheme.background,
+          backgroundColor: AppTheme.backgroundColor(context),
           body: BlocBuilder<CartBloc, CartState>(
             builder: (context, cartState) {
               if (cartState is CartLoading) {
@@ -256,7 +262,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           cartState.message,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: AppTheme.mutedForeground,
+                            color: AppTheme.mutedForegroundColor(context),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -318,7 +324,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         // React MobileAddressSelection: MapPin + "Select Delivery Address", subtitle
                         Row(
                           children: [
-                            Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primary),
+                            Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primaryColor(context)),
                             const SizedBox(width: 8),
                             const Text(
                               'Select Delivery Address',
@@ -329,7 +335,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         const SizedBox(height: 4),
                         Text(
                           'Choose where you want your order delivered',
-                          style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                          style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                         ),
                         const SizedBox(height: 16),
                         if (_addressesLoading)
@@ -344,16 +350,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: AppTheme.background,
+                              color: AppTheme.backgroundColor(context),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+                              border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                             ),
                             child: Column(
                               children: [
                                 Text(
                                   'No saved addresses. Add one to continue.',
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                                  style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                                 ),
                                 const SizedBox(height: 16),
                                 SizedBox(
@@ -388,10 +394,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   child: Container(
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
-                                      color: selected ? AppTheme.primary.withValues(alpha: 0.05) : AppTheme.background,
+                                      color: selected ? AppTheme.primaryColor(context).withValues(alpha: 0.05) : AppTheme.backgroundColor(context),
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.12),
+                                        color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.12),
                                         width: selected ? 2 : 1,
                                       ),
                                     ),
@@ -407,22 +413,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                   Icon(
                                                     a.type.toUpperCase() == 'HOME' ? Icons.home_outlined : (a.type.toUpperCase() == 'OFFICE' || a.type.toUpperCase() == 'WORK' ? Icons.work_outline : Icons.location_on_outlined),
                                                     size: 16,
-                                                    color: AppTheme.foreground.withValues(alpha: 0.6),
+                                                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                                                   ),
                                                   const SizedBox(width: 6),
                                                   Text(
                                                     a.type.toUpperCase(),
-                                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                                                   ),
                                                   if (a.isDefault) ...[
                                                     const SizedBox(width: 8),
                                                     Container(
                                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                                       decoration: BoxDecoration(
-                                                        color: AppTheme.primary.withValues(alpha: 0.1),
+                                                        color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                                                         borderRadius: BorderRadius.circular(999),
                                                       ),
-                                                      child: Text('DEFAULT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primary)),
+                                                      child: Text('DEFAULT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor(context))),
                                                     ),
                                                   ],
                                                 ],
@@ -432,23 +438,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                               const SizedBox(height: 4),
                                               Text(
                                                 a.addressLine + (a.addressLine2 != null && a.addressLine2!.isNotEmpty ? ', ${a.addressLine2}' : ''),
-                                                style: TextStyle(fontSize: 13, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                                                style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                                               ),
                                               const SizedBox(height: 2),
                                               Text(
                                                 '${a.city}, ${a.state} ${a.pincode}',
-                                                style: TextStyle(fontSize: 13, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                                                style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                                               ),
                                               const SizedBox(height: 2),
-                                              Text(a.country, style: TextStyle(fontSize: 13, color: AppTheme.foreground.withValues(alpha: 0.7))),
+                                              Text(a.country, style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7))),
                                               const SizedBox(height: 2),
-                                              Text(a.mobile, style: TextStyle(fontSize: 13, color: AppTheme.foreground.withValues(alpha: 0.7))),
+                                              Text(a.mobile, style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7))),
                                               if (selected) ...[
                                                 const SizedBox(height: 12),
                                                 Container(
                                                   padding: const EdgeInsets.only(top: 12),
                                                   decoration: BoxDecoration(
-                                                    border: Border(top: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12))),
+                                                    border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
                                                   ),
                                                   child: Row(
                                                     children: [
@@ -460,7 +466,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                           },
                                                           icon: const Icon(Icons.edit_outlined, size: 14),
                                                           label: const Text('Edit'),
-                                                          style: TextButton.styleFrom(foregroundColor: AppTheme.primary),
+                                                          style: TextButton.styleFrom(foregroundColor: AppTheme.primaryColor(context)),
                                                         ),
                                                       ),
                                                       Expanded(
@@ -503,9 +509,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                           height: 24,
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
-                                            color: selected ? AppTheme.primary : Colors.transparent,
+                                            color: selected ? AppTheme.primaryColor(context) : Colors.transparent,
                                             border: Border.all(
-                                              color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.2),
+                                              color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                                               width: 2,
                                             ),
                                           ),
@@ -535,16 +541,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primary.withValues(alpha: 0.05),
+                                    color: AppTheme.primaryColor(context).withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3), width: 2),
+                                    border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.3), width: 2),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.add, size: 20, color: AppTheme.primary),
-                                      SizedBox(width: 8),
-                                      Text('Add New Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.primary)),
+                                      Icon(Icons.add, size: 20, color: AppTheme.primaryColor(context)),
+                                      const SizedBox(width: 8),
+                                      Text('Add New Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context))),
                                     ],
                                   ),
                                 ),
@@ -582,7 +588,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           decoration: InputDecoration(
                             hintText: FormHints.promoCode,
                             filled: true,
-                            fillColor: AppTheme.background,
+                            fillColor: AppTheme.backgroundColor(context),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
@@ -594,17 +600,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppTheme.background,
+                            color: AppTheme.backgroundColor(context),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+                            border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                           ),
                           child: Column(
                             children: [
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6))), Text('\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text('\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))]),
                               const SizedBox(height: 8),
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Shipping', style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6))), Text(DeliveryConstants.calculatedAtCheckout, style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)))]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Shipping', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text(DeliveryConstants.calculatedAtCheckout, style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)))]),
                               const SizedBox(height: 12),
-                              Divider(height: 1, color: AppTheme.foreground.withValues(alpha: 0.12)),
+                              Divider(height: 1, color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                               const SizedBox(height: 12),
                               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total (approx)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), Text('\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
                             ],
@@ -621,8 +627,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     child: Container(
                       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
                       decoration: BoxDecoration(
-                        color: AppTheme.background,
-                        border: Border(top: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12))),
+                        color: AppTheme.backgroundColor(context),
+                        border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
                       ),
                       child: SafeArea(
                         top: false,
@@ -659,14 +665,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return Container(
       padding: EdgeInsets.only(top: topPadding, left: 16, right: 16, bottom: 12),
       decoration: BoxDecoration(
-        color: AppTheme.background,
-        border: Border(bottom: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.08))),
+        color: AppTheme.backgroundColor(context),
+        border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.08))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Material(
-            color: AppTheme.foreground.withValues(alpha: 0.05),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(999),
             child: InkWell(
               onTap: () {

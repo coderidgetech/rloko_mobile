@@ -8,12 +8,12 @@ class AuthLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
+    return Text(
       'Rloco',
       style: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.w700,
-        color: AppTheme.foreground,
+        color: AppTheme.foregroundColor(context),
         letterSpacing: -0.5,
       ),
     );

@@ -67,7 +67,7 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.muted.withValues(alpha: 0.3),
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -81,7 +81,7 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
             const SizedBox(height: 4),
             Text(
               'Choose your preferred payment method',
-              style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
+              style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
             ),
             const SizedBox(height: 16),
             Row(
@@ -145,14 +145,14 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppTheme.primary,
-                      AppTheme.primary.withValues(alpha: 0.9),
+                      AppTheme.primaryColor(context),
+                      AppTheme.primaryColor(context).withValues(alpha: 0.9),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.primary.withValues(alpha: 0.3),
+                      color: AppTheme.primaryColor(context).withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -274,7 +274,7 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
                             '• Open your UPI app\n• Go to Profile or Settings\n• Copy your UPI ID',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.mutedForeground,
+                              color: AppTheme.mutedForegroundColor(context),
                               height: 1.4,
                             ),
                           ),
@@ -370,10 +370,10 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.primary.withValues(alpha: 0.05) : Colors.white,
+            color: selected ? AppTheme.primaryColor(context).withValues(alpha: 0.05) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.2),
+              color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
             ),
             boxShadow: [
               BoxShadow(
@@ -390,10 +390,10 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: selected ? AppTheme.primary : AppTheme.muted,
+                  color: selected ? AppTheme.primaryColor(context) : AppTheme.mutedColor(context),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 16, color: selected ? Colors.white : AppTheme.mutedForeground),
+                child: Icon(icon, size: 16, color: selected ? Colors.white : AppTheme.mutedForegroundColor(context)),
               ),
               const SizedBox(width: 8),
               Text(
@@ -401,12 +401,12 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: selected ? AppTheme.primary : null,
+                  color: selected ? AppTheme.primaryColor(context) : null,
                 ),
               ),
               if (selected) ...[
                 const SizedBox(width: 4),
-                Icon(Icons.check, size: 16, color: AppTheme.primary),
+                Icon(Icons.check, size: 16, color: AppTheme.primaryColor(context)),
               ],
             ],
           ),
@@ -431,7 +431,7 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: AppTheme.foreground.withValues(alpha: 0.7),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 6),
@@ -449,7 +449,7 @@ class _AddPaymentMethodPageState extends State<AddPaymentMethodPage> {
             fillColor: Colors.white,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.2)),
+              borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),

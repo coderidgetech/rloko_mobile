@@ -11,7 +11,7 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: ListView(
         padding: const EdgeInsets.all(24),
@@ -23,7 +23,7 @@ class SettingsPage extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'App preferences',
-            style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+            style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
           ),
           const SizedBox(height: 24),
           ListTile(

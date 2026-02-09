@@ -49,7 +49,7 @@ class _OrdersPageState extends State<OrdersPage> {
       });
     }
     return Scaffold(
-      backgroundColor: AppTheme.muted,
+      backgroundColor: AppTheme.mutedColor(context),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
@@ -62,8 +62,8 @@ class _OrdersPageState extends State<OrdersPage> {
           },
         ),
         title: const Text('My Orders'),
-        backgroundColor: AppTheme.background,
-        foregroundColor: AppTheme.foreground,
+        backgroundColor: AppTheme.backgroundColor(context),
+        foregroundColor: AppTheme.foregroundColor(context),
       ),
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, authState) {
@@ -149,8 +149,8 @@ class _OrdersPageState extends State<OrdersPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.background,
-        border: Border(bottom: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.08))),
+        color: AppTheme.backgroundColor(context),
+        border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.08))),
       ),
       child: Row(
         children: [
@@ -191,7 +191,7 @@ class _TabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Material(
-        color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.05),
+        color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
           onTap: onTap,
@@ -204,7 +204,7 @@ class _TabChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: selected ? AppTheme.primaryForeground : AppTheme.foreground.withValues(alpha: 0.6),
+                color: selected ? AppTheme.primaryForegroundColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -223,7 +223,7 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final imageUrl = order.items.isNotEmpty ? order.items.first.image : null;
     final itemCount = order.items.fold<int>(0, (s, i) => s + i.quantity);
-    final statusDisplay = _statusDisplay(order.status);
+    final statusDisplay = _statusDisplay(context, order.status);
     final isInTransit = order.status == 'shipped' || order.status == 'in-transit';
     final isDelivered = order.status == 'delivered';
     final deliveryDate = _formatDateShort(order.createdAt);
@@ -232,7 +232,7 @@ class _OrderCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
+        side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
       ),
       elevation: 0,
       shadowColor: Colors.transparent,
@@ -264,7 +264,7 @@ class _OrderCard extends StatelessWidget {
                         _formatDate(order.createdAt),
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppTheme.foreground.withValues(alpha: 0.5),
+                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -309,7 +309,7 @@ class _OrderCard extends StatelessWidget {
                         : Container(
                             width: 64,
                             height: 64,
-                            color: AppTheme.muted,
+                            color: AppTheme.mutedColor(context),
                             child: const Icon(Icons.image_not_supported, size: 24),
                           ),
                   ),
@@ -322,7 +322,7 @@ class _OrderCard extends StatelessWidget {
                           '$itemCount item${itemCount == 1 ? '' : 'items'}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: AppTheme.foreground.withValues(alpha: 0.7),
+                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -336,7 +336,7 @@ class _OrderCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, size: 20, color: AppTheme.foreground.withValues(alpha: 0.4)),
+                  Icon(Icons.chevron_right, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
                 ],
               ),
               // Delivery strip (in-transit / delivered)
@@ -345,19 +345,19 @@ class _OrderCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.08),
+                    color: AppTheme.primaryColor(context).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.local_shipping, size: 16, color: AppTheme.primary),
+                      Icon(Icons.local_shipping, size: 16, color: AppTheme.primaryColor(context)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Expected delivery: $deliveryDate',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.foreground.withValues(alpha: 0.7),
+                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -382,7 +382,7 @@ class _OrderCard extends StatelessWidget {
                           'Delivered on $deliveryDate',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.foreground.withValues(alpha: 0.7),
+                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -407,7 +407,7 @@ class _OrderCard extends StatelessWidget {
     }
   }
 
-  ({String label, Color color, IconData icon}) _statusDisplay(String status) {
+  ({String label, Color color, IconData icon}) _statusDisplay(BuildContext context, String status) {
     switch (status) {
       case 'delivered':
         return (label: 'Delivered', color: Colors.green, icon: Icons.check_circle);
@@ -418,7 +418,7 @@ class _OrderCard extends StatelessWidget {
       case 'cancelled':
         return (label: 'Cancelled', color: AppTheme.destructive, icon: Icons.cancel);
       default:
-        return (label: status, color: AppTheme.mutedForeground, icon: Icons.receipt);
+        return (label: status, color: AppTheme.mutedForegroundColor(context), icon: Icons.receipt);
     }
   }
 

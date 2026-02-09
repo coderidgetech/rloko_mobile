@@ -15,7 +15,9 @@ class CategoryRepositoryImpl implements CategoryRepository {
   Future<List<CategoryEntity>> list() async {
     try {
       final list = await _dataSource.list();
-      return list.map((e) => e.toEntity()).toList();
+      final entities = list.map((e) => e.toEntity()).toList();
+      // Match web: only include categories with name and image (same as Categories.tsx)
+      return entities.where((c) => c.name.isNotEmpty && c.image.isNotEmpty).toList();
     } on DioException catch (e) {
       throw getApiException(e) ?? e;
     }

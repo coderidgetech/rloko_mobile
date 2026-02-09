@@ -29,6 +29,7 @@ import '../../features/product/presentation/pages/categories_page.dart';
 import '../../features/product/presentation/pages/category_products_page.dart';
 import '../../features/product/presentation/pages/product_detail_page.dart';
 import '../../features/product/presentation/pages/product_list_page.dart';
+import '../../features/product/presentation/widgets/sort_bottom_sheet.dart';
 import '../../features/product/presentation/pages/search_page.dart';
 import '../../features/cart/presentation/pages/cart_page.dart';
 import '../../features/wishlist/presentation/pages/wishlist_page.dart';
@@ -41,8 +42,11 @@ import '../../features/address/presentation/pages/address_form_page.dart';
 import '../../features/address/presentation/pages/addresses_page.dart';
 import '../../features/order/presentation/pages/checkout_page.dart';
 import '../../features/order/presentation/pages/order_confirmation_page.dart';
+import '../../features/home/presentation/pages/help_center_page.dart';
 import '../../features/home/presentation/pages/not_found_page.dart';
-import '../../features/home/presentation/pages/static_content_page.dart';
+import '../../features/home/presentation/pages/privacy_page.dart';
+import '../../features/home/presentation/pages/size_guide_page.dart';
+import '../../features/home/presentation/pages/terms_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavKey = GlobalKey<NavigatorState>();
@@ -53,6 +57,27 @@ GoRouter createAppRouter() {
     initialLocation: '/splash',
     errorBuilder: (context, state) => const NotFoundPage(),
     routes: [
+      // Redirects for web/shared-link path parity (avoid "page not found")
+      GoRoute(
+        path: '/order/:id',
+        redirect: (_, state) => '/orders/${state.pathParameters['id'] ?? ''}',
+      ),
+      GoRoute(
+        path: '/add-address',
+        redirect: (_, __) => '/addresses/add',
+      ),
+      GoRoute(
+        path: '/payment',
+        redirect: (_, __) => '/checkout',
+      ),
+      GoRoute(
+        path: '/featured-collection',
+        redirect: (_, __) => '/all-products',
+      ),
+      GoRoute(
+        path: '/otp-verification',
+        redirect: (_, __) => '/signup',
+      ),
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashPage(),
@@ -91,6 +116,13 @@ GoRouter createAppRouter() {
         },
       ),
       GoRoute(
+        path: '/category/:gender',
+        builder: (context, state) {
+          final gender = state.pathParameters['gender'] ?? '';
+          return CategoryProductsPage(gender: gender, slug: '');
+        },
+      ),
+      GoRoute(
         path: '/search',
         builder: (context, state) => const SearchPage(),
       ),
@@ -98,21 +130,45 @@ GoRouter createAppRouter() {
         path: '/all-products',
         builder: (context, state) => ProductListPage(
           title: 'All Products',
-          loadEvent: const ProductListLoadRequested(limit: 50),
+          loadEvent: const ProductListLoadRequested(limit: 200),
+          sortOptions: const [
+            SortOption(value: 'featured', label: 'Featured'),
+            SortOption(value: 'newest', label: 'Newest'),
+            SortOption(value: 'price-low', label: 'Price: Low to High'),
+            SortOption(value: 'price-high', label: 'Price: High to Low'),
+          ],
+          initialSort: 'featured',
+          statsLabel: 'Showing %d products',
         ),
       ),
       GoRoute(
         path: '/new-arrivals',
         builder: (context, state) => ProductListPage(
           title: 'New Arrivals',
-          loadEvent: const ProductListLoadNewArrivals(limit: 50),
+          loadEvent: const ProductListLoadNewArrivals(limit: 200),
+          filterPills: const [
+            FilterPill(value: 'all', label: 'All'),
+            FilterPill(value: 'dresses', label: 'Dresses'),
+            FilterPill(value: 'tops', label: 'Tops'),
+            FilterPill(value: 'bags', label: 'Bags'),
+            FilterPill(value: 'shoes', label: 'Shoes'),
+          ],
+          statsLabel: '%d new items this week',
+          emptyTitle: 'No new arrivals',
         ),
       ),
       GoRoute(
         path: '/sale',
         builder: (context, state) => ProductListPage(
           title: 'On Sale',
-          loadEvent: const ProductListLoadOnSale(limit: 50),
+          loadEvent: const ProductListLoadOnSale(limit: 200),
+          sortOptions: const [
+            SortOption(value: 'discount', label: 'Highest Discount'),
+            SortOption(value: 'price-low', label: 'Price: Low to High'),
+            SortOption(value: 'price-high', label: 'Price: High to Low'),
+          ],
+          initialSort: 'discount',
+          showSaleBanner: true,
         ),
       ),
       GoRoute(
@@ -232,19 +288,19 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/help',
-        builder: (context, state) => const StaticContentPage(title: 'Help Center'),
+        builder: (context, state) => const HelpCenterPage(),
       ),
       GoRoute(
         path: '/terms',
-        builder: (context, state) => const StaticContentPage(title: 'Terms of Service'),
+        builder: (context, state) => const TermsPage(),
       ),
       GoRoute(
         path: '/privacy',
-        builder: (context, state) => const StaticContentPage(title: 'Privacy Policy'),
+        builder: (context, state) => const PrivacyPage(),
       ),
       GoRoute(
         path: '/size-guide',
-        builder: (context, state) => const StaticContentPage(title: 'Size Guide'),
+        builder: (context, state) => const SizeGuidePage(),
       ),
       GoRoute(
         path: '/shipping',

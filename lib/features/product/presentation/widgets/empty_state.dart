@@ -27,12 +27,12 @@ class EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (icon != null)
-              Icon(icon, size: 64, color: AppTheme.mutedForeground),
+              Icon(icon, size: 64, color: AppTheme.mutedForegroundColor(context)),
             if (icon != null) const SizedBox(height: 16),
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppTheme.foreground,
+                    color: AppTheme.foregroundColor(context),
                   ),
               textAlign: TextAlign.center,
             ),
@@ -41,7 +41,7 @@ class EmptyState extends StatelessWidget {
               Text(
                 subtitle!,
                 style: TextStyle(
-                  color: AppTheme.mutedForeground,
+                  color: AppTheme.mutedForegroundColor(context),
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,

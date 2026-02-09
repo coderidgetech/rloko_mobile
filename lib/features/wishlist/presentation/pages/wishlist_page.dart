@@ -52,7 +52,7 @@ class _WishlistPageState extends State<WishlistPage> {
       });
     }
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: BlocBuilder<WishlistBloc, WishlistState>(
         builder: (context, state) {
@@ -169,7 +169,7 @@ class _WishlistCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppTheme.foreground.withValues(alpha: 0.08),
+          color: AppTheme.foregroundColor(context).withValues(alpha: 0.08),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -188,17 +188,17 @@ class _WishlistCard extends StatelessWidget {
                           imageUrl: safeImageUrl(image),
                           fit: BoxFit.cover,
                           placeholder: (_, __) => Container(
-                            color: AppTheme.muted,
+                            color: AppTheme.mutedColor(context),
                             child: const Center(
                                 child: CircularProgressIndicator(strokeWidth: 2)),
                           ),
                           errorWidget: (_, __, ___) => Container(
-                            color: AppTheme.muted,
+                            color: AppTheme.mutedColor(context),
                             child: const Icon(Icons.image),
                           ),
                         )
                       : Container(
-                          color: AppTheme.muted,
+                          color: AppTheme.mutedColor(context),
                           child: const Icon(Icons.image, size: 48),
                         ),
                 ),
@@ -245,10 +245,10 @@ class _WishlistCard extends StatelessWidget {
                 if (price != null)
                   Text(
                     '\$${price.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.primary,
+                      color: AppTheme.primaryColor(context),
                     ),
                   ),
                 const SizedBox(height: 12),
@@ -260,8 +260,8 @@ class _WishlistCard extends StatelessWidget {
                     icon: const Icon(Icons.shopping_bag_outlined, size: 14),
                     label: const Text('Add to Cart'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      foregroundColor: AppTheme.primaryForeground,
+                      backgroundColor: AppTheme.primaryColor(context),
+                      foregroundColor: AppTheme.primaryForegroundColor(context),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(999),

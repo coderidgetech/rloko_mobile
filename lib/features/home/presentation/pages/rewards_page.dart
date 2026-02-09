@@ -10,7 +10,7 @@ class RewardsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -23,26 +23,26 @@ class RewardsPage extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Earn points on every order',
-              style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+              style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
             ),
             const SizedBox(height: 32),
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
+                color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
                   Text(
                     '450',
-                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                    style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppTheme.primaryColor(context)),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Points',
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                   ),
                 ],
               ),
@@ -50,7 +50,7 @@ class RewardsPage extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Shop to earn more points. Use points for discounts at checkout.',
-              style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+              style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
               textAlign: TextAlign.center,
             ),
           ],

@@ -17,7 +17,7 @@ class ConfigLoading extends ConfigState {
 
 class ConfigLoaded extends ConfigState {
   const ConfigLoaded(this.config);
-  final Map<String, dynamic> config;
+  final SiteConfig config;
 
   @override
   List<Object?> get props => [config];

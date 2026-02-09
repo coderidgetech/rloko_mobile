@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
+import '../../domain/entities/site_config.dart';
 import '../../domain/usecases/get_site_config_usecase.dart';
 
 part 'config_event.dart';
@@ -19,7 +20,7 @@ class ConfigBloc extends Bloc<ConfigEvent, ConfigState> {
       final config = await _getConfig();
       emit(ConfigLoaded(config));
     } catch (_) {
-      emit(const ConfigLoaded({}));
+      emit(ConfigLoaded(SiteConfig.defaultConfig));
     }
   }
 }

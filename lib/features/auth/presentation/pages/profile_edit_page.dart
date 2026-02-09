@@ -79,7 +79,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.muted.withValues(alpha: 0.3),
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -95,7 +95,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               const SizedBox(height: 4),
               Text(
                 'Update your personal information',
-                style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
               ),
               const SizedBox(height: 24),
               Center(
@@ -111,8 +111,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                AppTheme.primary,
-                                AppTheme.primary.withValues(alpha: 0.6),
+                                AppTheme.primaryColor(context),
+                                AppTheme.primaryColor(context).withValues(alpha: 0.6),
                               ],
                             ),
                             shape: BoxShape.circle,
@@ -126,7 +126,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                             width: 32,
                             height: 32,
                             decoration: BoxDecoration(
-                              color: AppTheme.primary,
+                              color: AppTheme.primaryColor(context),
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),
                             ),
@@ -138,7 +138,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     const SizedBox(height: 8),
                     Text(
                       'Tap to change photo',
-                      style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                      style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                     ),
                   ],
                 ),
@@ -171,6 +171,11 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: _inputDecoration('Enter your phone', Icons.phone_outlined),
+                  validator: (v) {
+                    final t = v?.trim() ?? '';
+                    if (t.isNotEmpty && t.length < 10) return 'Enter a valid phone number';
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(height: 16),
@@ -193,10 +198,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: selected ? AppTheme.primary : Colors.white,
+                              color: selected ? AppTheme.primaryColor(context) : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.2),
+                                color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -212,7 +217,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: selected ? Colors.white : AppTheme.mutedForeground,
+                                  color: selected ? Colors.white : AppTheme.mutedForegroundColor(context),
                                 ),
                               ),
                             ),
@@ -246,7 +251,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     child: Text(
                       _birthdayStr ?? 'Select date',
                       style: TextStyle(
-                        color: _birthdayStr != null ? null : AppTheme.mutedForeground,
+                        color: _birthdayStr != null ? null : AppTheme.mutedForegroundColor(context),
                       ),
                     ),
                   ),
@@ -306,7 +311,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: AppTheme.foreground.withValues(alpha: 0.7),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 8),
@@ -322,10 +327,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.2)),
+        borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      prefixIcon: Icon(icon, size: 20, color: AppTheme.foreground.withValues(alpha: 0.4)),
+      prefixIcon: Icon(icon, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
     );
   }
 }

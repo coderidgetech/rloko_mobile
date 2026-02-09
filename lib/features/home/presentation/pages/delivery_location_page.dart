@@ -61,7 +61,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: BlocBuilder<AddressListBloc, AddressListState>(
         builder: (context, state) {
@@ -78,7 +78,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                   children: [
                     Text(
                       state.message,
-                      style: TextStyle(color: AppTheme.mutedForeground),
+                      style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -124,7 +124,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                       const SizedBox(height: 4),
                       Text(
                         'Choose where you want your order delivered',
-                        style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                        style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                       ),
                     ],
                   ),
@@ -135,12 +135,12 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                     onChanged: (v) => setState(() => _searchQuery = v),
                     decoration: InputDecoration(
                       hintText: FormHints.searchArea,
-                      prefixIcon: Icon(Icons.search, size: 18, color: AppTheme.mutedForeground),
+                      prefixIcon: Icon(Icons.search, size: 18, color: AppTheme.mutedForegroundColor(context)),
                       filled: true,
-                      fillColor: AppTheme.foreground.withValues(alpha: 0.05),
+                      fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.2)),
+                        borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
@@ -161,9 +161,9 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3), width: 2),
+                          border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.3), width: 2),
                           borderRadius: BorderRadius.circular(12),
-                          color: AppTheme.primary.withValues(alpha: 0.05),
+                          color: AppTheme.primaryColor(context).withValues(alpha: 0.05),
                         ),
                         child: Row(
                           children: [
@@ -171,10 +171,10 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.1),
+                                color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(Icons.my_location, size: 20, color: AppTheme.primary),
+                              child: Icon(Icons.my_location, size: 20, color: AppTheme.primaryColor(context)),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -186,18 +186,18 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
-                                      color: AppTheme.primary,
+                                      color: AppTheme.primaryColor(context),
                                     ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'Enable location to detect your address',
-                                    style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
+                                    style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
                                   ),
                                 ],
                               ),
                             ),
-                            Icon(Icons.chevron_right, size: 20, color: AppTheme.primary),
+                            Icon(Icons.chevron_right, size: 20, color: AppTheme.primaryColor(context)),
                           ],
                         ),
                       ),
@@ -219,7 +219,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                         icon: const Icon(Icons.add, size: 16),
                         label: const Text('Add New'),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.primary,
+                          foregroundColor: AppTheme.primaryColor(context),
                         ),
                       ),
                     ],
@@ -232,11 +232,11 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                     child: Center(
                       child: Column(
                         children: [
-                          Icon(Icons.location_off, size: 48, color: AppTheme.mutedForeground),
+                          Icon(Icons.location_off, size: 48, color: AppTheme.mutedForegroundColor(context)),
                           const SizedBox(height: 12),
                           Text(
                             _searchQuery.isEmpty ? 'No saved addresses' : 'No matches',
-                            style: TextStyle(color: AppTheme.mutedForeground),
+                            style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
                           ),
                           if (_searchQuery.isEmpty) ...[
                             const SizedBox(height: 12),
@@ -304,10 +304,10 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSelected ? AppTheme.primary.withValues(alpha: 0.05) : Colors.white,
+              color: isSelected ? AppTheme.primaryColor(context).withValues(alpha: 0.05) : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? AppTheme.primary : AppTheme.border,
+                color: isSelected ? AppTheme.primaryColor(context) : AppTheme.borderColor(context),
                 width: isSelected ? 2 : 1,
               ),
             ),
@@ -317,7 +317,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                   Positioned(
                     top: 0,
                     right: 0,
-                    child: Icon(Icons.check_circle, size: 20, color: AppTheme.primary),
+                    child: Icon(Icons.check_circle, size: 20, color: AppTheme.primaryColor(context)),
                   ),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,7 +335,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.mutedForeground,
+                                  color: AppTheme.mutedForegroundColor(context),
                                 ),
                               ),
                               if (address.isDefault) ...[
@@ -343,7 +343,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: AppTheme.primary.withValues(alpha: 0.1),
+                                    color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
                                   child: Text(
@@ -351,7 +351,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: AppTheme.primary,
+                                      color: AppTheme.primaryColor(context),
                                     ),
                                   ),
                                 ),
@@ -371,32 +371,32 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                             '${address.addressLine}${address.addressLine2 != null ? ', ${address.addressLine2}' : ''}, ${address.city} ${address.pincode}',
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppTheme.mutedForeground,
+                              color: AppTheme.mutedForegroundColor(context),
                               height: 1.3,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Phone: ${address.mobile}',
-                            style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
+                            style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
                           ),
                           const SizedBox(height: 12),
                           Container(
                             padding: const EdgeInsets.only(top: 12),
                             decoration: BoxDecoration(
                               border: Border(
-                                top: BorderSide(color: AppTheme.border.withValues(alpha: 0.2)),
+                                top: BorderSide(color: AppTheme.borderColor(context).withValues(alpha: 0.2)),
                               ),
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.schedule, size: 14, color: AppTheme.mutedForeground),
+                                Icon(Icons.schedule, size: 14, color: AppTheme.mutedForegroundColor(context)),
                                 const SizedBox(width: 6),
                                 Text(
                                   'Estimated delivery: ${DeliveryConstants.estimatedDelivery}',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppTheme.mutedForeground,
+                                    color: AppTheme.mutedForegroundColor(context),
                                   ),
                                 ),
                               ],

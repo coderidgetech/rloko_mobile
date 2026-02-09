@@ -1,3 +1,5 @@
+import '../entities/site_config.dart';
+
 abstract class ConfigRepository {
-  Future<Map<String, dynamic>> getConfig();
+  Future<SiteConfig> getConfig();
 }

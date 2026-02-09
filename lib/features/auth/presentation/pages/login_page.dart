@@ -43,7 +43,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     final fromCheckout = widget.redirectAfterLogin == '/checkout';
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) {
@@ -76,9 +76,9 @@ class _LoginPageState extends State<LoginPage> {
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                     child: IconButton(
                       onPressed: () => context.go(fromCheckout ? '/cart' : '/'),
-                      icon: Icon(Icons.close, size: 24, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                      icon: Icon(Icons.close, size: 24, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                       style: IconButton.styleFrom(
-                        backgroundColor: AppTheme.foreground.withValues(alpha: 0.05),
+                        backgroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                       ),
                     ),
                   ),
@@ -96,12 +96,12 @@ class _LoginPageState extends State<LoginPage> {
                               padding: const EdgeInsets.only(bottom: 16),
                               child: Row(
                                 children: [
-                                  Icon(Icons.shopping_cart_outlined, size: 20, color: AppTheme.primary),
+                                  Icon(Icons.shopping_cart_outlined, size: 20, color: AppTheme.primaryColor(context)),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Sign in to place your order. You\'ll return to checkout after.',
-                                      style: TextStyle(fontSize: 13, color: AppTheme.primary, fontWeight: FontWeight.w500),
+                                      style: TextStyle(fontSize: 13, color: AppTheme.primaryColor(context), fontWeight: FontWeight.w500),
                                     ),
                                   ),
                                 ],
@@ -121,13 +121,13 @@ class _LoginPageState extends State<LoginPage> {
                           Text(
                             'Sign in with your email',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 16, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                            style: TextStyle(fontSize: 16, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                           ),
                           const SizedBox(height: 32),
                           // React: inputs h-[54px] bg-foreground/5 border border-border/30 rounded-xl
                           Text(
                             'Email',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                           ),
                           const SizedBox(height: 8),
                           TextFormField(
@@ -136,10 +136,10 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: InputDecoration(
                               hintText: FormHints.email,
                               filled: true,
-                              fillColor: AppTheme.foreground.withValues(alpha: 0.05),
+                              fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
+                                borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                               ),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                             ),
@@ -152,7 +152,7 @@ class _LoginPageState extends State<LoginPage> {
                           const SizedBox(height: 16),
                           Text(
                             'Password',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                           ),
                           const SizedBox(height: 8),
                           TextFormField(
@@ -161,14 +161,14 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: InputDecoration(
                               hintText: FormHints.password,
                               filled: true,
-                              fillColor: AppTheme.foreground.withValues(alpha: 0.05),
+                              fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
+                                borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                               ),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               suffixIcon: IconButton(
-                                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20, color: AppTheme.foreground.withValues(alpha: 0.5)),
+                                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
                                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                               ),
                             ),
@@ -201,12 +201,12 @@ class _LoginPageState extends State<LoginPage> {
                           // React: Divider OR
                           Row(
                             children: [
-                              Expanded(child: Divider(color: AppTheme.foreground.withValues(alpha: 0.12))),
+                              Expanded(child: Divider(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('OR', style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.4))),
+                                child: Text('OR', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4))),
                               ),
-                              Expanded(child: Divider(color: AppTheme.foreground.withValues(alpha: 0.12))),
+                              Expanded(child: Divider(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
                             ],
                           ),
                           const SizedBox(height: 24),
@@ -217,11 +217,11 @@ class _LoginPageState extends State<LoginPage> {
                                 const SnackBar(content: Text('Google sign-in can be enabled with Firebase')),
                               );
                             },
-                            icon: Icon(Icons.g_mobiledata, size: 24, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                            icon: Icon(Icons.g_mobiledata, size: 24, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                             label: const Text('Continue with Google'),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
+                              side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                             ),
                           ),
@@ -232,7 +232,7 @@ class _LoginPageState extends State<LoginPage> {
                             children: [
                               Text(
                                 "Don't have an account? ",
-                                style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                                style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                               ),
                               TextButton(
                                 onPressed: () => context.push('/signup'),
@@ -241,7 +241,7 @@ class _LoginPageState extends State<LoginPage> {
                                   minimumSize: Size.zero,
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
-                                child: const Text('Sign up', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary)),
+                                child: Text('Sign up', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context))),
                               ),
                             ],
                           ),

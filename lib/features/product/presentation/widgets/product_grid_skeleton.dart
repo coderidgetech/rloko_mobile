@@ -26,7 +26,7 @@ class ProductGridSkeleton extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: AppTheme.muted,
+                  color: AppTheme.mutedColor(context),
                   borderRadius:
                       BorderRadius.circular(AppTheme.radius),
                 ),
@@ -37,7 +37,7 @@ class ProductGridSkeleton extends StatelessWidget {
               height: 14,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: AppTheme.muted,
+                color: AppTheme.mutedColor(context),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
@@ -46,7 +46,7 @@ class ProductGridSkeleton extends StatelessWidget {
               height: 12,
               width: 80,
               decoration: BoxDecoration(
-                color: AppTheme.muted,
+                color: AppTheme.mutedColor(context),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),

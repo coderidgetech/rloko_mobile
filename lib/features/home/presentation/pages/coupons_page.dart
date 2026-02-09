@@ -90,7 +90,7 @@ class _CouponsPageState extends State<CouponsPage> {
     final expired = _promotions.where((e) => !e.isActive).toList();
 
     return Scaffold(
-      backgroundColor: AppTheme.muted.withValues(alpha: 0.3),
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: _loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
@@ -101,7 +101,7 @@ class _CouponsPageState extends State<CouponsPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(_error!, style: TextStyle(color: AppTheme.mutedForeground)),
+                        Text(_error!, style: TextStyle(color: AppTheme.mutedForegroundColor(context))),
                         const SizedBox(height: 16),
                         FilledButton(onPressed: _load, child: const Text('Retry')),
                       ],
@@ -116,7 +116,7 @@ class _CouponsPageState extends State<CouponsPage> {
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
-                        color: AppTheme.background,
+                        color: AppTheme.backgroundColor(context),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -127,7 +127,7 @@ class _CouponsPageState extends State<CouponsPage> {
                             const SizedBox(height: 4),
                             Text(
                               '${active.length} active ${active.length == 1 ? 'coupon' : 'coupons'} available',
-                              style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                              style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                             ),
                           ],
                         ),
@@ -148,7 +148,7 @@ class _CouponsPageState extends State<CouponsPage> {
                                 child: Center(
                                   child: Text(
                                     'No active coupons',
-                                    style: TextStyle(color: AppTheme.mutedForeground),
+                                    style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
                                   ),
                                 ),
                               )
@@ -198,7 +198,7 @@ class _CouponsPageState extends State<CouponsPage> {
                                     '• Copy the coupon code\n• Add items to cart\n• Apply code at checkout\n• Enjoy your discount!',
                                     style: TextStyle(
                                       fontSize: 14,
-                                      color: AppTheme.mutedForeground,
+                                      color: AppTheme.mutedForegroundColor(context),
                                       height: 1.5,
                                     ),
                                   ),
@@ -231,7 +231,7 @@ class _CouponsPageState extends State<CouponsPage> {
           color: expired ? Colors.white.withValues(alpha: 0.5) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: expired ? AppTheme.border : AppTheme.primary.withValues(alpha: 0.3),
+            color: expired ? AppTheme.borderColor(context) : AppTheme.primaryColor(context).withValues(alpha: 0.3),
             width: expired ? 1 : 2,
           ),
           boxShadow: expired ? null : [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
@@ -243,14 +243,14 @@ class _CouponsPageState extends State<CouponsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: expired
-                    ? AppTheme.foreground.withValues(alpha: 0.05)
+                    ? AppTheme.foregroundColor(context).withValues(alpha: 0.05)
                     : null,
                 gradient: expired
                     ? null
                     : LinearGradient(
                         colors: [
-                          AppTheme.primary,
-                          AppTheme.primary.withValues(alpha: 0.8),
+                          AppTheme.primaryColor(context),
+                          AppTheme.primaryColor(context).withValues(alpha: 0.8),
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -265,7 +265,7 @@ class _CouponsPageState extends State<CouponsPage> {
                       Icon(
                         Icons.local_offer_outlined,
                         size: 20,
-                        color: expired ? AppTheme.mutedForeground : Colors.white,
+                        color: expired ? AppTheme.mutedForegroundColor(context) : Colors.white,
                       ),
                       const SizedBox(width: 8),
                       Text(
@@ -273,7 +273,7 @@ class _CouponsPageState extends State<CouponsPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: expired ? AppTheme.mutedForeground : Colors.white,
+                          color: expired ? AppTheme.mutedForegroundColor(context) : Colors.white,
                         ),
                       ),
                     ],
@@ -298,7 +298,7 @@ class _CouponsPageState extends State<CouponsPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: expired ? AppTheme.mutedForeground : null,
+                      color: expired ? AppTheme.mutedForegroundColor(context) : null,
                     ),
                   ),
                   if (coupon.code.isNotEmpty) ...[
@@ -307,7 +307,7 @@ class _CouponsPageState extends State<CouponsPage> {
                       'Code: ${coupon.code}',
                       style: TextStyle(
                         fontSize: 14,
-                        color: AppTheme.mutedForeground,
+                        color: AppTheme.mutedForegroundColor(context),
                       ),
                     ),
                   ],
@@ -317,7 +317,7 @@ class _CouponsPageState extends State<CouponsPage> {
                       'Min. order: $minOrder',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.mutedForeground.withValues(alpha: 0.8),
+                        color: AppTheme.mutedForegroundColor(context).withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -329,21 +329,21 @@ class _CouponsPageState extends State<CouponsPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: AppTheme.foreground.withValues(alpha: 0.05),
+                              color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: AppTheme.foreground.withValues(alpha: 0.2),
+                                color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                                 style: BorderStyle.solid,
                               ),
                             ),
                             child: Center(
                               child: Text(
                                 coupon.code,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'monospace',
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 2,
-                                  color: AppTheme.primary,
+                                  color: AppTheme.primaryColor(context),
                                 ),
                               ),
                             ),
@@ -351,7 +351,7 @@ class _CouponsPageState extends State<CouponsPage> {
                         ),
                         const SizedBox(width: 8),
                         Material(
-                          color: copied ? Colors.green : AppTheme.primary,
+                          color: copied ? Colors.green : AppTheme.primaryColor(context),
                           borderRadius: BorderRadius.circular(12),
                           child: InkWell(
                             onTap: onCopy,
@@ -377,7 +377,7 @@ class _CouponsPageState extends State<CouponsPage> {
                           coupon.code,
                           style: TextStyle(
                             fontFamily: 'monospace',
-                            color: AppTheme.mutedForeground.withValues(alpha: 0.6),
+                            color: AppTheme.mutedForegroundColor(context).withValues(alpha: 0.6),
                             decoration: TextDecoration.lineThrough,
                             letterSpacing: 2,
                           ),

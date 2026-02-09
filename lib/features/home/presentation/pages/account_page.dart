@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/bottom_nav.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -21,7 +23,7 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: false),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
@@ -48,7 +50,7 @@ class _AccountPageState extends State<AccountPage> {
           return _GuestContent();
         },
       ),
-      bottomNavigationBar: _BottomNav(currentIndex: 3),
+      bottomNavigationBar: const BottomNav(currentIndex: 3),
     );
   }
 }
@@ -59,13 +61,13 @@ class _AuthLoadingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: AppTheme.primary),
-          SizedBox(height: 16),
-          Text('Loading...', style: TextStyle(color: AppTheme.mutedForeground)),
+          CircularProgressIndicator(color: AppTheme.primaryColor(context)),
+          const SizedBox(height: 16),
+          Text('Loading...', style: TextStyle(color: AppTheme.mutedForegroundColor(context))),
         ],
       ),
     );
@@ -86,10 +88,10 @@ class _GuestContent extends StatelessWidget {
             width: 96,
             height: 96,
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
+              color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.person_outline, size: 40, color: AppTheme.primary),
+            child: Icon(Icons.person_outline, size: 40, color: AppTheme.primaryColor(context)),
           ),
           const SizedBox(height: 16),
           const Text(
@@ -102,7 +104,7 @@ class _GuestContent extends StatelessWidget {
             width: 320,
             child: Text(
               'Sign in to access your orders, wishlist, and personalized recommendations',
-              style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+              style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
               textAlign: TextAlign.center,
             ),
           ),
@@ -131,7 +133,7 @@ class _GuestContent extends StatelessWidget {
                 onPressed: () => context.push('/signup'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.2)),
+                  side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
                 ),
                 child: const Text('Create Account'),
@@ -144,7 +146,7 @@ class _GuestContent extends StatelessWidget {
             'Browse as Guest',
             style: TextStyle(
               fontSize: 12,
-              color: AppTheme.foreground.withValues(alpha: 0.4),
+              color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
               letterSpacing: 2,
               fontWeight: FontWeight.w500,
             ),
@@ -191,17 +193,17 @@ class _GuestOption extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: AppTheme.foreground.withValues(alpha: 0.05),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 20, color: AppTheme.foreground.withValues(alpha: 0.6)),
+              Icon(icon, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
               ),
-              Icon(Icons.chevron_right, size: 18, color: AppTheme.foreground.withValues(alpha: 0.4)),
+              Icon(Icons.chevron_right, size: 18, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
             ],
           ),
         ),
@@ -211,18 +213,30 @@ class _GuestOption extends StatelessWidget {
 }
 
 /// Logged in: matches React MobileAccountPage (profile, stats, menu sections, logout, version).
-class _AccountContent extends StatelessWidget {
+class _AccountContent extends StatefulWidget {
   const _AccountContent({required this.user});
   final UserEntity user;
 
+  @override
+  State<_AccountContent> createState() => _AccountContentState();
+}
+
+class _AccountContentState extends State<_AccountContent> {
   String get _memberSince {
-    if (user.createdAt.isEmpty) return 'Member';
-    final year = DateTime.tryParse(user.createdAt)?.year;
+    if (widget.user.createdAt.isEmpty) return 'Member';
+    final year = DateTime.tryParse(widget.user.createdAt)?.year;
     return year != null ? 'Member since $year' : 'Member';
   }
 
   @override
+  void initState() {
+    super.initState();
+    context.read<WishlistBloc>().add(const WishlistLoadRequested());
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = widget.user;
     final userName = user.name.isEmpty ? 'User' : user.name;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
@@ -234,10 +248,10 @@ class _AccountContent extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 40,
-                backgroundColor: AppTheme.muted,
+                backgroundColor: AppTheme.mutedColor(context),
                 child: Text(
                   userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context)),
                 ),
               ),
               const SizedBox(width: 16),
@@ -253,13 +267,13 @@ class _AccountContent extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       user.email,
-                      style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                      style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _memberSince,
-                      style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.4)),
+                      style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
                     ),
                   ],
                 ),
@@ -273,31 +287,37 @@ class _AccountContent extends StatelessWidget {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: AppTheme.foreground.withValues(alpha: 0.05),
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.settings_outlined, size: 18, color: AppTheme.foreground.withValues(alpha: 0.7)),
+                    child: Icon(Icons.settings_outlined, size: 18, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 24),
-          // Stats: use real counts when available from blocs; placeholders otherwise
-          Row(
-            children: [
-              Expanded(
-                child: _StatCard(value: '—', label: 'Orders', onTap: () => context.push('/orders')),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(value: '—', label: 'Wishlist', onTap: () => context.push('/wishlist')),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatCard(value: '—', label: 'Points', onTap: () => context.push('/rewards')),
-              ),
-            ],
+          // Stats: wishlist count from WishlistBloc; orders/points placeholders
+          BlocBuilder<WishlistBloc, WishlistState>(
+            buildWhen: (prev, next) => prev != next,
+            builder: (context, wishlistState) {
+              final wishlistCount = wishlistState is WishlistLoaded ? '${wishlistState.count}' : '0';
+              return Row(
+                children: [
+                  Expanded(
+                    child: _StatCard(value: '—', label: 'Orders', onTap: () => context.push('/orders')),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StatCard(value: wishlistCount, label: 'Wishlist', onTap: () => context.push('/wishlist')),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _StatCard(value: '—', label: 'Points', onTap: () => context.push('/rewards')),
+                  ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
           _SectionTitle(title: 'Orders & Shopping'),
@@ -349,7 +369,7 @@ class _AccountContent extends StatelessWidget {
           Center(
             child: Text(
               'Version 1.0.0',
-              style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.4)),
+              style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
             ),
           ),
         ],
@@ -372,7 +392,7 @@ class _SectionTitle extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w500,
-          color: AppTheme.foreground.withValues(alpha: 0.4),
+          color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
           letterSpacing: 2,
         ),
       ),
@@ -397,7 +417,7 @@ class _StatCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.foreground.withValues(alpha: 0.05),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -405,12 +425,12 @@ class _StatCard extends StatelessWidget {
             children: [
               Text(
                 value,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context)),
               ),
               const SizedBox(height: 4),
               Text(
                 label,
-                style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
               ),
             ],
           ),
@@ -447,17 +467,17 @@ class _MenuButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
               color: highlight
-                  ? AppTheme.primary.withValues(alpha: 0.1)
-                  : AppTheme.foreground.withValues(alpha: 0.05),
+                  ? AppTheme.primaryColor(context).withValues(alpha: 0.1)
+                  : AppTheme.foregroundColor(context).withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: highlight ? Border.all(color: AppTheme.primary.withValues(alpha: 0.2)) : null,
+              border: highlight ? Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.2)) : null,
             ),
             child: Row(
               children: [
                 Icon(
                   icon,
                   size: 20,
-                  color: highlight ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.6),
+                  color: highlight ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -466,7 +486,7 @@ class _MenuButton extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: highlight ? AppTheme.primary : null,
+                      color: highlight ? AppTheme.primaryColor(context) : null,
                     ),
                   ),
                 ),
@@ -475,8 +495,8 @@ class _MenuButton extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: highlight
-                          ? AppTheme.primary.withValues(alpha: 0.2)
-                          : AppTheme.foreground.withValues(alpha: 0.1),
+                          ? AppTheme.primaryColor(context).withValues(alpha: 0.2)
+                          : AppTheme.foregroundColor(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(9999),
                     ),
                     child: Text(
@@ -484,46 +504,17 @@ class _MenuButton extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: highlight ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.6),
+                        color: highlight ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                       ),
                     ),
                   ),
                 const SizedBox(width: 8),
-                Icon(Icons.chevron_right, size: 18, color: AppTheme.foreground.withValues(alpha: 0.4)),
+                Icon(Icons.chevron_right, size: 18, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({required this.currentIndex});
-  final int currentIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: currentIndex,
-      selectedItemColor: AppTheme.primary,
-      unselectedItemColor: AppTheme.mutedForeground,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'Categories'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-        BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Cart'),
-      ],
-      onTap: (i) {
-        if (i == 0) context.go('/');
-        if (i == 1) context.go('/categories');
-        if (i == 2) context.go('/search');
-        if (i == 3) context.go('/account');
-        if (i == 4) context.go('/cart');
-      },
     );
   }
 }

@@ -45,7 +45,7 @@ class _AddressesPageState extends State<AddressesPage> {
       });
     }
     return Scaffold(
-      backgroundColor: AppTheme.muted,
+      backgroundColor: AppTheme.mutedColor(context),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
@@ -58,8 +58,8 @@ class _AddressesPageState extends State<AddressesPage> {
           },
         ),
         title: const Text('Addresses'),
-        backgroundColor: AppTheme.background,
-        foregroundColor: AppTheme.foreground,
+        backgroundColor: AppTheme.backgroundColor(context),
+        foregroundColor: AppTheme.foregroundColor(context),
       ),
       body: BlocBuilder<AddressListBloc, AddressListState>(
         builder: (context, state) {
@@ -98,7 +98,7 @@ class _AddressesPageState extends State<AddressesPage> {
                   const SizedBox(height: 4),
                   Text(
                     'Manage your delivery addresses',
-                    style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                    style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                   ),
                   const SizedBox(height: 16),
                   // React: w-full bg-primary p-4 rounded-2xl, Plus 20, "Add New Address" font-medium
@@ -209,9 +209,9 @@ class _AddressCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.background,
+        color: AppTheme.backgroundColor(context),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
@@ -219,7 +219,7 @@ class _AddressCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(_typeIcon(address.type), size: 18, color: AppTheme.primary),
+              Icon(_typeIcon(address.type), size: 18, color: AppTheme.primaryColor(context)),
               const SizedBox(width: 8),
               Text(
                 _typeLabel(address.type),
@@ -230,12 +230,12 @@ class _AddressCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
                     'Default',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.primary),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context)),
                   ),
                 ),
             ],
@@ -248,22 +248,22 @@ class _AddressCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             address.addressLine,
-            style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.7)),
+            style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
           ),
           if (address.addressLine2 != null && address.addressLine2!.isNotEmpty)
             Text(
               address.addressLine2!,
-              style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.7)),
+              style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
             ),
           const SizedBox(height: 4),
           Text(
             '${address.city} - ${address.pincode}',
-            style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.7)),
+            style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
           ),
           const SizedBox(height: 4),
           Text(
             address.mobile,
-            style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+            style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
           ),
           const SizedBox(height: 12),
           Row(
@@ -275,7 +275,7 @@ class _AddressCard extends StatelessWidget {
                   label: const Text('Edit'),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    side: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
+                    side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -286,8 +286,8 @@ class _AddressCard extends StatelessWidget {
                   child: FilledButton(
                     onPressed: onSetDefault,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
-                      foregroundColor: AppTheme.primary,
+                      backgroundColor: AppTheme.primaryColor(context).withValues(alpha: 0.1),
+                      foregroundColor: AppTheme.primaryColor(context),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

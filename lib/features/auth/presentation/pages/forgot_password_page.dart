@@ -45,7 +45,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new),
@@ -71,24 +71,24 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 const SizedBox(height: 8),
                 Text(
                   'Enter your email and we\'ll send you a link to reset your password.',
-                  style: TextStyle(color: AppTheme.mutedForeground),
+                  style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
                 ),
                 const SizedBox(height: 32),
                 if (_sent)
                   Card(
-                    color: AppTheme.muted,
+                    color: AppTheme.mutedColor(context),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
                           Icon(Icons.check_circle,
-                              color: AppTheme.primary, size: 28),
+                              color: AppTheme.primaryColor(context), size: 28),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'If an account exists for ${_emailController.text}, you will receive an email with instructions.',
                               style: TextStyle(
-                                color: AppTheme.foreground,
+                                color: AppTheme.foregroundColor(context),
                                 fontSize: 14,
                               ),
                             ),
@@ -119,12 +119,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   ElevatedButton(
                     onPressed: _loading ? null : _submit,
                     child: _loading
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 24,
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppTheme.primaryForeground,
+                              color: AppTheme.primaryForegroundColor(context),
                             ),
                           )
                         : const Text('Send reset link'),

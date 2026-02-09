@@ -131,7 +131,7 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
@@ -162,7 +162,7 @@ class _SignupPageState extends State<SignupPage> {
                       icon: const Icon(Icons.close, size: 24),
                       style: IconButton.styleFrom(
                         foregroundColor:
-                            AppTheme.foreground.withValues(alpha: 0.7),
+                            AppTheme.foregroundColor(context).withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -203,11 +203,11 @@ class _SignupPageState extends State<SignupPage> {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
-            color: AppTheme.foreground.withValues(alpha: 0.6),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
           ),
         ),
         const SizedBox(height: 32),
-        _label('Full Name'),
+        _label(context, 'Full Name'),
         const SizedBox(height: 8),
         TextField(
           controller: _nameController,
@@ -218,7 +218,7 @@ class _SignupPageState extends State<SignupPage> {
           ),
         ),
         const SizedBox(height: 16),
-        _label('Email'),
+        _label(context, 'Email'),
         const SizedBox(height: 8),
         TextField(
           controller: _emailController,
@@ -229,7 +229,7 @@ class _SignupPageState extends State<SignupPage> {
           ),
         ),
         const SizedBox(height: 16),
-        _label('Phone'),
+        _label(context, 'Phone'),
         const SizedBox(height: 8),
         TextField(
           controller: _phoneController,
@@ -240,7 +240,7 @@ class _SignupPageState extends State<SignupPage> {
           ),
         ),
         const SizedBox(height: 16),
-        _label('Password'),
+        _label(context, 'Password'),
         const SizedBox(height: 8),
         TextField(
           controller: _passwordController,
@@ -260,7 +260,7 @@ class _SignupPageState extends State<SignupPage> {
               child: Checkbox(
                 value: _agreeTerms,
                 onChanged: (v) => setState(() => _agreeTerms = v ?? false),
-                activeColor: AppTheme.primary,
+                activeColor: AppTheme.primaryColor(context),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -274,17 +274,17 @@ class _SignupPageState extends State<SignupPage> {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppTheme.foreground.withValues(alpha: 0.6),
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                     ),
                     children: [
                       const TextSpan(text: 'I agree to the '),
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: () => context.push('/terms'),
-                          child: const Text(
+                          child: Text(
                             'Terms',
                             style: TextStyle(
-                              color: AppTheme.primary,
+                              color: AppTheme.primaryColor(context),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -294,10 +294,10 @@ class _SignupPageState extends State<SignupPage> {
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: () => context.push('/privacy'),
-                          child: const Text(
+                          child: Text(
                             'Privacy Policy',
                             style: TextStyle(
-                              color: AppTheme.primary,
+                              color: AppTheme.primaryColor(context),
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -316,19 +316,19 @@ class _SignupPageState extends State<SignupPage> {
           child: ElevatedButton(
             onPressed: _loading ? null : _sendOtp,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: AppTheme.primaryForeground,
+              backgroundColor: AppTheme.primaryColor(context),
+              foregroundColor: AppTheme.primaryForegroundColor(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
             child: _loading
-                ? const SizedBox(
+                ? SizedBox(
                     height: 24,
                     width: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppTheme.primaryForeground,
+                      color: AppTheme.primaryForegroundColor(context),
                     ),
                   )
                 : const Text('Send OTP'),
@@ -338,19 +338,19 @@ class _SignupPageState extends State<SignupPage> {
         Row(
           children: [
             Expanded(
-                child: Divider(color: AppTheme.border.withValues(alpha: 0.3))),
+                child: Divider(color: AppTheme.borderColor(context).withValues(alpha: 0.3))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'OR',
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppTheme.foreground.withValues(alpha: 0.4),
+                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
                 ),
               ),
             ),
             Expanded(
-                child: Divider(color: AppTheme.border.withValues(alpha: 0.3))),
+                child: Divider(color: AppTheme.borderColor(context).withValues(alpha: 0.3))),
           ],
         ),
         const SizedBox(height: 24),
@@ -367,7 +367,7 @@ class _SignupPageState extends State<SignupPage> {
           label: const Text('Continue with Google'),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            side: BorderSide(color: AppTheme.border.withValues(alpha: 0.3)),
+            side: BorderSide(color: AppTheme.borderColor(context).withValues(alpha: 0.3)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999),
             ),
@@ -381,14 +381,14 @@ class _SignupPageState extends State<SignupPage> {
               'Already have an account? ',
               style: TextStyle(
                 fontSize: 14,
-                color: AppTheme.foreground.withValues(alpha: 0.6),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
               ),
             ),
             TextButton(
               onPressed: () => context.pushReplacement('/login'),
-              child: const Text(
+              child: Text(
                 'Sign in',
-                style: TextStyle(color: AppTheme.primary),
+                style: TextStyle(color: AppTheme.primaryColor(context)),
               ),
             ),
           ],
@@ -410,13 +410,13 @@ class _SignupPageState extends State<SignupPage> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.1),
+            color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-            child: const Icon(
+            child: Icon(
               Icons.phone_outlined,
               size: 32,
-              color: AppTheme.primary,
+              color: AppTheme.primaryColor(context),
             ),
           ),
         ),
@@ -434,7 +434,7 @@ class _SignupPageState extends State<SignupPage> {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 14,
-            color: AppTheme.foreground.withValues(alpha: 0.6),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
             height: 1.4,
           ),
         ),
@@ -450,19 +450,19 @@ class _SignupPageState extends State<SignupPage> {
           child: ElevatedButton(
             onPressed: loading || _otp.join().length != 6 ? null : _verifyOtp,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary,
-              foregroundColor: AppTheme.primaryForeground,
+              backgroundColor: AppTheme.primaryColor(context),
+              foregroundColor: AppTheme.primaryForegroundColor(context),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
               ),
             ),
             child: loading
-                ? const SizedBox(
+                ? SizedBox(
                     height: 24,
                     width: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: AppTheme.primaryForeground,
+                      color: AppTheme.primaryForegroundColor(context),
                     ),
                   )
                 : const Text('Verify & Create Account'),
@@ -481,8 +481,8 @@ class _SignupPageState extends State<SignupPage> {
                   style: TextStyle(
                     fontSize: 14,
                     color: _countdown > 0
-                        ? AppTheme.foreground.withValues(alpha: 0.4)
-                        : AppTheme.primary,
+                        ? AppTheme.foregroundColor(context).withValues(alpha: 0.4)
+                        : AppTheme.primaryColor(context),
                   ),
                 ),
               ),
@@ -495,7 +495,7 @@ class _SignupPageState extends State<SignupPage> {
                   'Change phone number',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppTheme.foreground.withValues(alpha: 0.6),
+                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                   ),
                 ),
               ),
@@ -507,13 +507,13 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
-  Widget _label(String text) {
+  Widget _label(BuildContext context, String text) {
     return Text(
       text,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: AppTheme.foreground,
+        color: AppTheme.foregroundColor(context),
       ),
     );
   }
@@ -527,13 +527,13 @@ class _SignupPageState extends State<SignupPage> {
       prefixIcon: Icon(
         icon,
         size: 18,
-        color: AppTheme.foreground.withValues(alpha: 0.4),
+        color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
       ),
       filled: true,
-      fillColor: AppTheme.foreground.withValues(alpha: 0.05),
+      fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.3)),
+        borderSide: BorderSide(color: AppTheme.borderColor(context).withValues(alpha: 0.3)),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );

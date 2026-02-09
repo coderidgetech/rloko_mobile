@@ -23,7 +23,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -39,7 +39,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               const SizedBox(height: 8),
               Text(
                 'Choose a strong password to keep your account secure',
-                style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
               ),
               const SizedBox(height: 24),
               TextFormField(

@@ -51,7 +51,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.muted.withValues(alpha: 0.3),
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -65,7 +65,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
             const SizedBox(height: 4),
             Text(
               'Manage your saved payment options',
-              style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+              style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -87,11 +87,11 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                   padding: const EdgeInsets.symmetric(vertical: 48),
                   child: Column(
                     children: [
-                      Icon(Icons.credit_card, size: 48, color: AppTheme.foreground.withValues(alpha: 0.2)),
+                      Icon(Icons.credit_card, size: 48, color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
                       const SizedBox(height: 12),
                       Text(
                         'No payment methods saved',
-                        style: TextStyle(color: AppTheme.mutedForeground),
+                        style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
                       ),
                     ],
                   ),
@@ -126,7 +126,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.15)),
+          border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.15)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -148,8 +148,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          AppTheme.primary,
-                          AppTheme.primary.withValues(alpha: 0.6),
+                          AppTheme.primaryColor(context),
+                          AppTheme.primaryColor(context).withValues(alpha: 0.6),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(12),
@@ -170,11 +170,11 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                         ),
                         Text(
                           method.cardHolder!,
-                          style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                          style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                         ),
                         Text(
                           'Expires ${method.expiryDate}',
-                          style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground.withValues(alpha: 0.8)),
+                          style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context).withValues(alpha: 0.8)),
                         ),
                       ],
                     ),
@@ -183,20 +183,20 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check, size: 12, color: AppTheme.primary),
+                          Icon(Icons.check, size: 12, color: AppTheme.primaryColor(context)),
                           const SizedBox(width: 4),
                           Text(
                             'Default',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: AppTheme.primary,
+                              color: AppTheme.primaryColor(context),
                             ),
                           ),
                         ],
@@ -243,7 +243,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                         ),
                         Text(
                           method.upiId!,
-                          style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                          style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                         ),
                       ],
                     ),
@@ -252,20 +252,20 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check, size: 12, color: AppTheme.primary),
+                          Icon(Icons.check, size: 12, color: AppTheme.primaryColor(context)),
                           const SizedBox(width: 4),
                           Text(
                             'Default',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: AppTheme.primary,
+                              color: AppTheme.primaryColor(context),
                             ),
                           ),
                         ],
@@ -282,9 +282,9 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                     child: OutlinedButton(
                       onPressed: () => _setDefault(method.id),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.primary,
+                        foregroundColor: AppTheme.primaryColor(context),
                         side: BorderSide.none,
-                        backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                        backgroundColor: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: const Text('Set as Default'),

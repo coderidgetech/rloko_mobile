@@ -46,7 +46,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 80),
@@ -56,18 +56,18 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.05))),
+                border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.05))),
               ),
               child: Column(
                 children: [
-                  Icon(Icons.local_shipping_outlined, size: 24, color: AppTheme.mutedForeground),
+                  Icon(Icons.local_shipping_outlined, size: 24, color: AppTheme.mutedForegroundColor(context)),
                   const SizedBox(height: 8),
                   Text(
                     'DELIVERY INFORMATION',
                     style: TextStyle(
                       fontSize: 12,
                       letterSpacing: 3,
-                      color: AppTheme.mutedForeground,
+                      color: AppTheme.mutedForegroundColor(context),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -82,7 +82,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                   const SizedBox(height: 8),
                   Text(
                     'Fast, reliable shipping and hassle-free returns. Your satisfaction is our priority.',
-                    style: TextStyle(fontSize: 16, color: AppTheme.mutedForeground),
+                    style: TextStyle(fontSize: 16, color: AppTheme.mutedForegroundColor(context)),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -91,7 +91,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              color: AppTheme.foreground.withValues(alpha: 0.02),
+              color: AppTheme.foregroundColor(context).withValues(alpha: 0.02),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -109,7 +109,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.local_shipping_outlined, size: 24, color: AppTheme.mutedForeground),
+                      Icon(Icons.local_shipping_outlined, size: 24, color: AppTheme.mutedForegroundColor(context)),
                       const SizedBox(width: 12),
                       const Text(
                         'Shipping Information',
@@ -138,7 +138,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           children: [
-                            Text(_error!, style: TextStyle(color: AppTheme.mutedForeground)),
+                            Text(_error!, style: TextStyle(color: AppTheme.mutedForegroundColor(context))),
                             const SizedBox(height: 8),
                             TextButton(onPressed: _load, child: const Text('Retry')),
                           ],
@@ -149,12 +149,12 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        border: Border.all(color: AppTheme.border),
+                        border: Border.all(color: AppTheme.borderColor(context)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         'Standard delivery: 5-7 business days. Free shipping on orders over ₹2000.',
-                        style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                        style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                       ),
                     )
                   else
@@ -163,7 +163,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              border: Border.all(color: AppTheme.border),
+                              border: Border.all(color: AppTheme.borderColor(context)),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Column(
@@ -183,7 +183,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                                       '${m.estimatedDays} Business Days',
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: AppTheme.mutedForeground,
+                                        color: AppTheme.mutedForegroundColor(context),
                                       ),
                                     ),
                                   ],
@@ -193,7 +193,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                                   '₹${m.baseCost.toStringAsFixed(0)}',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: AppTheme.mutedForeground,
+                                    color: AppTheme.mutedForegroundColor(context),
                                   ),
                                 ),
                               ],
@@ -211,7 +211,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                     '• International shipping available to select countries\n'
                     '• P.O. boxes and military addresses accepted\n'
                     '• Currently unavailable in remote areas (will be notified at checkout)',
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground, height: 1.6),
+                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context), height: 1.6),
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -224,7 +224,7 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
                     '• Orders placed after 2 PM ship the next business day\n'
                     '• No shipping on Sundays and public holidays\n'
                     "• You'll receive tracking information via email once shipped",
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground, height: 1.6),
+                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context), height: 1.6),
                   ),
                 ],
               ),
@@ -242,9 +242,9 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.1)),
+            border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1)),
           ),
-          child: Icon(icon, size: 20, color: AppTheme.mutedForeground),
+          child: Icon(icon, size: 20, color: AppTheme.mutedForegroundColor(context)),
         ),
         const SizedBox(height: 8),
         Text(
@@ -252,13 +252,13 @@ class _ShippingInfoPageState extends State<ShippingInfoPage> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: AppTheme.mutedForeground,
+            color: AppTheme.mutedForegroundColor(context),
           ),
         ),
         const SizedBox(height: 4),
         Text(
           desc,
-          style: TextStyle(fontSize: 11, color: AppTheme.mutedForeground),
+          style: TextStyle(fontSize: 11, color: AppTheme.mutedForegroundColor(context)),
           textAlign: TextAlign.center,
         ),
       ],

@@ -53,7 +53,7 @@ class SafeCachedNetworkImage extends StatelessWidget {
       height: height,
       placeholder: placeholder ??
           (_, __) => Container(
-                color: AppTheme.muted,
+                color: AppTheme.mutedColor(context),
                 child: const Center(
                   child: SizedBox(
                     width: 24,
@@ -64,7 +64,7 @@ class SafeCachedNetworkImage extends StatelessWidget {
               ),
       errorWidget: errorWidget ??
           (_, __, ___) => Container(
-                color: AppTheme.muted,
+                color: AppTheme.mutedColor(context),
                 child: const Icon(Icons.image_not_supported, size: 40),
               ),
     );

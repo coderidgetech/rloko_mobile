@@ -50,11 +50,11 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: AppBar(
         title: const Text('Order confirmed'),
-        backgroundColor: AppTheme.background,
-        foregroundColor: AppTheme.foreground,
+        backgroundColor: AppTheme.backgroundColor(context),
+        foregroundColor: AppTheme.foregroundColor(context),
         automaticallyImplyLeading: false,
       ),
       body: _loading
@@ -72,7 +72,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
                           _error!,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: AppTheme.mutedForeground,
+                            color: AppTheme.mutedForegroundColor(context),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -115,7 +115,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
                         'Order number: $_orderNumber',
                         style: TextStyle(
                           fontSize: 16,
-                          color: AppTheme.mutedForeground,
+                          color: AppTheme.mutedForegroundColor(context),
                         ),
                         textAlign: TextAlign.center,
                       ),

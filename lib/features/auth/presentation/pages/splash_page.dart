@@ -106,7 +106,7 @@ class _SplashPageState extends State<SplashPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       body: Stack(
         children: [
           AnimatedBuilder(
@@ -118,9 +118,9 @@ class _SplashPageState extends State<SplashPage>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      AppTheme.primary.withOpacity(0.03),
+                      AppTheme.primaryColor(context).withOpacity(0.03),
                       Colors.transparent,
-                      AppTheme.primary.withOpacity(0.03),
+                      AppTheme.primaryColor(context).withOpacity(0.03),
                     ],
                   ),
                 ),
@@ -144,7 +144,7 @@ class _SplashPageState extends State<SplashPage>
                             style: TextStyle(
                               fontSize: 48,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.foreground,
+                              color: AppTheme.foregroundColor(context),
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -163,7 +163,7 @@ class _SplashPageState extends State<SplashPage>
                           style: TextStyle(
                             fontSize: 12,
                             letterSpacing: 3,
-                            color: AppTheme.mutedForeground,
+                            color: AppTheme.mutedForegroundColor(context),
                           ),
                         ),
                       );
@@ -177,7 +177,7 @@ class _SplashPageState extends State<SplashPage>
                         height: 4,
                         width: _barWidth.value,
                         decoration: BoxDecoration(
-                          color: AppTheme.primary,
+                          color: AppTheme.primaryColor(context),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       );
@@ -201,7 +201,7 @@ class _SplashPageState extends State<SplashPage>
                     style: TextStyle(
                       fontSize: 12,
                       letterSpacing: 4,
-                      color: AppTheme.mutedForeground.withOpacity(0.6),
+                      color: AppTheme.mutedForegroundColor(context).withOpacity(0.6),
                     ),
                   ),
                 );

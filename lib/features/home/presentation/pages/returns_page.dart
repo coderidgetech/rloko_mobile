@@ -55,7 +55,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -65,7 +65,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
             Center(
               child: Column(
                 children: [
-                  Icon(Icons.replay, size: 32, color: AppTheme.primary),
+                  Icon(Icons.replay, size: 32, color: AppTheme.primaryColor(context)),
                   const SizedBox(height: 8),
                   const Text(
                     'Easy Returns',
@@ -74,7 +74,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                   const SizedBox(height: 4),
                   Text(
                     '30-day hassle-free return policy',
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                   ),
                 ],
               ),
@@ -87,14 +87,14 @@ class _ReturnsPageState extends State<ReturnsPage> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppTheme.primary.withValues(alpha: 0.05),
+                          AppTheme.primaryColor(context).withValues(alpha: 0.05),
                           Colors.transparent,
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+                      border: Border.all(color: AppTheme.borderColor(context).withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -102,7 +102,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppTheme.primary,
+                            color: AppTheme.primaryColor(context),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -132,13 +132,13 @@ class _ReturnsPageState extends State<ReturnsPage> {
                                 s.$3,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.mutedForeground,
+                                  color: AppTheme.mutedForegroundColor(context),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Icon(s.$4, size: 20, color: AppTheme.primary),
+                        Icon(s.$4, size: 20, color: AppTheme.primaryColor(context)),
                       ],
                     ),
                   ),
@@ -169,7 +169,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.05),
+                color: AppTheme.primaryColor(context).withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -192,7 +192,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.muted.withValues(alpha: 0.5),
+                color: AppTheme.mutedColor(context).withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -205,18 +205,18 @@ class _ReturnsPageState extends State<ReturnsPage> {
                   const SizedBox(height: 8),
                   Text(
                     "We currently don't offer direct exchanges. If you need a different size or color, please return your original item and place a new order.",
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground, height: 1.4),
+                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context), height: 1.4),
                   ),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.1),
+                      color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       '💡 Tip: Contact us first - we may be able to hold the item you want while processing your return!',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.primary),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context)),
                     ),
                   ),
                 ],
@@ -236,7 +236,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      Text(_error!, style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground)),
+                      Text(_error!, style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context))),
                       const SizedBox(height: 8),
                       TextButton(onPressed: _load, child: const Text('Retry')),
                     ],
@@ -249,7 +249,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                   padding: const EdgeInsets.all(24),
                   child: Text(
                     'No return requests yet',
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                   ),
                 ),
               )
@@ -259,7 +259,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.foreground.withValues(alpha: 0.05),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
@@ -271,7 +271,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                   const SizedBox(height: 4),
                   Text(
                     'Contact our customer service team for assistance with your return',
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
@@ -299,7 +299,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: red ? Colors.red.shade50 : AppTheme.muted.withValues(alpha: 0.3),
+        color: red ? Colors.red.shade50 : AppTheme.mutedColor(context).withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
         border: red ? Border.all(color: Colors.red.shade100) : null,
       ),
@@ -331,7 +331,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                         item,
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppTheme.mutedForeground,
+                          color: AppTheme.mutedForegroundColor(context),
                         ),
                       ),
                     ),
@@ -351,10 +351,10 @@ class _ReturnsPageState extends State<ReturnsPage> {
           width: 32,
           height: 32,
           decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.1),
+            color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, size: 16, color: AppTheme.primary),
+          child: Icon(icon, size: 16, color: AppTheme.primaryColor(context)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -365,7 +365,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
               ),
             ],
           ),
@@ -382,7 +382,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.border),
+          border: Border.all(color: AppTheme.borderColor(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -417,7 +417,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
             const SizedBox(height: 8),
             Text(
               r.reason,
-              style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+              style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
             ),
             const SizedBox(height: 4),
             Text(
@@ -436,11 +436,11 @@ class _ReturnsPageState extends State<ReturnsPage> {
         return Colors.green;
       case 'approved':
       case 'processing':
-        return AppTheme.primary;
+        return AppTheme.primaryColor(context);
       case 'rejected':
         return Colors.red;
       default:
-        return AppTheme.mutedForeground;
+        return AppTheme.mutedForegroundColor(context);
     }
   }
 }

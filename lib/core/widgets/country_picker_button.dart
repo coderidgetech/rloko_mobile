@@ -17,7 +17,7 @@ class CountryPickerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppTheme.foreground.withValues(alpha: 0.05),
+      color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: () => _showPicker(context),
@@ -27,7 +27,7 @@ class CountryPickerButton extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 90),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+            border: Border.all(color: AppTheme.borderColor(context).withValues(alpha: 0.3)),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
@@ -47,13 +47,13 @@ class CountryPickerButton extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: AppTheme.foreground,
+                  color: AppTheme.foregroundColor(context),
                 ),
               ),
               Icon(
                 Icons.keyboard_arrow_down,
                 size: 20,
-                color: AppTheme.foreground.withValues(alpha: 0.4),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
               ),
             ],
           ),
@@ -133,7 +133,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: AppTheme.background,
+            color: AppTheme.backgroundColor(context),
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -143,7 +143,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.foreground.withValues(alpha: 0.2),
+                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -157,14 +157,14 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                     prefixIcon: Icon(
                       Icons.search,
                       size: 20,
-                      color: AppTheme.foreground.withValues(alpha: 0.4),
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
                     ),
                     filled: true,
-                    fillColor: AppTheme.muted.withValues(alpha: 0.5),
+                    fillColor: AppTheme.mutedColor(context).withValues(alpha: 0.5),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
-                        color: AppTheme.border.withValues(alpha: 0.3),
+                        color: AppTheme.borderColor(context).withValues(alpha: 0.3),
                       ),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
@@ -183,7 +183,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                     final isSelected = c.code == widget.selected.code;
                     return Material(
                       color: isSelected
-                          ? AppTheme.primary.withValues(alpha: 0.1)
+                          ? AppTheme.primaryColor(context).withValues(alpha: 0.1)
                           : null,
                       child: ListTile(
                         leading: Text(c.flag, style: const TextStyle(fontSize: 24)),
@@ -198,7 +198,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                           c.code,
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.foreground.withValues(alpha: 0.5),
+                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
                           ),
                         ),
                         trailing: Text(
@@ -206,7 +206,7 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: AppTheme.foreground.withValues(alpha: 0.7),
+                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
                           ),
                         ),
                         onTap: () => widget.onSelected(c),

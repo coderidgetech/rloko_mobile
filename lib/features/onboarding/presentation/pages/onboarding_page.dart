@@ -102,7 +102,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -118,7 +118,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: AppTheme.foreground.withValues(alpha: 0.6),
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -151,8 +151,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                   CachedNetworkImage(
                                     imageUrl: safeImageUrl(slide.image),
                                     fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(color: AppTheme.muted),
-                                    errorWidget: (_, __, ___) => Container(color: AppTheme.muted, child: const Icon(Icons.image, size: 48)),
+                                    placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                                    errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image, size: 48)),
                                   ),
                                   Container(
                                     decoration: BoxDecoration(
@@ -176,10 +176,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.1),
+                            color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(slide.icon, size: 40, color: AppTheme.primary),
+                          child: Icon(slide.icon, size: 40, color: AppTheme.primaryColor(context)),
                         ),
                         const SizedBox(height: 24),
                         Text(
@@ -197,7 +197,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.5,
-                            color: AppTheme.mutedForeground,
+                            color: AppTheme.mutedForegroundColor(context),
                           ),
                         ),
                       ],
@@ -233,7 +233,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           height: 8,
                           width: active ? 32 : 8,
                           decoration: BoxDecoration(
-                            color: active ? AppTheme.primary : const Color(0xFFE5E5E5),
+                            color: active ? AppTheme.primaryColor(context) : const Color(0xFFE5E5E5),
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
@@ -270,13 +270,13 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       child: RichText(
                         textAlign: TextAlign.center,
                         text: TextSpan(
-                          style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                          style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                           children: [
                             const TextSpan(text: 'Already have an account? '),
                             TextSpan(
                               text: 'Sign In',
                               style: TextStyle(
-                                color: AppTheme.primary,
+                                color: AppTheme.primaryColor(context),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

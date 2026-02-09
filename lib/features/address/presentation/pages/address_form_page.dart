@@ -106,7 +106,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
 
     if (_loadingAddress) {
       return Scaffold(
-        backgroundColor: AppTheme.background,
+        backgroundColor: AppTheme.backgroundColor(context),
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new),
@@ -119,7 +119,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       body: SafeArea(
         top: false,
         child: Column(
@@ -128,14 +128,14 @@ class _AddressFormPageState extends State<AddressFormPage> {
             Container(
               padding: EdgeInsets.only(top: topPadding, left: 16, right: 16, bottom: 12),
               decoration: BoxDecoration(
-                color: AppTheme.background,
-                border: Border(bottom: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.08))),
+                color: AppTheme.backgroundColor(context),
+                border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.08))),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Material(
-                    color: AppTheme.foreground.withValues(alpha: 0.05),
+                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(999),
                     child: InkWell(
                       onTap: () => context.pop(),
@@ -164,7 +164,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                     // Delivery Details section – match React
                     Row(
                       children: [
-                        Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primary),
+                        Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primaryColor(context)),
                         const SizedBox(width: 8),
                         const Text(
                           'Delivery Details',
@@ -175,7 +175,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                     const SizedBox(height: 4),
                     Text(
                       'Add a new delivery address for your orders',
-                      style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                      style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                     ),
                     const SizedBox(height: 24),
                     // Address type – Home / Work cards
@@ -306,9 +306,9 @@ class _AddressFormPageState extends State<AddressFormPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.background,
+                        color: AppTheme.backgroundColor(context),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.12)),
+                        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                       ),
                       child: Row(
                         children: [
@@ -320,7 +320,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                                 const SizedBox(height: 4),
                                 Text(
                                   'Use this address for future orders',
-                                  style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                                  style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                                 ),
                               ],
                             ),
@@ -328,7 +328,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                           Switch(
                             value: _isDefault,
                             onChanged: (v) => setState(() => _isDefault = v),
-                            activeColor: AppTheme.primary,
+                            activeColor: AppTheme.primaryColor(context),
                           ),
                         ],
                       ),
@@ -365,8 +365,8 @@ class _AddressFormPageState extends State<AddressFormPage> {
             Container(
               padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
               decoration: BoxDecoration(
-                color: AppTheme.background,
-                border: Border(top: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12))),
+                color: AppTheme.backgroundColor(context),
+                border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
               ),
               child: SizedBox(
                 width: double.infinity,
@@ -375,7 +375,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                    backgroundColor: AppTheme.primary,
+                    backgroundColor: AppTheme.primaryColor(context),
                   ),
                   child: _isLoading
                       ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -412,7 +412,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
-        fillColor: AppTheme.background,
+        fillColor: AppTheme.backgroundColor(context),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
@@ -500,23 +500,23 @@ class _TypeCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: selected ? AppTheme.primary.withValues(alpha: 0.05) : AppTheme.background,
+            color: selected ? AppTheme.primaryColor(context).withValues(alpha: 0.05) : AppTheme.backgroundColor(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.12),
+              color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.12),
               width: 2,
             ),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 24, color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.6)),
+              Icon(icon, size: 24, color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
               const SizedBox(height: 8),
               Text(
                 label,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: selected ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.6),
+                  color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                 ),
               ),
             ],

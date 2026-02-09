@@ -21,8 +21,8 @@ const _trendingSearches = [
 ];
 
 const _categories = <({String name, String link})>[
-  (name: 'Women', link: '/categories'),
-  (name: 'Men', link: '/categories'),
+  (name: 'Women', link: '/category/women'),
+  (name: 'Men', link: '/category/men'),
   (name: 'Dresses', link: '/category/women/dresses'),
   (name: 'Shoes', link: '/category/women/shoes'),
   (name: 'Bags', link: '/category/women/bags'),
@@ -69,7 +69,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: false),
       body: Column(
         children: [
@@ -86,14 +86,14 @@ class _SearchPageState extends State<SearchPage> {
                       prefixIcon: Icon(
                         Icons.search,
                         size: 18,
-                        color: AppTheme.foreground.withValues(alpha: 0.4),
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
                       ),
                       suffixIcon: _query.isNotEmpty
                           ? IconButton(
                               icon: Icon(
                                 Icons.close,
                                 size: 18,
-                                color: AppTheme.foreground.withValues(alpha: 0.6),
+                                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                               ),
                               onPressed: () {
                                 _searchController.clear();
@@ -103,7 +103,7 @@ class _SearchPageState extends State<SearchPage> {
                             )
                           : null,
                       filled: true,
-                      fillColor: AppTheme.foreground.withValues(alpha: 0.05),
+                      fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(999),
                         borderSide: BorderSide.none,
@@ -120,7 +120,7 @@ class _SearchPageState extends State<SearchPage> {
                     'Cancel',
                     style: TextStyle(
                         fontSize: 14,
-                        color: AppTheme.foreground.withValues(alpha: 0.7)),
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
                   ),
                 ),
               ],
@@ -194,7 +194,7 @@ class _SearchPageState extends State<SearchPage> {
                               '${filtered.length} items',
                               style: TextStyle(
                                   fontSize: 14,
-                                  color: AppTheme.foreground.withValues(alpha: 0.6)),
+                                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                             ),
                           ],
                         ),
@@ -254,14 +254,14 @@ class _SuggestionsView extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: AppTheme.foreground.withValues(alpha: 0.6)),
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                 ),
                 TextButton(
                   onPressed: onClearRecent,
                   child: Text(
                     'Clear All',
                     style: TextStyle(
-                        fontSize: 12, color: AppTheme.primary),
+                        fontSize: 12, color: AppTheme.primaryColor(context)),
                   ),
                 ),
               ],
@@ -271,13 +271,13 @@ class _SuggestionsView extends StatelessWidget {
                   leading: Icon(
                     Icons.access_time,
                     size: 18,
-                    color: AppTheme.foreground.withValues(alpha: 0.4),
+                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
                   ),
                   title: Text(s, style: const TextStyle(fontSize: 14)),
                   trailing: Icon(
                     Icons.chevron_right,
                     size: 16,
-                    color: AppTheme.foreground.withValues(alpha: 0.2),
+                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                   ),
                   onTap: () => onSearch(s),
                 )),
@@ -288,20 +288,20 @@ class _SuggestionsView extends StatelessWidget {
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.foreground.withValues(alpha: 0.6)),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
           ),
           const SizedBox(height: 12),
           ..._trendingSearches.map((s) => ListTile(
                 leading: Icon(
                   Icons.trending_up,
                   size: 18,
-                  color: AppTheme.primary,
+                  color: AppTheme.primaryColor(context),
                 ),
                 title: Text(s, style: const TextStyle(fontSize: 14)),
                 trailing: Icon(
                   Icons.chevron_right,
                   size: 16,
-                  color: AppTheme.foreground.withValues(alpha: 0.2),
+                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                 ),
                 onTap: () => onSearch(s),
               )),
@@ -311,7 +311,7 @@ class _SuggestionsView extends StatelessWidget {
             style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.foreground.withValues(alpha: 0.6)),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
           ),
           const SizedBox(height: 12),
           GridView.count(
@@ -323,7 +323,7 @@ class _SuggestionsView extends StatelessWidget {
             childAspectRatio: 2.5,
             children: _categories.map((cat) {
               return Material(
-                color: AppTheme.foreground.withValues(alpha: 0.05),
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
                 child: InkWell(
                   onTap: () => context.go(cat.link),

@@ -100,23 +100,23 @@ class _OtpInputState extends State<OtpInput> {
                 ),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AppTheme.foreground.withValues(alpha: 0.05),
+                  fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppTheme.border.withValues(alpha: 0.3),
+                      color: AppTheme.borderColor(context).withValues(alpha: 0.3),
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppTheme.border.withValues(alpha: 0.3),
+                      color: AppTheme.borderColor(context).withValues(alpha: 0.3),
                     ),
                   ),
-                  focusedBorder: OutlineInputBorder(
+                    focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                      color: AppTheme.primary,
+                    borderSide: BorderSide(
+                      color: AppTheme.primaryColor(context),
                       width: 2,
                     ),
                   ),

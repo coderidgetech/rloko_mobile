@@ -7,8 +7,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/bottom_nav.dart';
 import '../../../../core/widgets/safe_network_image.dart';
+import '../../../config/domain/entities/site_config.dart';
 import '../../../config/presentation/bloc/config_bloc.dart';
+import '../../../config/utils/config_category_utils.dart';
 import '../../../product/domain/entities/category_entity.dart';
 import '../../../product/domain/entities/product_entity.dart';
 import '../../../product/presentation/bloc/category_list_bloc.dart';
@@ -38,7 +41,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: false),
       body: SafeArea(
         child: RefreshIndicator(
@@ -48,30 +51,36 @@ class _HomePageState extends State<HomePage> {
             context.read<ConfigBloc>().add(const ConfigLoadRequested());
             context.read<InspirationVideosBloc>().add(const InspirationVideosLoadRequested(limit: 20));
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _HeroSection(),
-                const _StoryCirclesSection(),
-                const SizedBox(height: 24),
-                const _InspirationVideosSection(),
-                const SizedBox(height: 24),
-                _QuickStatsBanner(),
-                _ShopByCategorySection(),
-                Container(height: 8, color: AppTheme.foreground.withValues(alpha: 0.05)),
-                _HomeProductSections(),
-                _PromoBanner(),
-                _TrustBadges(),
-                _HomeFooter(),
-                const SizedBox(height: 24),
-              ],
-            ),
+          child: BlocBuilder<ConfigBloc, ConfigState>(
+            buildWhen: (a, b) => b is ConfigLoaded,
+            builder: (context, configState) {
+              final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (config.homepage.hero.enabled) const _HeroSection(),
+                    if (config.homepage.sections.shopByCategory) const _StoryCirclesSection(),
+                    if (config.homepage.sections.shopByCategory || config.homepage.sections.editorialFeatures) const SizedBox(height: 24),
+                    if (config.homepage.sections.editorialFeatures) const _InspirationVideosSection(),
+                    if (config.homepage.sections.editorialFeatures) const SizedBox(height: 24),
+                    _QuickStatsBanner(),
+                    if (config.homepage.sections.shopByCategory) _ShopByCategorySection(),
+                    if (config.homepage.sections.shopByCategory) Container(height: 8, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
+                    _HomeProductSections(config: config),
+                    if (config.homepage.sections.promotionalBanner) _PromoBanner(),
+                    _TrustBadges(),
+                    _HomeFooter(config: config),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              );
+            },
           ),
         ),
       ),
-      bottomNavigationBar: _BottomNav(currentIndex: 0),
+      bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }
 }
@@ -106,18 +115,18 @@ List<_HeroSlide> _buildHeroSlidesWithImages(List<_HeroSlide> slides) {
   ];
 }
 
-List<_HeroSlide> _heroSlidesFromConfig(Map<String, dynamic> config) {
-  final homepage = config['homepage'];
-  if (homepage is! Map) return _defaultHeroSlides();
-  final hero = homepage['hero'];
-  if (hero is! Map) return _defaultHeroSlides();
-  final heading = hero['heading']?.toString();
-  final subheading = hero['subheading']?.toString();
-  final cta = hero['primaryButtonText']?.toString() ?? 'Shop';
-  final link = hero['primaryButtonLink']?.toString() ?? '/categories';
-  final image = hero['backgroundImage']?.toString() ?? '';
-  if (heading == null || heading.isEmpty) return _defaultHeroSlides();
-  return [_HeroSlide(title: heading, subtitle: subheading ?? '', image: image, cta: cta, link: link)];
+List<_HeroSlide> _heroSlidesFromConfig(SiteConfig config) {
+  final hero = config.homepage.hero;
+  if (hero.heading.isEmpty) return _defaultHeroSlides();
+  return [
+    _HeroSlide(
+      title: hero.heading,
+      subtitle: hero.subheading,
+      image: hero.backgroundImage,
+      cta: hero.primaryButtonText.isEmpty ? 'Shop' : hero.primaryButtonText,
+      link: hero.primaryButtonLink.isEmpty ? '/categories' : hero.primaryButtonLink,
+    ),
+  ];
 }
 
 class _HeroSection extends StatefulWidget {
@@ -160,9 +169,8 @@ class _HeroSectionState extends State<_HeroSection> {
     return BlocBuilder<ConfigBloc, ConfigState>(
       buildWhen: (a, b) => b is ConfigLoaded,
       builder: (context, state) {
-        final raw = state is ConfigLoaded && state.config.isNotEmpty
-            ? _heroSlidesFromConfig(state.config)
-            : _defaultHeroSlides();
+        final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
+        final raw = _heroSlidesFromConfig(config);
         final slides = _buildHeroSlidesWithImages(raw);
         _startTimer(slides.length);
         return _HeroCarousel(slides: slides, pageController: _pageController);
@@ -182,7 +190,7 @@ class _StoryCirclesSection extends StatelessWidget {
       items.add(_StoryItem(
         id: c.id,
         title: c.name,
-        image: c.image.isNotEmpty ? c.image : placeholderImageUrl,
+        image: c.image.isNotEmpty ? c.image : fallbackImageForCategory(c.gender, c.slug),
         link: '/category/${c.gender}/${c.slug}',
       ));
     }
@@ -194,8 +202,14 @@ class _StoryCirclesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CategoryListBloc, CategoryListState>(
       builder: (context, state) {
-        final items = state is CategoryListLoaded && state.categories.isNotEmpty
-            ? _itemsFromCategories(state.categories)
+        var categories = state is CategoryListLoaded ? state.categories : <CategoryEntity>[];
+        if (categories.isEmpty) {
+          final configState = context.watch<ConfigBloc>().state;
+          final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
+          categories = categoriesFromConfig(config.categories);
+        }
+        final items = categories.isNotEmpty
+            ? _itemsFromCategories(categories)
             : [
                 _StoryItem(id: 'new', title: 'New', image: placeholderImageUrl, isNew: true, link: '/new-arrivals'),
                 _StoryItem(id: 'sale', title: 'Sale', image: placeholderImageUrl, link: '/sale'),
@@ -230,8 +244,8 @@ class _HeroCarousel extends StatelessWidget {
                   CachedNetworkImage(
                     imageUrl: safeImageUrl(s.image),
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: AppTheme.muted),
-                    errorWidget: (_, __, ___) => Container(color: AppTheme.muted, child: const Icon(Icons.image)),
+                    placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                    errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image)),
                   ),
                   Container(
                     decoration: BoxDecoration(
@@ -269,7 +283,7 @@ class _HeroCarousel extends StatelessWidget {
                             onPressed: () => context.push(s.link),
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.white,
-                              foregroundColor: AppTheme.foreground,
+                              foregroundColor: AppTheme.foregroundColor(context),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                             ),
@@ -336,8 +350,8 @@ class _StoryCirclesStrip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.background,
-        border: Border(bottom: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12))),
+        color: AppTheme.backgroundColor(context),
+        border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
       ),
       child: SizedBox(
         height: 88,
@@ -366,7 +380,7 @@ class _StoryCirclesStrip extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: item.isNew ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.2),
+                              color: item.isNew ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                               width: 2,
                             ),
                             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
@@ -377,7 +391,7 @@ class _StoryCirclesStrip extends StatelessWidget {
                               width: 60,
                               height: 60,
                               fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: AppTheme.muted),
+                              placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
                               errorWidget: (_, __, ___) => const Icon(Icons.image),
                             ),
                           ),
@@ -390,7 +404,7 @@ class _StoryCirclesStrip extends StatelessWidget {
                               width: 20,
                               height: 20,
                               decoration: BoxDecoration(
-                                color: AppTheme.primary,
+                                color: AppTheme.primaryColor(context),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white, width: 2),
                                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4)],
@@ -408,7 +422,7 @@ class _StoryCirclesStrip extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.foreground.withValues(alpha: 0.8)),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.8)),
                       ),
                     ),
                   ],
@@ -452,7 +466,7 @@ class _InspirationVideosSectionState extends State<_InspirationVideosSection> {
           return Container(
             padding: const EdgeInsets.symmetric(vertical: 24),
             child: Center(
-              child: Text('Loading videos...', style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground)),
+              child: Text('Loading videos...', style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context))),
             ),
           );
         }
@@ -487,7 +501,7 @@ class _InspirationVideosContent extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 24),
       child: Column(
         children: [
-          Text('Tik Tok', style: TextStyle(fontSize: 10, letterSpacing: 1.5, color: AppTheme.mutedForeground)),
+          Text('Tik Tok', style: TextStyle(fontSize: 10, letterSpacing: 1.5, color: AppTheme.mutedForegroundColor(context))),
           const SizedBox(height: 4),
           const Text('INSPIRATION', style: TextStyle(fontSize: 20, letterSpacing: 2, fontWeight: FontWeight.w300)),
           const SizedBox(height: 16),
@@ -511,8 +525,8 @@ class _InspirationVideosContent extends StatelessWidget {
                             CachedNetworkImage(
                               imageUrl: safeImageUrl(video.thumbnailUrl),
                               fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: AppTheme.muted),
-                              errorWidget: (_, __, ___) => Container(color: AppTheme.muted, child: const Icon(Icons.videocam_off)),
+                              placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                              errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.videocam_off)),
                             ),
                             Container(
                               decoration: BoxDecoration(
@@ -591,7 +605,7 @@ class _InspirationVideosContent extends StatelessWidget {
                         height: 6,
                         width: active ? 24 : 6,
                         decoration: BoxDecoration(
-                          color: active ? AppTheme.primary : AppTheme.border,
+                          color: active ? AppTheme.primaryColor(context) : AppTheme.borderColor(context),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -607,7 +621,7 @@ class _InspirationVideosContent extends StatelessWidget {
             child: Text(
               'Discover the latest trends and styling inspiration from our community. Get inspired by real fashion moments and elevate your style.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
+              style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
             ),
           ),
         ],
@@ -624,7 +638,7 @@ class _QuickStatsBanner extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: 0.05),
+        color: AppTheme.primaryColor(context).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -659,10 +673,10 @@ class _QuickStat extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
+              color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 18, color: AppTheme.primary),
+            child: Icon(icon, size: 18, color: AppTheme.primaryColor(context)),
           ),
           const SizedBox(height: 6),
           Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
@@ -680,7 +694,7 @@ class _ShopByCategorySection extends StatelessWidget {
       builder: (context, state) {
         if (state is CategoryListLoading) {
           return Container(
-            color: AppTheme.background,
+            color: AppTheme.backgroundColor(context),
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,7 +706,7 @@ class _ShopByCategorySection extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Explore our collections',
-                  style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                  style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                 ),
                 const SizedBox(height: 16),
                 GridView.builder(
@@ -708,7 +722,7 @@ class _ShopByCategorySection extends StatelessWidget {
                   itemCount: 6,
                   itemBuilder: (_, __) => Container(
                     decoration: BoxDecoration(
-                      color: AppTheme.muted,
+                      color: AppTheme.mutedColor(context),
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
@@ -719,7 +733,7 @@ class _ShopByCategorySection extends StatelessWidget {
         }
         if (state is CategoryListError) {
           return Container(
-            color: AppTheme.background,
+            color: AppTheme.backgroundColor(context),
             padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -731,18 +745,20 @@ class _ShopByCategorySection extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   state.message,
-                  style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+                  style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
                 ),
               ],
             ),
           );
         }
-        final categories = state is CategoryListLoaded ? state.categories : <CategoryEntity>[];
+        var categories = state is CategoryListLoaded ? state.categories : <CategoryEntity>[];
         if (categories.isEmpty) {
-          return const SizedBox.shrink();
+          final configState = context.watch<ConfigBloc>().state;
+          final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
+          categories = categoriesFromConfig(config.categories);
         }
         return Container(
-          color: AppTheme.background,
+          color: AppTheme.backgroundColor(context),
           padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -754,7 +770,7 @@ class _ShopByCategorySection extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 'Explore our collections',
-                style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
               ),
               const SizedBox(height: 16),
               GridView.builder(
@@ -789,7 +805,7 @@ class _ShopCategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final link = '/category/${category.gender}/${category.slug}';
-    final imageUrl = category.image.isNotEmpty ? category.image : placeholderImageUrl;
+    final imageUrl = category.image.isNotEmpty ? category.image : fallbackImageForCategory(category.gender, category.slug);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -803,9 +819,9 @@ class _ShopCategoryCard extends StatelessWidget {
               CachedNetworkImage(
                 imageUrl: safeImageUrl(imageUrl),
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(color: AppTheme.muted),
+                placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
                 errorWidget: (_, __, ___) =>
-                    Container(color: AppTheme.muted, child: const Icon(Icons.image)),
+                    Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image)),
               ),
               Container(
                 decoration: BoxDecoration(
@@ -857,25 +873,28 @@ class _ShopCategoryCard extends StatelessWidget {
 }
 
 class _HomeProductSections extends StatelessWidget {
+  const _HomeProductSections({required this.config});
+  final SiteConfig config;
+
   @override
   Widget build(BuildContext context) {
+    final s = config.homepage.sections;
     return BlocBuilder<ProductListBloc, ProductListState>(
       builder: (context, state) {
         if (state is ProductListHomeLoading) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                _SectionTitle(title: '✨ Featured'),
-                ProductGridSkeleton(itemCount: 4),
-                SizedBox(height: 24),
-                _SectionTitle(title: '🆕 New Arrivals'),
-                ProductGridSkeleton(itemCount: 4),
-                SizedBox(height: 24),
-                _SectionTitle(title: '🔥 On Sale'),
-                ProductGridSkeleton(itemCount: 4),
-              ],
-            ),
+          final children = <Widget>[];
+          if (s.featuredProducts) {
+            children.addAll([const _SectionTitle(title: '✨ Featured'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
+          }
+          if (s.newArrivals) {
+            children.addAll([const _SectionTitle(title: '🆕 New Arrivals'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
+          }
+          if (s.bestSellers) {
+            children.addAll([const _SectionTitle(title: '🔥 On Sale'), const ProductGridSkeleton(itemCount: 4)]);
+          }
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(children: children),
           );
         }
         if (state is ProductListError) {
@@ -885,29 +904,32 @@ class _HomeProductSections extends StatelessWidget {
           );
         }
         if (state is ProductListHomeLoaded) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (state.featured.isNotEmpty) ...[
-                _SectionTitle(title: '✨ Featured', onSeeAll: () => context.push('/all-products')),
-                _ProductGrid(products: state.featured),
-                const SizedBox(height: 16),
-                Divider(height: 2, color: AppTheme.foreground.withValues(alpha: 0.05)),
-                const SizedBox(height: 16),
-              ],
-              if (state.newArrivals.isNotEmpty) ...[
-                _SectionTitle(title: '🆕 New Arrivals', onSeeAll: () => context.push('/new-arrivals')),
-                _ProductGrid(products: state.newArrivals),
-                const SizedBox(height: 16),
-                Divider(height: 2, color: AppTheme.foreground.withValues(alpha: 0.05)),
-                const SizedBox(height: 16),
-              ],
-              if (state.sale.isNotEmpty) ...[
-                _SectionTitle(title: '🔥 On Sale', onSeeAll: () => context.push('/sale')),
-                _ProductGrid(products: state.sale),
-              ],
-            ],
-          );
+          final children = <Widget>[];
+          if (s.featuredProducts && state.featured.isNotEmpty) {
+            children.addAll([
+              _SectionTitle(title: '✨ Featured', onSeeAll: () => context.push('/all-products')),
+              _ProductGrid(products: state.featured),
+              const SizedBox(height: 16),
+              Divider(height: 2, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
+              const SizedBox(height: 16),
+            ]);
+          }
+          if (s.newArrivals && state.newArrivals.isNotEmpty) {
+            children.addAll([
+              _SectionTitle(title: '🆕 New Arrivals', onSeeAll: () => context.push('/new-arrivals')),
+              _ProductGrid(products: state.newArrivals),
+              const SizedBox(height: 16),
+              Divider(height: 2, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
+              const SizedBox(height: 16),
+            ]);
+          }
+          if (s.bestSellers && state.sale.isNotEmpty) {
+            children.addAll([
+              _SectionTitle(title: '🔥 On Sale', onSeeAll: () => context.push('/sale')),
+              _ProductGrid(products: state.sale),
+            ]);
+          }
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children);
         }
         return const SizedBox.shrink();
       },
@@ -972,9 +994,9 @@ class _PromoBanner extends StatelessWidget {
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: [
-            AppTheme.primary.withValues(alpha: 0.1),
-            AppTheme.primary.withValues(alpha: 0.05),
-            AppTheme.primary.withValues(alpha: 0.1),
+            AppTheme.primaryColor(context).withValues(alpha: 0.1),
+            AppTheme.primaryColor(context).withValues(alpha: 0.05),
+            AppTheme.primaryColor(context).withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
@@ -989,15 +1011,19 @@ class _PromoBanner extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Get exclusive deals and early access to sales',
-            style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+            style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("You're already using the Rloco app")),
+              );
+            },
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.foreground,
-              foregroundColor: AppTheme.background,
+              backgroundColor: AppTheme.foregroundColor(context),
+              foregroundColor: AppTheme.backgroundColor(context),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
             ),
@@ -1016,7 +1042,7 @@ class _TrustBadges extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12))),
+        border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1044,26 +1070,31 @@ class _TrustBadge extends StatelessWidget {
         Text(emoji, style: const TextStyle(fontSize: 24)),
         const SizedBox(height: 4),
         Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        Text(subtitle, style: TextStyle(fontSize: 10, color: AppTheme.foreground.withValues(alpha: 0.5))),
+        Text(subtitle, style: TextStyle(fontSize: 10, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
       ],
     );
   }
 }
 
 class _HomeFooter extends StatelessWidget {
+  const _HomeFooter({required this.config});
+  final SiteConfig config;
+
   @override
   Widget build(BuildContext context) {
-    // Match React: px-4 py-8 text-center, text-sm text-foreground/60 mb-2, gap-4 text-xs text-foreground/50
+    final copyright = config.navigation.footer.copyrightText.isNotEmpty
+        ? config.navigation.footer.copyrightText
+        : '© ${DateTime.now().year} ${config.general.siteName}. All rights reserved.';
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12))),
+        border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
       ),
       child: Column(
         children: [
           Text(
-            '© ${DateTime.now().year} Rloco. All rights reserved.',
-            style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+            copyright,
+            style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
@@ -1072,64 +1103,22 @@ class _HomeFooter extends StatelessWidget {
             children: [
               TextButton(
                 onPressed: () => context.push('/privacy'),
-                child: Text('Privacy', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+                child: Text('Privacy', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
               ),
-              Text(' • ', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+              Text(' • ', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
               TextButton(
                 onPressed: () => context.push('/terms'),
-                child: Text('Terms', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+                child: Text('Terms', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
               ),
-              Text(' • ', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+              Text(' • ', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
               TextButton(
                 onPressed: () => context.push('/help'),
-                child: Text('Help', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5))),
+                child: Text('Help', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  const _BottomNav({required this.currentIndex});
-
-  final int currentIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: currentIndex,
-      selectedItemColor: AppTheme.primary,
-      unselectedItemColor: AppTheme.mutedForeground,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'Categories'),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Account'),
-        BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Cart'),
-      ],
-      onTap: (index) {
-        switch (index) {
-          case 0:
-            context.go('/');
-            break;
-          case 1:
-            context.go('/categories');
-            break;
-          case 2:
-            context.go('/search');
-            break;
-          case 3:
-            context.go('/account');
-            break;
-          case 4:
-            context.go('/cart');
-            break;
-        }
-      },
     );
   }
 }

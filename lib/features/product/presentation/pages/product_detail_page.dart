@@ -138,7 +138,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
       padding: EdgeInsets.all(isGreen ? 12 : 16),
       decoration: BoxDecoration(
         color: isGreen ? greenBg : null,
-        border: isGreen ? null : Border.all(color: AppTheme.border),
+        border: isGreen ? null : Border.all(color: AppTheme.borderColor(context)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -147,7 +147,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
           Icon(
             icon,
             size: 20,
-            color: isGreen ? greenColor : AppTheme.foreground.withValues(alpha: 0.6),
+            color: isGreen ? greenColor : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -180,7 +180,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             crossed,
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppTheme.foreground.withValues(alpha: 0.4),
+                              color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
@@ -207,7 +207,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         const SizedBox(height: 4),
                         Text(
                           subtitle!,
-                          style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                          style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                         ),
                       ],
                     ],
@@ -224,8 +224,8 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
-          bottom: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.12)),
+          top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+          bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
         ),
       ),
       child: Column(
@@ -246,7 +246,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.add, size: 20, color: AppTheme.foreground),
+                    child: Icon(Icons.add, size: 20, color: AppTheme.foregroundColor(context)),
                   ),
                 ],
               ),
@@ -272,7 +272,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
       padding: const EdgeInsets.only(bottom: 16),
       decoration: showBorder
           ? BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppTheme.border.withValues(alpha: 0.5))),
+              border: Border(bottom: BorderSide(color: AppTheme.borderColor(context).withValues(alpha: 0.5))),
             )
           : null,
       child: Column(
@@ -287,7 +287,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 children: List.generate(5, (i) => Icon(
                   i < stars ? Icons.star : Icons.star_border,
                   size: 12,
-                  color: i < stars ? AppTheme.primary : AppTheme.foreground.withValues(alpha: 0.2),
+                  color: i < stars ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                 )),
               ),
             ],
@@ -295,12 +295,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
           const SizedBox(height: 8),
           Text(
             text,
-            style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.7), height: 1.5),
+            style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7), height: 1.5),
           ),
           const SizedBox(height: 4),
           Text(
             date,
-            style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.4)),
+            style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
           ),
         ],
       ),
@@ -310,7 +310,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: BlocBuilder<ProductDetailBloc, ProductDetailState>(
         builder: (context, state) {
@@ -375,18 +375,18 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         children: [
                           Container(
                             width: double.infinity,
-                            color: AppTheme.muted,
+                            color: AppTheme.mutedColor(context),
                             child: AspectRatio(
                               aspectRatio: 3 / 4,
                               child: CachedNetworkImage(
                                 imageUrl: safeImageUrl(images[_imageIndex.clamp(0, images.length - 1)]),
                                 fit: BoxFit.cover,
                                 placeholder: (_, __) => Container(
-                                  color: AppTheme.muted,
+                                  color: AppTheme.mutedColor(context),
                                   child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                                 ),
                                 errorWidget: (_, __, ___) => Container(
-                                  color: AppTheme.muted,
+                                  color: AppTheme.mutedColor(context),
                                   child: const Icon(Icons.image_not_supported, size: 64),
                                 ),
                               ),
@@ -424,7 +424,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                   child: Icon(
                                     isWishlisted ? Icons.favorite : Icons.favorite_border,
                                     size: 22,
-                                    color: isWishlisted ? AppTheme.primary : AppTheme.foreground,
+                                    color: isWishlisted ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context),
                                   ),
                                 ),
                               ),
@@ -480,16 +480,16 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                                     ),
                                     const SizedBox(width: 4),
-                                    Icon(Icons.star, size: 14, color: AppTheme.primary),
+                                    Icon(Icons.star, size: 14, color: AppTheme.primaryColor(context)),
                                     const SizedBox(width: 4),
                                     Text(
                                       '|',
-                                      style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5)),
+                                      style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       '${product.reviews}',
-                                      style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                                      style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                                     ),
                                   ],
                                 ),
@@ -517,7 +517,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: i == _imageIndex ? AppTheme.primary : Colors.transparent,
+                                        color: i == _imageIndex ? AppTheme.primaryColor(context) : Colors.transparent,
                                         width: 2,
                                       ),
                                     ),
@@ -526,7 +526,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                       imageUrl: safeImageUrl(images[i]),
                                       fit: BoxFit.cover,
                                       errorWidget: (_, __, ___) => Container(
-                                        color: AppTheme.muted,
+                                        color: AppTheme.mutedColor(context),
                                         child: const Icon(Icons.image),
                                       ),
                                     ),
@@ -558,7 +558,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         product.category,
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppTheme.foreground.withValues(alpha: 0.6),
+                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                         ),
                       ),
                       // Price row (match React: $price, strikethrough, % OFF badge)
@@ -580,7 +580,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                               _formatOriginalPrice(product),
                               style: TextStyle(
                                 fontSize: 16,
-                                color: AppTheme.foreground.withValues(alpha: 0.4),
+                                color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
                                 decoration: TextDecoration.lineThrough,
                               ),
                             ),
@@ -588,15 +588,15 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.15),
+                                color: AppTheme.primaryColor(context).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '${(((product.originalPrice! - product.price) / product.originalPrice!) * 100).round()}% OFF',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
-                                  color: AppTheme.primary,
+                                  color: AppTheme.primaryColor(context),
                                 ),
                               ),
                             ),
@@ -626,7 +626,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                       'Garment Measurement: Chest 41.0in',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: AppTheme.foreground.withValues(alpha: 0.6),
+                                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                                       ),
                                     ),
                                   ),
@@ -639,7 +639,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 children: [
                                   const Text('Size Chart'),
                                   const SizedBox(width: 4),
-                                  Icon(Icons.chevron_right, size: 18, color: AppTheme.primary),
+                                  Icon(Icons.chevron_right, size: 18, color: AppTheme.primaryColor(context)),
                                 ],
                               ),
                             ),
@@ -652,15 +652,15 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: AppTheme.primary.withValues(alpha: 0.15),
+                                color: AppTheme.primaryColor(context).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 'Size ${product.sizes[product.sizes.length ~/ 2]} Recommended',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
-                                  color: AppTheme.primary,
+                                  color: AppTheme.primaryColor(context),
                                 ),
                               ),
                             ),
@@ -684,10 +684,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 child: Container(
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: selected ? AppTheme.foreground : Colors.white,
+                                    color: selected ? AppTheme.foregroundColor(context) : Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: selected ? AppTheme.foreground : AppTheme.border,
+                                      color: selected ? AppTheme.foregroundColor(context) : AppTheme.borderColor(context),
                                       width: 2,
                                     ),
                                   ),
@@ -696,7 +696,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
-                                      color: selected ? AppTheme.background : AppTheme.foreground,
+                                      color: selected ? AppTheme.backgroundColor(context) : AppTheme.foregroundColor(context),
                                     ),
                                   ),
                                 ),
@@ -733,8 +733,8 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 context.push('/cart');
                               },
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.primary,
-                                side: const BorderSide(color: AppTheme.primary, width: 2),
+                                foregroundColor: AppTheme.primaryColor(context),
+                                side: BorderSide(color: AppTheme.primaryColor(context), width: 2),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -779,8 +779,8 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 );
                               },
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppTheme.primary,
-                                foregroundColor: AppTheme.primaryForeground,
+                                backgroundColor: AppTheme.primaryColor(context),
+                                foregroundColor: AppTheme.primaryForegroundColor(context),
                                 padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -810,12 +810,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppTheme.foreground.withValues(alpha: 0.05),
+                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.location_on_outlined, size: 18, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                            Icon(Icons.location_on_outlined, size: 18, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                             const SizedBox(width: 12),
                             const Expanded(
                               child: Text(
@@ -825,7 +825,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             ),
                             Text(
                               'Change',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context)),
                             ),
                           ],
                         ),
@@ -861,7 +861,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                           product.description.isEmpty
                               ? 'Crafted with meticulous attention to detail.'
                               : product.description,
-                          style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.7), height: 1.5),
+                          style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7), height: 1.5),
                         ),
                       ),
                       _mobileAccordion(
@@ -888,7 +888,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         headerTrailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.star, size: 14, color: AppTheme.primary),
+                            Icon(Icons.star, size: 14, color: AppTheme.primaryColor(context)),
                             const SizedBox(width: 4),
                             Text(
                               '${product.rating}',
@@ -906,9 +906,45 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             SizedBox(
                               width: double.infinity,
                               child: TextButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  showModalBottomSheet<void>(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    builder: (ctx) => DraggableScrollableSheet(
+                                      initialChildSize: 0.6,
+                                      maxChildSize: 0.9,
+                                      minChildSize: 0.3,
+                                      expand: false,
+                                      builder: (_, scrollController) => SingleChildScrollView(
+                                        controller: scrollController,
+                                        padding: const EdgeInsets.all(24),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Center(
+                                              child: Container(
+                                                width: 40,
+                                                height: 4,
+                                                decoration: BoxDecoration(
+                                                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                                                  borderRadius: BorderRadius.circular(2),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Text('All Reviews (${product.reviews})', style: Theme.of(context).textTheme.titleLarge),
+                                            const SizedBox(height: 16),
+                                            _reviewItem('Sarah M.', 5, 'Absolutely love this piece! The quality is amazing and fits perfectly. Highly recommend!', '2 days ago', showBorder: true),
+                                            _reviewItem('Emma R.', 5, 'Great product! True to size and very comfortable. Will definitely buy again.', '1 week ago', showBorder: true),
+                                            _reviewItem('Jessica L.', 4, 'Beautiful design and good quality. Runs slightly small, consider sizing up.', '2 weeks ago', showBorder: false),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                                 style: TextButton.styleFrom(
-                                  foregroundColor: AppTheme.primary,
+                                  foregroundColor: AppTheme.primaryColor(context),
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                 ),
                                 child: Text(
@@ -999,6 +1035,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     required String subtitle,
     required IconData icon,
     required List<ProductEntity> products,
+    VoidCallback? onViewAll,
   }) {
     if (products.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -1016,7 +1053,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                   children: [
                     Row(
                       children: [
-                        Icon(icon, size: 20, color: AppTheme.primary),
+                        Icon(icon, size: 20, color: AppTheme.primaryColor(context)),
                         const SizedBox(width: 8),
                         Text(
                           title,
@@ -1028,13 +1065,13 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                       ],
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: onViewAll ?? () => context.push('/all-products'),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('View All', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary)),
+                          Text('View All', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context))),
                           const SizedBox(width: 4),
-                          Icon(Icons.chevron_right, size: 16, color: AppTheme.primary),
+                          Icon(Icons.chevron_right, size: 16, color: AppTheme.primaryColor(context)),
                         ],
                       ),
                     ),
@@ -1043,7 +1080,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                  style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -1067,28 +1104,28 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              AppTheme.primary.withValues(alpha: 0.1),
-                              AppTheme.primary.withValues(alpha: 0.05),
+                              AppTheme.primaryColor(context).withValues(alpha: 0.1),
+                              AppTheme.primaryColor(context).withValues(alpha: 0.05),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppTheme.primary.withValues(alpha: 0.3),
+                            color: AppTheme.primaryColor(context).withValues(alpha: 0.3),
                             width: 2,
                           ),
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.chevron_right, size: 32, color: AppTheme.primary),
+                            Icon(Icons.chevron_right, size: 32, color: AppTheme.primaryColor(context)),
                             const SizedBox(height: 8),
                             Text(
                               'View All',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primary),
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context)),
                             ),
                             Text(
                               '${products.length} products',
-                              style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                              style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                             ),
                           ],
                         ),
@@ -1126,7 +1163,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                   imageUrl: safeImageUrl(p.firstImage ?? ''),
                   fit: BoxFit.cover,
                   errorWidget: (_, __, ___) => Container(
-                    color: AppTheme.muted,
+                    color: AppTheme.mutedColor(context),
                     child: const Icon(Icons.image),
                   ),
                 ),
@@ -1143,9 +1180,9 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.star, size: 12, color: AppTheme.primary),
+                  Icon(Icons.star, size: 12, color: AppTheme.primaryColor(context)),
                   const SizedBox(width: 4),
-                  Text('${p.rating}', style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.6))),
+                  Text('${p.rating}', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
                 ],
               ),
             ],
@@ -1154,13 +1191,13 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               children: [
                 Text(
                   '\$${p.price.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context)),
                 ),
                 if (p.originalPrice != null && p.originalPrice! > p.price) ...[
                   const SizedBox(width: 6),
                   Text(
                     '\$${p.originalPrice!.toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.4), decoration: TextDecoration.lineThrough),
+                    style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4), decoration: TextDecoration.lineThrough),
                   ),
                 ],
               ],
@@ -1190,7 +1227,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.auto_awesome, size: 20, color: AppTheme.primary),
+                    Icon(Icons.auto_awesome, size: 20, color: AppTheme.primaryColor(context)),
                     const SizedBox(width: 8),
                     const Text(
                       'Complete the Look',
@@ -1201,7 +1238,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 const SizedBox(height: 8),
                 Text(
                   'Bundle and save 10% on your purchase',
-                  style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+                  style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -1222,7 +1259,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isMain ? AppTheme.primary.withValues(alpha: 0.3) : AppTheme.border,
+                    color: isMain ? AppTheme.primaryColor(context).withValues(alpha: 0.3) : AppTheme.borderColor(context),
                     width: 2,
                   ),
                 ),
@@ -1233,8 +1270,8 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                       height: 24,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isMain ? AppTheme.primary : Colors.white,
-                        border: Border.all(color: AppTheme.border),
+                        color: isMain ? AppTheme.primaryColor(context) : Colors.white,
+                        border: Border.all(color: AppTheme.borderColor(context)),
                       ),
                       child: isMain ? const Icon(Icons.check, size: 14, color: Colors.white) : null,
                     ),
@@ -1248,7 +1285,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                           imageUrl: safeImageUrl(p.firstImage ?? ''),
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => Container(
-                            color: AppTheme.muted,
+                            color: AppTheme.mutedColor(context),
                             child: const Icon(Icons.image),
                           ),
                         ),
@@ -1268,12 +1305,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                           const SizedBox(height: 4),
                           Text(
                             p.category,
-                            style: TextStyle(fontSize: 12, color: AppTheme.foreground.withValues(alpha: 0.5)),
+                            style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '\$${p.price.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context)),
                           ),
                         ],
                       ),
@@ -1282,12 +1319,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.15),
+                          color: AppTheme.primaryColor(context).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           'SELECTED',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor(context)),
                         ),
                       ),
                   ],
@@ -1303,14 +1340,14 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+                border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Subtotal (${allProducts.length} items)', style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6))),
+                      Text('Subtotal (${allProducts.length} items)', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
                       Text(
                         '\$${allProducts.fold<double>(0, (s, p) => s + p.price).toStringAsFixed(2)}',
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -1329,7 +1366,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Divider(color: AppTheme.border),
+                  Divider(color: AppTheme.borderColor(context)),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1340,7 +1377,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         children: [
                           Text(
                             '\$${(allProducts.fold<double>(0, (s, p) => s + p.price) * 0.9).toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary),
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor(context)),
                           ),
                           Text(
                             'You save \$${(allProducts.fold<double>(0, (s, p) => s + p.price) * 0.1).toStringAsFixed(2)}',
@@ -1355,12 +1392,27 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                     width: double.infinity,
                     height: 48,
                     child: FilledButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        final cartBloc = context.read<CartBloc>();
+                        for (final p in allProducts) {
+                          cartBloc.add(CartAddItemRequested(CartItemEntity(
+                            productId: p.id,
+                            productName: p.name,
+                            image: p.firstImage ?? '',
+                            price: p.price,
+                            size: 'One Size',
+                            quantity: 1,
+                          )));
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${allProducts.length} item(s) added to cart')),
+                        );
+                      },
                       icon: const Icon(Icons.shopping_bag, size: 20),
                       label: const Text('Add Bundle to Cart'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
-                        foregroundColor: AppTheme.primaryForeground,
+                        backgroundColor: AppTheme.primaryColor(context),
+                        foregroundColor: AppTheme.primaryForegroundColor(context),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                       ),
                     ),
@@ -1399,9 +1451,9 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.1)),
+            border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1)),
           ),
-          child: Icon(icon, size: 18, color: AppTheme.mutedForeground),
+          child: Icon(icon, size: 18, color: AppTheme.mutedForegroundColor(context)),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1410,12 +1462,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             children: [
               Text(
                 title.toUpperCase(),
-                style: TextStyle(fontSize: 12, letterSpacing: 1, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 12, letterSpacing: 1, color: AppTheme.mutedForegroundColor(context)),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground.withValues(alpha: 0.8)),
+                style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context).withValues(alpha: 0.8)),
               ),
             ],
           ),
@@ -1428,7 +1480,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: AppTheme.foreground.withValues(alpha: 0.4)),
+        Icon(icon, size: 16, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1437,7 +1489,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               Text(title, style: const TextStyle(fontSize: 14)),
               Text(
                 subtitle,
-                style: TextStyle(fontSize: 12, color: AppTheme.mutedForeground),
+                style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
               ),
             ],
           ),
@@ -1451,7 +1503,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.foreground.withValues(alpha: 0.1)),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -1461,7 +1513,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Row(
                 children: [
-                  Icon(icon, size: 18, color: AppTheme.mutedForeground),
+                  Icon(icon, size: 18, color: AppTheme.mutedForegroundColor(context)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -1472,7 +1524,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.expand_more, size: 18, color: AppTheme.mutedForeground),
+                    child: Icon(Icons.expand_more, size: 18, color: AppTheme.mutedForegroundColor(context)),
                   ),
                 ],
               ),
@@ -1484,7 +1536,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: AppTheme.foreground.withValues(alpha: 0.1))),
+                border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1))),
               ),
               child: child,
             ),
@@ -1496,17 +1548,17 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     );
   }
 
-  static Widget _detailRow(String label, String value) {
+  Widget _detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: RichText(
         text: TextSpan(
-          style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
+          style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
           children: [
             TextSpan(
               text: '${label.toUpperCase()}: ',
-              style: const TextStyle(
-                color: AppTheme.foreground,
+              style: TextStyle(
+                color: AppTheme.foregroundColor(context),
                 fontWeight: FontWeight.w500,
                 letterSpacing: 1,
               ),
@@ -1519,13 +1571,13 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   }
 
   /// Match React Product Details: flex justify-between text-sm, left foreground/60, right font-medium
-  static Widget _productDetailRow(String label, String value) {
+  Widget _productDetailRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 14, color: AppTheme.foreground.withValues(alpha: 0.6)),
+          style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
         ),
         Text(
           value,
@@ -1535,11 +1587,11 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     );
   }
 
-  static Widget _sustainRow(IconData icon, String title, String body) {
+  Widget _sustainRow(IconData icon, String title, String body) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 16, color: AppTheme.mutedForeground),
+        Icon(icon, size: 16, color: AppTheme.mutedForegroundColor(context)),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1556,7 +1608,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               const SizedBox(height: 4),
               Text(
                 body,
-                style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground, height: 1.5),
+                style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context), height: 1.5),
               ),
             ],
           ),
@@ -1565,7 +1617,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     );
   }
 
-  static Widget _faqItem(String q, String a) {
+  Widget _faqItem(String q, String a) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1580,7 +1632,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
         const SizedBox(height: 4),
         Text(
           a,
-          style: TextStyle(fontSize: 14, color: AppTheme.mutedForeground, height: 1.5),
+          style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context), height: 1.5),
         ),
       ],
     );
