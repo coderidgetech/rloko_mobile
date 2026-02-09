@@ -40,7 +40,6 @@ import '../../features/order/presentation/pages/order_detail_page.dart';
 import '../../features/order/presentation/pages/orders_page.dart';
 import '../../features/address/presentation/pages/address_form_page.dart';
 import '../../features/address/presentation/pages/addresses_page.dart';
-import '../../features/order/presentation/pages/checkout_page.dart';
 import '../../features/order/presentation/pages/order_confirmation_page.dart';
 import '../../features/home/presentation/pages/help_center_page.dart';
 import '../../features/home/presentation/pages/not_found_page.dart';
@@ -68,7 +67,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/payment',
-        redirect: (_, __) => '/checkout',
+        redirect: (_, __) => '/cart',
       ),
       GoRoute(
         path: '/featured-collection',
@@ -269,7 +268,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/checkout',
-        builder: (context, state) => const CheckoutPage(),
+        redirect: (_, __) => '/cart',
       ),
       GoRoute(
         path: '/order-confirmation/:id',

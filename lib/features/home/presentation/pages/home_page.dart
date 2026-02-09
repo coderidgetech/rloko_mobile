@@ -872,30 +872,38 @@ class _ShopCategoryCard extends StatelessWidget {
   }
 }
 
-class _HomeProductSections extends StatelessWidget {
+class _HomeProductSections extends StatefulWidget {
   const _HomeProductSections({required this.config});
   final SiteConfig config;
 
   @override
+  State<_HomeProductSections> createState() => _HomeProductSectionsState();
+}
+
+class _HomeProductSectionsState extends State<_HomeProductSections> {
+  bool _requestedHomeReload = false;
+
+  @override
   Widget build(BuildContext context) {
-    final s = config.homepage.sections;
+    final s = widget.config.homepage.sections;
     return BlocBuilder<ProductListBloc, ProductListState>(
       builder: (context, state) {
+        // State was overwritten by ProductListLoadRequested (e.g. from product detail or search).
+        // Re-request home sections so Featured / New Arrivals / On Sale show again.
+        if (state is ProductListLoaded && !_requestedHomeReload) {
+          _requestedHomeReload = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              context.read<ProductListBloc>().add(const ProductListLoadHomeSections(limit: 10));
+            }
+          });
+          return _buildLoadingSections(context, s);
+        }
+        if (state is ProductListHomeLoaded) {
+          _requestedHomeReload = false;
+        }
         if (state is ProductListHomeLoading) {
-          final children = <Widget>[];
-          if (s.featuredProducts) {
-            children.addAll([const _SectionTitle(title: '✨ Featured'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
-          }
-          if (s.newArrivals) {
-            children.addAll([const _SectionTitle(title: '🆕 New Arrivals'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
-          }
-          if (s.bestSellers) {
-            children.addAll([const _SectionTitle(title: '🔥 On Sale'), const ProductGridSkeleton(itemCount: 4)]);
-          }
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(children: children),
-          );
+          return _buildLoadingSections(context, s);
         }
         if (state is ProductListError) {
           return Padding(
@@ -931,8 +939,28 @@ class _HomeProductSections extends StatelessWidget {
           }
           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: children);
         }
+        if (state is ProductListInitial || state is ProductListLoading) {
+          return _buildLoadingSections(context, s);
+        }
         return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _buildLoadingSections(BuildContext context, dynamic s) {
+    final children = <Widget>[];
+    if (s.featuredProducts) {
+      children.addAll([const _SectionTitle(title: '✨ Featured'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
+    }
+    if (s.newArrivals) {
+      children.addAll([const _SectionTitle(title: '🆕 New Arrivals'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
+    }
+    if (s.bestSellers) {
+      children.addAll([const _SectionTitle(title: '🔥 On Sale'), const ProductGridSkeleton(itemCount: 4)]);
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(children: children),
     );
   }
 }
@@ -972,7 +1000,7 @@ class _ProductGrid extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.65,
+          childAspectRatio: 0.52,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),

@@ -14,6 +14,7 @@ import '../../../cart/domain/entities/cart_item_entity.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../address/domain/entities/address_entity.dart';
 import '../../../address/domain/usecases/address_usecases.dart';
+import '../../../address/presentation/pages/address_form_page.dart';
 import '../../domain/entities/order_entity.dart';
 import '../../domain/usecases/order_usecases.dart';
 
@@ -76,6 +77,189 @@ class _CheckoutPageState extends State<CheckoutPage> {
         });
       }
     }
+  }
+
+  /// Show address form in a bottom sheet (add or edit). Returns true if saved.
+  Future<bool?> _showAddressFormSheet({String? addressId, AddressEntity? initialAddress}) async {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => SizedBox(
+        height: MediaQuery.of(ctx).size.height * 0.9,
+        child: ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          child: AddressFormPage(
+            addressId: addressId,
+            initialAddress: initialAddress,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Show address picker sheet: list of addresses + Add new. Calls [onSelect] when an address is chosen.
+  void _showAddressPickerSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.6),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Delivery address',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                children: [
+                  ..._addresses.map((a) {
+                    final selected = _selectedAddressId == a.id;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            setState(() => _selectedAddressId = a.id);
+                            Navigator.pop(ctx);
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppTheme.primaryColor(context).withValues(alpha: 0.08)
+                                  : AppTheme.backgroundColor(context),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: selected
+                                    ? AppTheme.primaryColor(context)
+                                    : AppTheme.foregroundColor(context).withValues(alpha: 0.12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        a.name,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${a.addressLine}, ${a.city}, ${a.pincode}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        a.mobile,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () async {
+                                    final result = await _showAddressFormSheet(addressId: a.id);
+                                    if (result == true && mounted) {
+                                      await _loadAddresses();
+                                      if (ctx.mounted) Navigator.pop(ctx);
+                                    }
+                                  },
+                                  icon: Icon(Icons.edit_outlined, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () async {
+                        Navigator.pop(ctx);
+                        final result = await _showAddressFormSheet();
+                        if (result == true && mounted) await _loadAddresses();
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor(context).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add, size: 22, color: AppTheme.primaryColor(context)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Add new address',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryColor(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   ShippingInfoEntity _addressToShipping(
@@ -321,23 +505,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           ),
                           const SizedBox(height: 16),
                         ],
-                        // React MobileAddressSelection: MapPin + "Select Delivery Address", subtitle
-                        Row(
-                          children: [
-                            Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primaryColor(context)),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Select Delivery Address',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Choose where you want your order delivered',
-                          style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
-                        ),
-                        const SizedBox(height: 16),
+                        // Delivery address – one compact card + Change (Myntra-style)
                         if (_addressesLoading)
                           const Center(
                             child: Padding(
@@ -345,243 +513,106 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                           )
-                        else if (_addresses.isEmpty) ...[
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: AppTheme.backgroundColor(context),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  'No saved addresses. Add one to continue.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                        else if (_addresses.isEmpty)
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () async {
+                                final result = await _showAddressFormSheet();
+                                if (result == true && mounted) await _loadAddresses();
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor(context).withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.25)),
                                 ),
-                                const SizedBox(height: 16),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    onPressed: () async {
-                                      await context.push('/addresses/add');
-                                      if (mounted) _loadAddresses();
-                                    },
-                                    icon: const Icon(Icons.add, size: 20),
-                                    label: const Text('Add address'),
-                                    style: FilledButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ]
-                        else
-                          ..._addresses.map((a) {
-                            final selected = _selectedAddressId == a.id;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () => setState(() => _selectedAddressId = a.id),
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      color: selected ? AppTheme.primaryColor(context).withValues(alpha: 0.05) : AppTheme.backgroundColor(context),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.12),
-                                        width: selected ? 2 : 1,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.location_on_outlined, size: 24, color: AppTheme.primaryColor(context)),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Add delivery address',
+                                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.foregroundColor(context)),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Tap to add where you want your order delivered',
+                                            style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                children: [
-                                                  Icon(
-                                                    a.type.toUpperCase() == 'HOME' ? Icons.home_outlined : (a.type.toUpperCase() == 'OFFICE' || a.type.toUpperCase() == 'WORK' ? Icons.work_outline : Icons.location_on_outlined),
-                                                    size: 16,
-                                                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
-                                                  ),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    a.type.toUpperCase(),
-                                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
-                                                  ),
-                                                  if (a.isDefault) ...[
-                                                    const SizedBox(width: 8),
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
-                                                        borderRadius: BorderRadius.circular(999),
-                                                      ),
-                                                      child: Text('DEFAULT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryColor(context))),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                              const SizedBox(height: 12),
-                                              Text(a.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                a.addressLine + (a.addressLine2 != null && a.addressLine2!.isNotEmpty ? ', ${a.addressLine2}' : ''),
-                                                style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '${a.city}, ${a.state} ${a.pincode}',
-                                                style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(a.country, style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7))),
-                                              const SizedBox(height: 2),
-                                              Text(a.mobile, style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7))),
-                                              if (selected) ...[
-                                                const SizedBox(height: 12),
-                                                Container(
-                                                  padding: const EdgeInsets.only(top: 12),
-                                                  decoration: BoxDecoration(
-                                                    border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      Expanded(
-                                                        child: TextButton.icon(
-                                                          onPressed: () async {
-                                                            await context.push('/addresses/edit/${a.id}');
-                                                            if (mounted) _loadAddresses();
-                                                          },
-                                                          icon: const Icon(Icons.edit_outlined, size: 14),
-                                                          label: const Text('Edit'),
-                                                          style: TextButton.styleFrom(foregroundColor: AppTheme.primaryColor(context)),
-                                                        ),
-                                                      ),
-                                                      Expanded(
-                                                        child: TextButton.icon(
-                                                          onPressed: () async {
-                                                            final confirm = await showDialog<bool>(
-                                                              context: context,
-                                                              builder: (ctx) => AlertDialog(
-                                                                title: const Text('Delete address?'),
-                                                                content: const Text('This address will be removed.'),
-                                                                actions: [
-                                                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                                                  FilledButton(
-                                                                    onPressed: () => Navigator.pop(ctx, true),
-                                                                    style: FilledButton.styleFrom(backgroundColor: AppTheme.destructive),
-                                                                    child: const Text('Delete'),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            );
-                                                            if (confirm == true && mounted) {
-                                                              await sl<DeleteAddressUseCase>().call(a.id);
-                                                              _loadAddresses();
-                                                            }
-                                                          },
-                                                          icon: const Icon(Icons.delete_outline, size: 14),
-                                                          label: const Text('Delete'),
-                                                          style: TextButton.styleFrom(foregroundColor: AppTheme.destructive),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                        ),
-                                        Container(
-                                          width: 24,
-                                          height: 24,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: selected ? AppTheme.primaryColor(context) : Colors.transparent,
-                                            border: Border.all(
-                                              color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
-                                              width: 2,
-                                            ),
-                                          ),
-                                          child: selected ? const Icon(Icons.check, size: 16, color: Colors.white) : null,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        if (_addresses.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          // Match React MobileAddressSelectionPage: full-width Add New Address, w-full py-4 rounded-2xl
-                          SizedBox(
-                            width: double.infinity,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () async {
-                                  await context.push('/addresses/add');
-                                  if (mounted) _loadAddresses();
-                                },
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor(context).withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.3), width: 2),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.add, size: 20, color: AppTheme.primaryColor(context)),
-                                      const SizedBox(width: 8),
-                                      Text('Add New Address', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context))),
-                                    ],
-                                  ),
+                                    Icon(Icons.chevron_right, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+                                  ],
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          // Delivery info box – match React
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
+                          )
+                        else
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _showAddressPickerSheet,
                               borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '📦 Delivery Information',
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF1E3A8A)),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.backgroundColor(context),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  DeliveryConstants.deliveryInfoBullets,
-                                  style: TextStyle(fontSize: 12, color: const Color(0xFF1E3A8A).withValues(alpha: 0.9), height: 1.4),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.location_on_outlined, size: 22, color: AppTheme.primaryColor(context)),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _addresses.firstWhere((a) => a.id == _selectedAddressId).name,
+                                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _addresses
+                                                .firstWhere((a) => a.id == _selectedAddressId)
+                                                .addressLine,
+                                            style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            _addresses.firstWhere((a) => a.id == _selectedAddressId).mobile,
+                                            style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: _showAddressPickerSheet,
+                                      child: const Text('Change'),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                        ],
+                        const SizedBox(height: 12),
+                        Text(
+                          DeliveryConstants.standardDeliveryDays,
+                          style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                        ),
+                        const SizedBox(height: 24),
                         const Text('Promo code (optional)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         TextField(

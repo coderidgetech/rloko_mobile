@@ -7,6 +7,7 @@ import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/bottom_nav.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../order/presentation/bloc/order_list_bloc.dart';
 import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
 
 class AccountPage extends StatefulWidget {
@@ -232,6 +233,7 @@ class _AccountContentState extends State<_AccountContent> {
   void initState() {
     super.initState();
     context.read<WishlistBloc>().add(const WishlistLoadRequested());
+    context.read<OrderListBloc>().add(const OrderListLoadRequested());
   }
 
   @override
@@ -297,25 +299,33 @@ class _AccountContentState extends State<_AccountContent> {
             ],
           ),
           const SizedBox(height: 24),
-          // Stats: wishlist count from WishlistBloc; orders/points placeholders
-          BlocBuilder<WishlistBloc, WishlistState>(
+          // Stats: orders from OrderListBloc, wishlist from WishlistBloc, points (0 until backend exists)
+          BlocBuilder<OrderListBloc, OrderListState>(
             buildWhen: (prev, next) => prev != next,
-            builder: (context, wishlistState) {
-              final wishlistCount = wishlistState is WishlistLoaded ? '${wishlistState.count}' : '0';
-              return Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(value: '—', label: 'Orders', onTap: () => context.push('/orders')),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(value: wishlistCount, label: 'Wishlist', onTap: () => context.push('/wishlist')),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(value: '—', label: 'Points', onTap: () => context.push('/rewards')),
-                  ),
-                ],
+            builder: (context, orderListState) {
+              final ordersCount = orderListState is OrderListLoaded
+                  ? '${orderListState.total}'
+                  : (orderListState is OrderListLoading ? '...' : '0');
+              return BlocBuilder<WishlistBloc, WishlistState>(
+                buildWhen: (prev, next) => prev != next,
+                builder: (context, wishlistState) {
+                  final wishlistCount = wishlistState is WishlistLoaded ? '${wishlistState.count}' : '0';
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(value: ordersCount, label: 'Orders', onTap: () => context.push('/orders')),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(value: wishlistCount, label: 'Wishlist', onTap: () => context.push('/wishlist')),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(value: '0', label: 'Points', onTap: () => context.push('/rewards')),
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),

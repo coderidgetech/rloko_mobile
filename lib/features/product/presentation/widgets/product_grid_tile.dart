@@ -156,93 +156,88 @@ class ProductGridTile extends StatelessWidget {
                 ],
               ),
             ),
-            // Product info: fixed height + clip so content never overflows the cell
+            // Product info: name, category, price — constrained so text fits and ellipsizes
             Flexible(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SizedBox(
-                    height: constraints.maxHeight,
-                    child: ClipRect(
-                      child: SingleChildScrollView(
-                        physics: const NeverScrollableScrollPhysics(),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (product.rating > 0) ...[
-                                Row(
-                                  children: [
-                                    Icon(Icons.star, size: 10, color: AppTheme.primaryColor(context)),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      product.rating.toStringAsFixed(1),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                              ],
-                              Text(
-                                product.name,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppTheme.foregroundColor(context),
-                                  height: 1.2,
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              if (product.category.isNotEmpty)
-                                Text(
-                                  product.category.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
-                                    letterSpacing: 0.5,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Text(
-                                    '\$${product.price.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppTheme.primaryColor(context),
-                                    ),
-                                  ),
-                                  if (product.originalPrice != null &&
-                                      product.originalPrice! > product.price) ...[
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '\$${product.originalPrice!.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
-                                        decoration: TextDecoration.lineThrough,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (product.rating > 0) ...[
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.star, size: 10, color: AppTheme.primaryColor(context)),
+                          const SizedBox(width: 2),
+                          Text(
+                            product.rating.toStringAsFixed(1),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
+                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                    Flexible(
+                      child: Text(
+                        product.name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.foregroundColor(context),
+                          height: 1.25,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(height: 2),
+                    if (product.category.isNotEmpty)
+                      Text(
+                        product.category.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
+                          letterSpacing: 0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '\$${product.price.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryColor(context),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (product.originalPrice != null &&
+                            product.originalPrice! > product.price)
+                          Text(
+                            '\$${product.originalPrice!.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

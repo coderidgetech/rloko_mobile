@@ -667,37 +667,76 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                           ),
                         ],
                         const SizedBox(height: 12),
-                        GridView.count(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          crossAxisCount: 4,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 2.2,
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
                           children: product.sizes.map((size) {
                             final selected = _selectedSize == size;
+                            final available = product.stock[size] ?? 0;
+                            final outOfStock = available == 0;
+                            final availabilityText = outOfStock
+                                ? 'Out of stock'
+                                : available <= 5
+                                    ? '$available left'
+                                    : 'In stock';
+                            final sizeColor = outOfStock
+                                ? AppTheme.foregroundColor(context).withValues(alpha: 0.4)
+                                : selected
+                                    ? AppTheme.backgroundColor(context)
+                                    : AppTheme.foregroundColor(context);
+                            final availabilityColor = outOfStock
+                                ? AppTheme.foregroundColor(context).withValues(alpha: 0.4)
+                                : selected
+                                    ? AppTheme.backgroundColor(context).withValues(alpha: 0.9)
+                                    : AppTheme.foregroundColor(context).withValues(alpha: 0.7);
                             return Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                onTap: () => setState(() => _selectedSize = size),
+                                onTap: outOfStock
+                                    ? null
+                                    : () => setState(() => _selectedSize = size),
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
-                                  alignment: Alignment.center,
+                                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
                                   decoration: BoxDecoration(
-                                    color: selected ? AppTheme.foregroundColor(context) : Colors.white,
+                                    color: outOfStock
+                                        ? AppTheme.foregroundColor(context).withValues(alpha: 0.06)
+                                        : selected
+                                            ? AppTheme.foregroundColor(context)
+                                            : Colors.white,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
-                                      color: selected ? AppTheme.foregroundColor(context) : AppTheme.borderColor(context),
+                                      color: outOfStock
+                                          ? AppTheme.borderColor(context)
+                                          : selected
+                                              ? AppTheme.foregroundColor(context)
+                                              : AppTheme.borderColor(context),
                                       width: 2,
                                     ),
                                   ),
-                                  child: Text(
-                                    size,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: selected ? AppTheme.backgroundColor(context) : AppTheme.foregroundColor(context),
+                                  child: Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: '$size  ',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: sizeColor,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: availabilityText,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w400,
+                                            color: availabilityColor,
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ),
