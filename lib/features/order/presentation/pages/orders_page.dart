@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
@@ -327,7 +328,7 @@ class _OrderCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '\$${order.total.toStringAsFixed(2)}',
+                          CurrencyScope.of(context).formatPrice(order.total, null),
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
                             fontSize: 18,

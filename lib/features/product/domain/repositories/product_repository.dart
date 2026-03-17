@@ -9,6 +9,7 @@ abstract class ProductRepository {
     String? gender,
     bool? onSale,
     bool? featured,
+    bool? gift,
     double? minPrice,
     double? maxPrice,
     String? sort,

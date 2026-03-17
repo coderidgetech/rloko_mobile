@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/form_hints.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/region/app_region.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/entities/address_entity.dart';
 import '../../domain/usecases/address_usecases.dart';
@@ -50,7 +52,8 @@ class _AddressFormPageState extends State<AddressFormPage> {
       _loadingAddress = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => _loadAddress());
     } else {
-      _countryController.text = 'USA';
+      final scope = CurrencyScope.maybeOf(context);
+      _countryController.text = scope?.region == AppRegion.india ? 'India' : 'USA';
     }
   }
 

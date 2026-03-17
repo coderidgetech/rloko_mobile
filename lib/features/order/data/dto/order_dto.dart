@@ -2,6 +2,7 @@ import '../../domain/entities/order_entity.dart';
 
 String _str(dynamic v) => v?.toString() ?? '';
 double _double(dynamic v) => (v is num) ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0.0;
+double? _doubleOrNull(dynamic v) => v == null ? null : ((v is num) ? v.toDouble() : double.tryParse(v.toString()));
 String _date(dynamic v) => v != null ? (DateTime.tryParse(v.toString())?.toIso8601String() ?? '') : '';
 
 class OrderItemDto {
@@ -12,6 +13,9 @@ class OrderItemDto {
     required this.price,
     required this.size,
     required this.quantity,
+    this.isGift,
+    this.giftWrapColor,
+    this.giftMessage,
   });
 
   factory OrderItemDto.fromJson(Map<String, dynamic> json) {
@@ -22,6 +26,9 @@ class OrderItemDto {
       price: _double(json['price']),
       size: json['size'] as String? ?? '',
       quantity: json['quantity'] is int ? json['quantity'] as int : 0,
+      isGift: json['is_gift'] as bool?,
+      giftWrapColor: json['gift_wrap_color'] as String?,
+      giftMessage: json['gift_message'] as String?,
     );
   }
 
@@ -31,6 +38,9 @@ class OrderItemDto {
   final double price;
   final String size;
   final int quantity;
+  final bool? isGift;
+  final String? giftWrapColor;
+  final String? giftMessage;
 
   OrderItemEntity toEntity() => OrderItemEntity(
         productId: productId,
@@ -39,6 +49,9 @@ class OrderItemDto {
         price: price,
         size: size,
         quantity: quantity,
+        isGift: isGift,
+        giftWrapColor: giftWrapColor,
+        giftMessage: giftMessage,
       );
 }
 
@@ -112,6 +125,7 @@ class CreateOrderRequestDto {
     required this.paymentMethod,
     this.paymentInfo,
     this.promotionCode,
+    this.giftPackingCharge,
   });
 
   final List<Map<String, dynamic>> items;
@@ -119,6 +133,7 @@ class CreateOrderRequestDto {
   final String paymentMethod;
   final Map<String, dynamic>? paymentInfo;
   final String? promotionCode;
+  final double? giftPackingCharge;
 
   Map<String, dynamic> toJson() => {
         'items': items,
@@ -126,6 +141,7 @@ class CreateOrderRequestDto {
         'payment_method': paymentMethod,
         if (paymentInfo != null && paymentInfo!.isNotEmpty) 'payment_info': paymentInfo,
         if (promotionCode != null && promotionCode!.isNotEmpty) 'promotion_code': promotionCode,
+        if (giftPackingCharge != null && giftPackingCharge! > 0) 'gift_packing_charge': giftPackingCharge,
       };
 }
 
@@ -139,6 +155,7 @@ class OrderDto {
     required this.subtotal,
     required this.discount,
     required this.shippingCost,
+    this.giftPackingCharge,
     required this.tax,
     required this.total,
     required this.status,
@@ -167,6 +184,7 @@ class OrderDto {
       subtotal: _double(json['subtotal']),
       discount: _double(json['discount']),
       shippingCost: _double(json['shipping_cost']),
+      giftPackingCharge: _doubleOrNull(json['gift_packing_charge']),
       tax: _double(json['tax']),
       total: _double(json['total']),
       status: json['status'] as String? ?? 'pending',
@@ -186,6 +204,7 @@ class OrderDto {
   final double subtotal;
   final double discount;
   final double shippingCost;
+  final double? giftPackingCharge;
   final double tax;
   final double total;
   final String status;
@@ -204,6 +223,7 @@ class OrderDto {
         subtotal: subtotal,
         discount: discount,
         shippingCost: shippingCost,
+        giftPackingCharge: giftPackingCharge,
         tax: tax,
         total: total,
         status: status,

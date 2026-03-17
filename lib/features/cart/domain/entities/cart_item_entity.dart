@@ -9,6 +9,9 @@ class CartItemEntity extends Equatable {
     this.priceInr,
     required this.size,
     required this.quantity,
+    this.isGift,
+    this.giftWrapColor,
+    this.giftMessage,
   });
 
   final String productId;
@@ -18,6 +21,9 @@ class CartItemEntity extends Equatable {
   final double? priceInr;
   final String size;
   final int quantity;
+  final bool? isGift;
+  final String? giftWrapColor;
+  final String? giftMessage;
 
   @override
   List<Object?> get props => [productId, size];

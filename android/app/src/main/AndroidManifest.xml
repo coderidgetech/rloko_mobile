@@ -2,10 +2,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:label="rloco_mobile"
+        android:label="Rloco"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"
         android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"

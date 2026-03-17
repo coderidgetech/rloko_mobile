@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/bottom_nav.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/wishlist_entity.dart';
@@ -54,6 +56,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
+      bottomNavigationBar: const BottomNav(currentIndex: 0),
       body: BlocBuilder<WishlistBloc, WishlistState>(
         builder: (context, state) {
           if (state is WishlistLoading) {
@@ -244,7 +247,7 @@ class _WishlistCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 if (price != null)
                   Text(
-                    '\$${price.toStringAsFixed(2)}',
+                    CurrencyScope.of(context).formatPrice(price, null),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

@@ -20,6 +20,7 @@ class ProductDto {
     required this.featured,
     required this.newArrival,
     required this.onSale,
+    this.isGift = false,
     required this.rating,
     required this.reviews,
     this.badge,
@@ -75,6 +76,7 @@ class ProductDto {
       featured: json['featured'] as bool? ?? false,
       newArrival: json['new_arrival'] as bool? ?? false,
       onSale: json['on_sale'] as bool? ?? false,
+      isGift: json['is_gift'] as bool? ?? false,
       rating: _double(json['rating']),
       reviews: json['reviews'] is int ? json['reviews'] as int : 0,
       badge: json['badge'] as String?,
@@ -108,6 +110,7 @@ class ProductDto {
   final bool featured;
   final bool newArrival;
   final bool onSale;
+  final bool isGift;
   final double rating;
   final int reviews;
   final String? badge;
@@ -142,6 +145,7 @@ class ProductDto {
         featured: featured,
         newArrival: newArrival,
         onSale: onSale,
+        isGift: isGift,
         rating: rating,
         reviews: reviews,
         badge: badge,

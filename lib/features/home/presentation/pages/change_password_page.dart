@@ -1,11 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 
-/// Change password (mock UI to match React MobileChangePasswordPage).
-/// Backend has forgot-password + reset with token; in-app change password can be added later.
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
 
@@ -15,10 +16,54 @@ class ChangePasswordPage extends StatefulWidget {
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _formKey = GlobalKey<FormState>();
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
   bool _obscureCurrent = true;
   bool _obscureNew = true;
   bool _obscureConfirm = true;
   bool _loading = false;
+
+  @override
+  void dispose() {
+    _currentController.dispose();
+    _newController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _changePassword() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _loading = true);
+    try {
+      await sl<DioClient>().dio.put<void>(
+        '/auth/password',
+        data: {
+          'current_password': _currentController.text,
+          'new_password': _newController.text,
+        },
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password changed successfully')),
+      );
+      context.go('/settings');
+    } on DioException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      final msg = e.response?.data?['message'] as String? ??
+          e.response?.data?['error'] as String? ??
+          'Failed to change password. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to change password. Please try again.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +88,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               ),
               const SizedBox(height: 24),
               TextFormField(
+                controller: _currentController,
                 obscureText: _obscureCurrent,
                 decoration: InputDecoration(
                   labelText: 'Current password',
@@ -52,9 +98,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     onPressed: () => setState(() => _obscureCurrent = !_obscureCurrent),
                   ),
                 ),
+                validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _newController,
                 obscureText: _obscureNew,
                 decoration: InputDecoration(
                   labelText: 'New password',
@@ -64,9 +112,15 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     onPressed: () => setState(() => _obscureNew = !_obscureNew),
                   ),
                 ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (v.length < 8) return 'Minimum 8 characters';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
               TextFormField(
+                controller: _confirmController,
                 obscureText: _obscureConfirm,
                 decoration: InputDecoration(
                   labelText: 'Confirm new password',
@@ -76,24 +130,17 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                     onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                 ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Required';
+                  if (v != _newController.text) return 'Passwords do not match';
+                  return null;
+                },
               ),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _loading
-                      ? null
-                      : () {
-                          setState(() => _loading = true);
-                          Future.delayed(const Duration(milliseconds: 800), () {
-                            if (!mounted) return;
-                            setState(() => _loading = false);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Password changed successfully')),
-                            );
-                            context.go('/settings');
-                          });
-                        },
+                  onPressed: _loading ? null : _changePassword,
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

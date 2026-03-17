@@ -8,6 +8,9 @@ class OrderItemEntity extends Equatable {
     required this.price,
     required this.size,
     required this.quantity,
+    this.isGift,
+    this.giftWrapColor,
+    this.giftMessage,
   });
 
   final String productId;
@@ -16,6 +19,9 @@ class OrderItemEntity extends Equatable {
   final double price;
   final String size;
   final int quantity;
+  final bool? isGift;
+  final String? giftWrapColor;
+  final String? giftMessage;
 
   @override
   List<Object?> get props => [productId, size];
@@ -58,6 +64,7 @@ class OrderEntity extends Equatable {
     required this.subtotal,
     required this.discount,
     required this.shippingCost,
+    this.giftPackingCharge,
     required this.tax,
     required this.total,
     required this.status,
@@ -76,6 +83,7 @@ class OrderEntity extends Equatable {
   final double subtotal;
   final double discount;
   final double shippingCost;
+  final double? giftPackingCharge;
   final double tax;
   final double total;
   final String status;

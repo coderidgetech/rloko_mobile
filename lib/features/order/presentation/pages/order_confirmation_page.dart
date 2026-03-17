@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/injection.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/usecases/order_usecases.dart';
 
@@ -122,7 +123,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
                       if (_total != null) ...[
                         const SizedBox(height: 8),
                         Text(
-                          'Total: \$${_total!.toStringAsFixed(2)}',
+                          'Total: ${CurrencyScope.of(context).formatPrice(_total!, null)}',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,

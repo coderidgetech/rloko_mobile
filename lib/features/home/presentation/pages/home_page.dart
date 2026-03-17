@@ -44,43 +44,94 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: false),
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            context.read<ProductListBloc>().add(const ProductListLoadHomeSections(limit: 10));
-            context.read<CategoryListBloc>().add(const CategoryListLoadRequested());
-            context.read<ConfigBloc>().add(const ConfigLoadRequested());
-            context.read<InspirationVideosBloc>().add(const InspirationVideosLoadRequested(limit: 20));
-          },
-          child: BlocBuilder<ConfigBloc, ConfigState>(
-            buildWhen: (a, b) => b is ConfigLoaded,
-            builder: (context, configState) {
-              final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
-              return SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (config.homepage.hero.enabled) const _HeroSection(),
-                    if (config.homepage.sections.shopByCategory) const _StoryCirclesSection(),
-                    if (config.homepage.sections.shopByCategory || config.homepage.sections.editorialFeatures) const SizedBox(height: 24),
-                    if (config.homepage.sections.editorialFeatures) const _InspirationVideosSection(),
-                    if (config.homepage.sections.editorialFeatures) const SizedBox(height: 24),
-                    _QuickStatsBanner(),
-                    if (config.homepage.sections.shopByCategory) _ShopByCategorySection(),
-                    if (config.homepage.sections.shopByCategory) Container(height: 8, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
-                    _HomeProductSections(config: config),
-                    if (config.homepage.sections.promotionalBanner) _PromoBanner(),
-                    _TrustBadges(),
-                    _HomeFooter(config: config),
-                    const SizedBox(height: 24),
-                  ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Delivery address bar matching React MobileHomeHeader row 2
+            const _HomeDeliveryBar(),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  context.read<ProductListBloc>().add(const ProductListLoadHomeSections(limit: 10));
+                  context.read<CategoryListBloc>().add(const CategoryListLoadRequested());
+                  context.read<ConfigBloc>().add(const ConfigLoadRequested());
+                  context.read<InspirationVideosBloc>().add(const InspirationVideosLoadRequested(limit: 20));
+                },
+                child: BlocBuilder<ConfigBloc, ConfigState>(
+                  buildWhen: (a, b) => b is ConfigLoaded,
+                  builder: (context, configState) {
+                    final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (config.homepage.hero.enabled) const _HeroSection(),
+                          if (config.homepage.sections.shopByCategory) const _StoryCirclesSection(),
+                          if (config.homepage.sections.shopByCategory || config.homepage.sections.editorialFeatures) const SizedBox(height: 24),
+                          if (config.homepage.sections.editorialFeatures) const _InspirationVideosSection(),
+                          if (config.homepage.sections.editorialFeatures) const SizedBox(height: 24),
+                          _QuickStatsBanner(),
+                          if (config.homepage.sections.shopByCategory) _ShopByCategorySection(),
+                          if (config.homepage.sections.shopByCategory) Container(height: 8, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
+                          const _GiftsSection(),
+                          Container(height: 8, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
+                          _HomeProductSections(config: config),
+                          if (config.homepage.sections.promotionalBanner) _PromoBanner(),
+                          _TrustBadges(),
+                          _HomeFooter(config: config),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: const BottomNav(currentIndex: 0),
+    );
+  }
+}
+
+/// Delivery address row matching React MobileHomeHeader: "Deliver to [Name] - [address...]"
+class _HomeDeliveryBar extends StatelessWidget {
+  const _HomeDeliveryBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.backgroundColor(context),
+      child: InkWell(
+        onTap: () => context.push('/delivery-location'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1))),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.location_on_outlined, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Deliver to Praneeth - 202 flat, 2nd floor, datta Krup...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.foregroundColor(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -872,6 +923,255 @@ class _ShopCategoryCard extends StatelessWidget {
   }
 }
 
+/// Perfect Gifts section: Gift For Her / Gift For Him cards linking to category.
+class _GiftsSection extends StatelessWidget {
+  const _GiftsSection();
+
+  static const _giftForHerImage =
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80';
+  static const _giftForHimImage =
+      'https://images.unsplash.com/photo-1549298240-0d8e60513026?w=600&q=80';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppTheme.backgroundColor(context),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 48,
+            height: 2,
+            child: Container(
+              color: AppTheme.primaryColor(context),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Perfect Gifts',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+              color: AppTheme.foregroundColor(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Handpicked for every special moment',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Ref: full-width stacked cards (grid-cols-1), each h-[280px], image h-[160px]
+          _GiftCard(
+            title: 'Gift For Her',
+            subtitle: 'Thoughtful presents she\'ll treasure',
+            imageUrl: _giftForHerImage,
+            link: '/gift-for-her',
+            accentColor: Colors.pink,
+            icon: Icons.favorite,
+            itemsLabel: '127 items',
+          ),
+          const SizedBox(height: 16),
+          _GiftCard(
+            title: 'Gift For Him',
+            subtitle: 'Perfect gifts for every gentleman',
+            imageUrl: _giftForHimImage,
+            link: '/gift-for-him',
+            accentColor: AppTheme.primaryColor(context),
+            icon: Icons.card_giftcard_outlined,
+            itemsLabel: '94 items',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GiftCard extends StatelessWidget {
+  const _GiftCard({
+    required this.title,
+    required this.subtitle,
+    required this.imageUrl,
+    required this.link,
+    required this.accentColor,
+    required this.icon,
+    required this.itemsLabel,
+  });
+
+  final String title;
+  final String subtitle;
+  final String imageUrl;
+  final String link;
+  final Color accentColor;
+  final IconData icon;
+  final String itemsLabel;
+
+  /// Ref mobile: h-[280px] total, image h-[160px], content flex-1; rounded-2xl, icon w-14 h-14 (56), top-4
+  static const double _cardHeight = 280;
+  static const double _imageHeight = 160;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => context.push(link),
+        borderRadius: BorderRadius.circular(16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: _cardHeight,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.1),
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: _imageHeight,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: safeImageUrl(imageUrl),
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) =>
+                            Container(color: AppTheme.mutedColor(context)),
+                        errorWidget: (_, __, ___) => Container(
+                          color: AppTheme.mutedColor(context),
+                          child: Icon(Icons.image, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.5),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 8,
+                              ),
+                            ],
+                          ),
+                          child: Icon(icon, size: 26, color: accentColor),
+                        ),
+                      ),
+                      Positioned(
+                        top: 16,
+                        left: 16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.95),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            itemsLabel,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.foregroundColor(context),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                    color: accentColor.withValues(alpha: 0.08),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                            color: AppTheme.foregroundColor(context),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: accentColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Text(
+                              'Explore Now',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.foregroundColor(context),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 16,
+                              color: AppTheme.foregroundColor(context),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeProductSections extends StatefulWidget {
   const _HomeProductSections({required this.config});
   final SiteConfig config;
@@ -889,8 +1189,9 @@ class _HomeProductSectionsState extends State<_HomeProductSections> {
     return BlocBuilder<ProductListBloc, ProductListState>(
       builder: (context, state) {
         // State was overwritten by ProductListLoadRequested (e.g. from product detail or search).
-        // Re-request home sections so Featured / New Arrivals / On Sale show again.
-        if (state is ProductListLoaded && !_requestedHomeReload) {
+        // Re-request home sections only when Home is the visible route (not when user is on category/search).
+        final isHomeCurrentRoute = ModalRoute.of(context)?.isCurrent ?? false;
+        if (state is ProductListLoaded && !_requestedHomeReload && isHomeCurrentRoute) {
           _requestedHomeReload = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (context.mounted) {

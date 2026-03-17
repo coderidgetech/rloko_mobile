@@ -1,11 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/form_hints.dart';
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../../../core/theme/app_theme.dart';
 
-/// Forgot password: email field and submit. Backend has POST /auth/forgot-password;
-/// this page is UI-only until we add the API call in a later step.
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
 
@@ -25,21 +26,39 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _loading = true;
       _sent = false;
     });
-    // TODO: call forgot-password API when backend endpoint is wired
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await sl<DioClient>().dio.post<void>(
+        '/auth/forgot-password',
+        data: {'email': _emailController.text.trim()},
+      );
       if (mounted) {
         setState(() {
           _loading = false;
           _sent = true;
         });
       }
-    });
+    } on DioException catch (e) {
+      if (!mounted) return;
+      final msg = e.response?.data?['message'] as String? ??
+          e.response?.data?['error'] as String? ??
+          'Failed to send reset link. Please try again.';
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to send reset link. Please try again.')),
+      );
+    }
   }
 
   @override

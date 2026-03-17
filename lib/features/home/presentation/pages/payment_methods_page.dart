@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 
-/// Payment methods list – design matches React MobilePaymentMethodsPage (mock; no saved-methods API).
+/// Payment methods list – shows cards/UPI added this session.
+/// A full saved-payments API can be wired here once the backend endpoint is available;
+/// for now the list starts empty and only persists for the current session.
 class PaymentMethodsPage extends StatefulWidget {
   const PaymentMethodsPage({super.key});
 
@@ -13,22 +15,7 @@ class PaymentMethodsPage extends StatefulWidget {
 }
 
 class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
-  final List<_PaymentMethod> _methods = [
-    _PaymentMethod(
-      id: '1',
-      type: 'card',
-      cardNumber: '**** **** **** 4532',
-      cardHolder: 'PRANEETH KUMAR',
-      expiryDate: '12/26',
-      isDefault: true,
-    ),
-    _PaymentMethod(
-      id: '2',
-      type: 'upi',
-      upiId: 'praneeth@paytm',
-      isDefault: false,
-    ),
-  ];
+  final List<_PaymentMethod> _methods = [];
 
   void _setDefault(String id) {
     setState(() {

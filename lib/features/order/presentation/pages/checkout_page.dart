@@ -8,6 +8,7 @@ import '../../../../core/constants/form_hints.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
@@ -637,13 +638,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           ),
                           child: Column(
                             children: [
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text('\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text(CurrencyScope.of(context).formatPrice(subtotal, null), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))]),
                               const SizedBox(height: 8),
                               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Shipping', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text(DeliveryConstants.calculatedAtCheckout, style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)))]),
                               const SizedBox(height: 12),
                               Divider(height: 1, color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                               const SizedBox(height: 12),
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total (approx)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), Text('\$${subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total (approx)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), Text(CurrencyScope.of(context).formatPrice(subtotal, null), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
                             ],
                           ),
                         ),

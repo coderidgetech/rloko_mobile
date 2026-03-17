@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/injection.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/safe_network_image.dart';
@@ -107,10 +108,13 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     );
   }
 
-  /// Match React: display $ price (text-2xl font-bold / text-base line-through)
-  String _formatPrice(ProductEntity p) => '\$${p.price.toStringAsFixed(2)}';
-  String _formatOriginalPrice(ProductEntity p) =>
-      p.originalPrice != null ? '\$${p.originalPrice!.toStringAsFixed(2)}' : '';
+  /// Match React: display price in selected region (USD/INR)
+  String _formatPrice(BuildContext context, ProductEntity p) =>
+      CurrencyScope.of(context).formatPrice(p.price, p.priceInr);
+  String _formatOriginalPrice(BuildContext context, ProductEntity p) =>
+      p.originalPrice != null
+          ? CurrencyScope.of(context).formatPrice(p.originalPrice!, null)
+          : '';
 
   void _toggleSection(String section) {
     setState(() => _expandedSection = _expandedSection == section ? '' : section);
@@ -546,12 +550,38 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Title & category
-                      Text(
-                        product.name,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              product.name,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          if (product.isGift) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade100,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: Colors.amber.shade700),
+                              ),
+                              child: Text(
+                                'GIFT',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -568,7 +598,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            _formatPrice(product),
+                            _formatPrice(context, product),
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -577,7 +607,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                           if (product.originalPrice != null && product.originalPrice! > product.price) ...[
                             const SizedBox(width: 12),
                             Text(
-                              _formatOriginalPrice(product),
+                              _formatOriginalPrice(context, product),
                               style: TextStyle(
                                 fontSize: 16,
                                 color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
@@ -1229,13 +1259,13 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             Row(
               children: [
                 Text(
-                  '\$${p.price.toStringAsFixed(2)}',
+                  CurrencyScope.of(context).formatPrice(p.price, p.priceInr),
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context)),
                 ),
                 if (p.originalPrice != null && p.originalPrice! > p.price) ...[
                   const SizedBox(width: 6),
                   Text(
-                    '\$${p.originalPrice!.toStringAsFixed(2)}',
+                    CurrencyScope.of(context).formatPrice(p.originalPrice!, null),
                     style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4), decoration: TextDecoration.lineThrough),
                   ),
                 ],
@@ -1348,7 +1378,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '\$${p.price.toStringAsFixed(2)}',
+                            CurrencyScope.of(context).formatPrice(p.price, p.priceInr),
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context)),
                           ),
                         ],
@@ -1388,7 +1418,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                     children: [
                       Text('Subtotal (${allProducts.length} items)', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
                       Text(
-                        '\$${allProducts.fold<double>(0, (s, p) => s + p.price).toStringAsFixed(2)}',
+                        CurrencyScope.of(context).formatPrice(allProducts.fold<double>(0, (s, p) => s + p.price), null),
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -1399,7 +1429,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                     children: [
                       Text('Bundle Discount (10%)', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF16A34A))),
                       Text(
-                        '-\$${(allProducts.fold<double>(0, (s, p) => s + p.price) * 0.1).toStringAsFixed(2)}',
+                        '-${CurrencyScope.of(context).formatPrice((allProducts.fold<double>(0, (s, p) => s + p.price) * 0.1), null)}',
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF16A34A)),
                       ),
                     ],
@@ -1415,11 +1445,11 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            '\$${(allProducts.fold<double>(0, (s, p) => s + p.price) * 0.9).toStringAsFixed(2)}',
+                            CurrencyScope.of(context).formatPrice((allProducts.fold<double>(0, (s, p) => s + p.price) * 0.9), null),
                             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor(context)),
                           ),
                           Text(
-                            'You save \$${(allProducts.fold<double>(0, (s, p) => s + p.price) * 0.1).toStringAsFixed(2)}',
+                            'You save ${CurrencyScope.of(context).formatPrice((allProducts.fold<double>(0, (s, p) => s + p.price) * 0.1), null)}',
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF16A34A)),
                           ),
                         ],
@@ -1469,10 +1499,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 color: const Color(0xFFF0FDF4),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  '✨ Free shipping on orders over \$50',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF166534)),
+                  '✨ Free shipping on orders over ${CurrencyScope.of(context).formatPrice(50, null)}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF166534)),
                 ),
               ),
             ),

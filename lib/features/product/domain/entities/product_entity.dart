@@ -20,6 +20,7 @@ class ProductEntity extends Equatable {
     required this.featured,
     required this.newArrival,
     required this.onSale,
+    this.isGift = false,
     required this.rating,
     required this.reviews,
     this.badge,
@@ -48,6 +49,7 @@ class ProductEntity extends Equatable {
   final bool featured;
   final bool newArrival;
   final bool onSale;
+  final bool isGift;
   final double rating;
   final int reviews;
   final String? badge;
@@ -60,5 +62,5 @@ class ProductEntity extends Equatable {
   String? get firstImage => images.isNotEmpty ? images.first : null;
 
   @override
-  List<Object?> get props => [id, name, price];
+  List<Object?> get props => [id, name, price, isGift];
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/form_hints.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/bottom_nav.dart';
 import '../bloc/product_list_bloc.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/product_grid_skeleton.dart';
@@ -224,6 +225,7 @@ class _SearchPageState extends State<SearchPage> {
           ),
         ],
       ),
+      bottomNavigationBar: const BottomNav(currentIndex: 2),
     );
   }
 }

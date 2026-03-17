@@ -47,6 +47,7 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
         gender: event.gender,
         onSale: event.onSale,
         featured: event.featured,
+        gift: event.gift,
         minPrice: event.minPrice,
         maxPrice: event.maxPrice,
         sort: event.sort,

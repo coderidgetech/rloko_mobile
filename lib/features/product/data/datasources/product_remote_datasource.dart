@@ -17,6 +17,7 @@ class ProductRemoteDataSource {
     String? gender,
     bool? onSale,
     bool? featured,
+    bool? gift,
     double? minPrice,
     double? maxPrice,
     String? sort,
@@ -28,6 +29,7 @@ class ProductRemoteDataSource {
     if (gender != null && gender.isNotEmpty) query['gender'] = gender;
     if (onSale == true) query['on_sale'] = 'true';
     if (featured == true) query['featured'] = 'true';
+    if (gift == true) query['gift'] = 'true';
     if (minPrice != null) query['min_price'] = minPrice;
     if (maxPrice != null) query['max_price'] = maxPrice;
     if (sort != null && sort.isNotEmpty) query['sort'] = sort;

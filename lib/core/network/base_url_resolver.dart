@@ -1,20 +1,29 @@
 import 'dart:io' show Platform;
 
-/// Resolves API base URL for the app.
+/// Resolves the API base URL at startup.
 ///
-/// - Use `--dart-define=API_BASE_URL=http://YOUR_IP:8081/api` to override (e.g. physical device).
-/// - Android emulator: default is `http://10.0.2.2:8081/api` (10.0.2.2 = host machine).
-/// - iOS simulator / desktop: default is `http://localhost:8081/api`.
-/// - Physical device: set API_BASE_URL to your computer's LAN IP (e.g. http://192.168.1.5:8081/api).
+/// ## Environments
+///
+/// | Environment          | Command                                                                        |
+/// |----------------------|--------------------------------------------------------------------------------|
+/// | Android emulator     | `flutter run` (default: http://10.0.2.2:8080/api)                            |
+/// | iOS simulator        | `flutter run` (default: http://localhost:8080/api)                            |
+/// | Physical device (LAN)| `flutter run --dart-define=API_BASE_URL=http://192.168.x.x:8080/api`         |
+/// | Staging              | `flutter run --dart-define=API_BASE_URL=https://api-staging.rloco.com/api`   |
+/// | Production           | `flutter run --dart-define=API_BASE_URL=https://api.rloco.com/api`           |
+/// | Release APK          | `flutter build apk --dart-define=API_BASE_URL=https://api.rloco.com/api`     |
+/// | Release IPA          | `flutter build ipa --dart-define=API_BASE_URL=https://api.rloco.com/api`     |
+///
+/// The production URL **must** be HTTPS.
 String resolveApiBaseUrl() {
   const fromEnv = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',
   );
   if (fromEnv.isNotEmpty) return fromEnv;
-  // Android emulator: 10.0.2.2 is the host loopback
+  // Android emulator: 10.0.2.2 maps to the host machine's loopback
   if (Platform.isAndroid) {
-    return 'http://10.0.2.2:8081/api';
+    return 'http://10.0.2.2:8080/api';
   }
-  return 'http://localhost:8081/api';
+  return 'http://localhost:8080/api';
 }

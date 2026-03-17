@@ -10,6 +10,9 @@ class CartItemDto {
     this.priceInr,
     required this.size,
     required this.quantity,
+    this.isGift,
+    this.giftWrapColor,
+    this.giftMessage,
   });
 
   factory CartItemDto.fromJson(Map<String, dynamic> json) {
@@ -23,6 +26,9 @@ class CartItemDto {
           : null,
       size: json['size'] as String? ?? '',
       quantity: json['quantity'] is int ? json['quantity'] as int : 0,
+      isGift: json['is_gift'] as bool?,
+      giftWrapColor: json['gift_wrap_color'] as String?,
+      giftMessage: json['gift_message'] as String?,
     );
   }
 
@@ -33,6 +39,9 @@ class CartItemDto {
   final double? priceInr;
   final String size;
   final int quantity;
+  final bool? isGift;
+  final String? giftWrapColor;
+  final String? giftMessage;
 
   CartItemEntity toEntity() => CartItemEntity(
         productId: productId,
@@ -42,6 +51,9 @@ class CartItemDto {
         priceInr: priceInr,
         size: size,
         quantity: quantity,
+        isGift: isGift,
+        giftWrapColor: giftWrapColor,
+        giftMessage: giftMessage,
       );
 
   Map<String, dynamic> toJson() => {
@@ -52,6 +64,9 @@ class CartItemDto {
         if (priceInr != null) 'price_inr': priceInr,
         'size': size,
         'quantity': quantity,
+        if (isGift == true) 'is_gift': isGift,
+        if (giftWrapColor != null) 'gift_wrap_color': giftWrapColor,
+        if (giftMessage != null) 'gift_message': giftMessage,
       };
 }
 

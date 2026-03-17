@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../domain/entities/order_entity.dart';
@@ -382,7 +383,7 @@ class _OrderItemsCard extends StatelessWidget {
                               children: [
                                 Text('Qty: ${item.quantity}', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5))),
                                 Text(
-                                  '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                                  CurrencyScope.of(context).formatPrice(item.price * item.quantity, null),
                                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                                 ),
                               ],
@@ -539,14 +540,14 @@ class _OrderSummaryCard extends StatelessWidget {
         children: [
           const Text('Order Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
           const SizedBox(height: 16),
-          _SummaryRow(label: 'Subtotal', value: '\$${order.subtotal.toStringAsFixed(2)}'),
-          if (order.discount > 0) _SummaryRow(label: 'Discount', value: '-\$${order.discount.toStringAsFixed(2)}'),
+          _SummaryRow(label: 'Subtotal', value: CurrencyScope.of(context).formatPrice(order.subtotal, null)),
+          if (order.discount > 0) _SummaryRow(label: 'Discount', value: '-${CurrencyScope.of(context).formatPrice(order.discount, null)}'),
           _SummaryRow(
             label: 'Shipping',
-            value: order.shippingCost == 0 ? 'FREE' : '\$${order.shippingCost.toStringAsFixed(2)}',
+            value: order.shippingCost == 0 ? 'FREE' : CurrencyScope.of(context).formatPrice(order.shippingCost, null),
             valueGreen: order.shippingCost == 0,
           ),
-          _SummaryRow(label: 'Tax', value: '\$${order.tax.toStringAsFixed(2)}'),
+          _SummaryRow(label: 'Tax', value: CurrencyScope.of(context).formatPrice(order.tax, null)),
           const SizedBox(height: 10),
           Divider(height: 1, color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
           const SizedBox(height: 10),
@@ -554,7 +555,7 @@ class _OrderSummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-              Text('\$${order.total.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
+              Text(CurrencyScope.of(context).formatPrice(order.total, null), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
             ],
           ),
         ],

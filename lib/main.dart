@@ -1,12 +1,18 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
 
 import 'app/router/app_router.dart';
+import 'core/constants/stripe_constants.dart';
 import 'core/di/injection.dart';
 import 'core/network/dio_client.dart';
+import 'core/region/currency_scope.dart';
+import 'core/region/region_repository.dart';
+import 'core/region/presentation/region_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'features/config/domain/entities/site_config.dart';
 import 'features/config/utils/config_theme_builder.dart';
@@ -38,6 +44,17 @@ import 'features/video/presentation/bloc/inspiration_videos_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (kStripePublishableKey.isNotEmpty) {
+    Stripe.publishableKey = kStripePublishableKey;
+    await Stripe.instance.applySettings();
+  } else if (kDebugMode) {
+    debugPrint(
+      '[Stripe] No publishable key found. '
+      'Run with --dart-define=STRIPE_PUBLISHABLE_KEY=pk_test_... to enable card payments.',
+    );
+  }
+
   await initInjection();
   runApp(const RlocoApp());
 }
@@ -112,27 +129,38 @@ class RlocoApp extends StatelessWidget {
           create: (context) => ConfigBloc(sl<GetSiteConfigUseCase>())
             ..add(const ConfigLoadRequested()),
         ),
+        BlocProvider(
+          create: (context) => RegionBloc(
+            regionRepository: sl<RegionRepository>(),
+            initialRegion: sl<RegionRepository>().getRegionSync(),
+          ),
+        ),
       ],
-      child: _AppLifecycleHandler(
-        child: BlocListener<AuthBloc, AuthState>(
-          listener: (context, state) {
-            if (state is AuthAuthenticated) {
-              context.read<CartBloc>().add(const CartMergeGuestCartRequested());
-              context.read<WishlistBloc>().add(const WishlistMergeGuestRequested());
-              // Orders and addresses load when user navigates to those pages (avoids duplicate requests / 401 race)
-            }
-          },
-          child: BlocBuilder<ConfigBloc, ConfigState>(
-            buildWhen: (a, b) => b is ConfigLoaded,
-            builder: (context, state) {
-              final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
-              final theme = ConfigThemeBuilder.build(config.design);
-              return MaterialApp.router(
-                title: config.general.siteName,
-                theme: theme,
-                routerConfig: _appRouter,
-              );
-            },
+      child: BlocBuilder<RegionBloc, RegionState>(
+        builder: (context, state) => CurrencyScope(
+          region: state.region,
+          child: _AppLifecycleHandler(
+            child: BlocListener<AuthBloc, AuthState>(
+              listener: (context, state) {
+                if (state is AuthAuthenticated) {
+                  context.read<CartBloc>().add(const CartMergeGuestCartRequested());
+                  context.read<WishlistBloc>().add(const WishlistMergeGuestRequested());
+                  // Orders and addresses load when user navigates to those pages (avoids duplicate requests / 401 race)
+                }
+              },
+              child: BlocBuilder<ConfigBloc, ConfigState>(
+                buildWhen: (a, b) => b is ConfigLoaded,
+                builder: (context, state) {
+                  final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
+                  final theme = ConfigThemeBuilder.build(config.design);
+                  return MaterialApp.router(
+                    title: config.general.siteName,
+                    theme: theme,
+                    routerConfig: _appRouter,
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ),

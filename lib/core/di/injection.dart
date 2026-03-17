@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../network/base_url_resolver.dart';
 import '../network/dio_client.dart';
+import '../region/region_repository.dart';
+import '../region/region_repository_impl.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -62,6 +64,8 @@ import '../../features/config/data/repositories/config_repository_impl.dart';
 import '../../features/config/domain/repositories/config_repository.dart';
 import '../../features/config/domain/usecases/get_site_config_usecase.dart';
 import '../../features/shipping/domain/usecases/get_shipping_methods_usecase.dart';
+import '../../features/payment/data/datasources/payment_remote_datasource.dart';
+import '../../features/payment/domain/usecases/create_payment_intent_usecase.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -75,6 +79,9 @@ Future<void> initInjection() async {
   final prefs = await SharedPreferences.getInstance();
   sl.registerSingleton<SharedPreferences>(prefs);
   sl.registerLazySingleton<DioClient>(() => DioClient(sharedPreferences: prefs));
+  sl.registerLazySingleton<RegionRepository>(
+    () => RegionRepositoryImpl(sl<SharedPreferences>()),
+  );
 
   // Auth
   sl.registerLazySingleton<AuthRemoteDataSource>(
@@ -281,6 +288,14 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<GetShippingMethodsUseCase>(
     () => GetShippingMethodsUseCase(sl<ShippingRepository>()),
+  );
+
+  // Payment (Stripe)
+  sl.registerLazySingleton<PaymentRemoteDataSource>(
+    () => PaymentRemoteDataSource(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<CreatePaymentIntentUseCase>(
+    () => CreatePaymentIntentUseCase(sl<PaymentRemoteDataSource>()),
   );
 }
 

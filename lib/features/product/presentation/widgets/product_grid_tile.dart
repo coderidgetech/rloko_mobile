@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../domain/entities/product_entity.dart';
@@ -153,6 +154,27 @@ class ProductGridTile extends StatelessWidget {
                         ),
                       ),
                     ),
+                  // GIFT badge
+                  if (product.isGift)
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade700,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                        ),
+                        child: const Text(
+                          'GIFT',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -212,7 +234,7 @@ class ProductGridTile extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            '\$${product.price.toStringAsFixed(2)}',
+                            CurrencyScope.of(context).formatPrice(product.price, product.priceInr),
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -225,7 +247,7 @@ class ProductGridTile extends StatelessWidget {
                         if (product.originalPrice != null &&
                             product.originalPrice! > product.price)
                           Text(
-                            '\$${product.originalPrice!.toStringAsFixed(2)}',
+                            CurrencyScope.of(context).formatPrice(product.originalPrice!, null),
                             style: TextStyle(
                               fontSize: 11,
                               color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),

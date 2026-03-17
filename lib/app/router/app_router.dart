@@ -74,8 +74,16 @@ GoRouter createAppRouter() {
         redirect: (_, __) => '/all-products',
       ),
       GoRoute(
+        path: '/gift-for-her',
+        redirect: (_, __) => '/category/women?gift=true',
+      ),
+      GoRoute(
+        path: '/gift-for-him',
+        redirect: (_, __) => '/category/men?gift=true',
+      ),
+      GoRoute(
         path: '/otp-verification',
-        redirect: (_, __) => '/signup',
+        redirect: (_, __) => '/login',
       ),
       GoRoute(
         path: '/splash',
@@ -111,14 +119,24 @@ GoRouter createAppRouter() {
         builder: (context, state) {
           final gender = state.pathParameters['gender'] ?? '';
           final slug = state.pathParameters['slug'] ?? '';
-          return CategoryProductsPage(gender: gender, slug: slug);
+          final isGift = state.uri.queryParameters['gift'] == 'true';
+          return CategoryProductsPage(
+            gender: gender,
+            slug: slug,
+            isGiftMode: isGift,
+          );
         },
       ),
       GoRoute(
         path: '/category/:gender',
         builder: (context, state) {
           final gender = state.pathParameters['gender'] ?? '';
-          return CategoryProductsPage(gender: gender, slug: '');
+          final isGift = state.uri.queryParameters['gift'] == 'true';
+          return CategoryProductsPage(
+            gender: gender,
+            slug: '',
+            isGiftMode: isGift,
+          );
         },
       ),
       GoRoute(

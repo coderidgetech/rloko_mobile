@@ -10,6 +10,7 @@ import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/product_grid_skeleton.dart';
 import '../widgets/product_grid_tile.dart';
 import '../widgets/quick_actions.dart';
+import '../widgets/quick_category_switcher.dart';
 import '../widgets/sort_bottom_sheet.dart';
 import '../../domain/entities/product_entity.dart';
 
@@ -22,10 +23,12 @@ class CategoryProductsPage extends StatefulWidget {
     super.key,
     required this.gender,
     required this.slug,
+    this.isGiftMode = false,
   });
 
   final String gender;
   final String slug;
+  final bool isGiftMode;
 
   @override
   State<CategoryProductsPage> createState() => _CategoryProductsPageState();
@@ -86,11 +89,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   @override
   void initState() {
     super.initState();
+    final category = _apiCategoryParam();
     context.read<ProductListBloc>().add(
           ProductListLoadRequested(
             gender: widget.gender,
-            category: _apiCategoryParam(),
+            category: category,
             limit: 200,
+            gift: widget.isGiftMode ? true : null,
           ),
         );
   }
@@ -99,11 +104,13 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   void didUpdateWidget(CategoryProductsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.gender != widget.gender || oldWidget.slug != widget.slug) {
+      final category = _apiCategoryParam();
       context.read<ProductListBloc>().add(
             ProductListLoadRequested(
               gender: widget.gender,
-              category: _apiCategoryParam(),
+              category: category,
               limit: 200,
+              gift: widget.isGiftMode ? true : null,
             ),
           );
     }
@@ -111,12 +118,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Title: match React - category ? category capitalized : gender ? gender capitalized : 'All Products'
-    final categoryTitle = widget.slug.isNotEmpty
-        ? '${widget.slug[0].toUpperCase()}${widget.slug.substring(1)}'
-        : widget.gender.isNotEmpty
-            ? '${widget.gender[0].toUpperCase()}${widget.gender.substring(1)}'
-            : 'All Products';
     // Subcategory pills: only when gender && !category (React logic)
     final showSubPills = widget.gender.isNotEmpty && widget.slug.isEmpty;
     final subCategories = widget.gender == 'women'
@@ -131,7 +132,11 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       bottomNavigationBar: const BottomNav(currentIndex: 1), // Categories tab active
       body: BlocBuilder<ProductListBloc, ProductListState>(
         builder: (context, state) {
-          if (state is ProductListLoading) {
+          // Show loading when: explicitly loading, or still initial/home state (load was just dispatched)
+          if (state is ProductListLoading ||
+              state is ProductListHomeLoading ||
+              state is ProductListInitial ||
+              state is ProductListHomeLoaded) {
             return const Padding(
               padding: EdgeInsets.all(16),
               child: ProductGridSkeleton(itemCount: 6),
@@ -147,10 +152,25 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
           if (state is ProductListLoaded) {
             final products = _filterAndSort(state.products);
             // Match React: always show filter bar + QuickActions, even when empty
+            final giftTitle = widget.isGiftMode
+                ? (widget.gender == 'women' ? 'Gift For Her' : widget.gender == 'men' ? 'Gift For Him' : 'Perfect Gifts')
+                : null;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildFixedFilterBar(categoryTitle, products.length, showSubPills, subCategories),
+                if (giftTitle != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Text(
+                      giftTitle,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foregroundColor(context),
+                          ),
+                    ),
+                  ),
+                QuickCategorySwitcher(gender: widget.gender, slug: widget.slug),
+                _buildFixedFilterBar(products.length, showSubPills, subCategories),
                 Expanded(
                   child: Stack(
                     children: [
@@ -249,13 +269,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     );
   }
 
-  /// Fixed filter bar (matches React: fixed below header, z-40, border-b)
+  /// Filter bar matching React MobileCategoryPage: "Showing X products" + Filter/Sort buttons, then subcategory pills.
   Widget _buildFixedFilterBar(
-    String categoryTitle,
     int count,
     bool showSubPills,
     List<String> subCategories,
   ) {
+    final hasActiveFilters = _filterState.priceRange != 'all' ||
+        _filterState.size != 'all' ||
+        _filterState.color != 'all';
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor(context),
@@ -265,31 +287,92 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Item count row: title (left) | count (right) - React: flex justify-between px-4 py-2
+          // Row: "Showing X products" (left) | Filter + Sort buttons (right) - React px-4 py-2
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  categoryTitle,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.foregroundColor(context),
-                  ),
-                ),
-                Text(
-                  '$count items',
+                  'Showing $count products',
                   style: TextStyle(
                     fontSize: 14,
                     color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                   ),
                 ),
+                Row(
+                  children: [
+                    // Filter button - React: rounded-full border border-border/30 shadow-sm, SlidersHorizontal 14
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _showFilterSheet,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
+                            borderRadius: BorderRadius.circular(999),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, 1))],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.tune_rounded, size: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Filter',
+                                style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                              ),
+                              if (hasActiveFilters)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 4),
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor(context),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Sort button
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _showSortSheet,
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
+                            borderRadius: BorderRadius.circular(999),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, 1))],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.swap_vert_rounded, size: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Sort',
+                                style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
-          // Subcategory pills: only when gender && !category
+          // Subcategory pills: only when gender && !category - React: border-t, rounded-full, border border-border/30 shadow-sm
           if (showSubPills)
             Container(
               decoration: BoxDecoration(
@@ -309,8 +392,12 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                           decoration: BoxDecoration(
-                            color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+                            color: selected ? AppTheme.primaryColor(context) : AppTheme.backgroundColor(context),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                            ),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))],
                           ),
                           child: Text(
                             s,

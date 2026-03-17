@@ -2,13 +2,19 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/delivery_constants.dart';
 import '../../../../core/constants/form_hints.dart';
+import '../../../../core/constants/stripe_constants.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../payment/domain/usecases/create_payment_intent_usecase.dart';
+import '../../../promotion/domain/usecases/validate_promotion_usecase.dart';
+import '../../../../core/region/app_region.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/bottom_nav.dart';
@@ -24,9 +30,6 @@ import '../../../order/domain/usecases/order_usecases.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
 import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
 
-/// Mock coupon codes (match React COUPON_CODES)
-const _couponCodes = {'RLOCO10': 10, 'SAVE20': 20, 'WELCOME15': 15};
-
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -37,14 +40,16 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   final _couponController = TextEditingController();
   String? _appliedCouponCode;
-  int? _appliedCouponDiscount;
+  double? _appliedCouponDiscount;
+  String? _appliedCouponLabel;
   bool _showCouponInput = false;
+  bool _applyingCoupon = false;
 
   // Checkout (single-page cart + checkout)
   List<AddressEntity> _addresses = [];
   bool _addressesLoading = true;
   String? _selectedAddressId;
-  String _selectedPaymentMethod = 'cod'; // cod, card, upi (only cod supported for now)
+  String _selectedPaymentMethod = 'cod';
   bool _placing = false;
   String? _error;
   bool _retriedAddressesAfterAuth = false;
@@ -316,11 +321,14 @@ class _CartPageState extends State<CartPage> {
                     _PaymentOption(
                       id: 'card',
                       label: _paymentMethodLabel('card'),
-                      subtitle: 'Coming soon',
+                      subtitle: 'Pay securely via Stripe',
                       icon: Icons.credit_card_outlined,
-                      selected: false,
-                      enabled: false,
-                      onTap: () {},
+                      selected: _selectedPaymentMethod == 'card',
+                      enabled: kStripePublishableKey.isNotEmpty,
+                      onTap: () {
+                        setState(() => _selectedPaymentMethod = 'card');
+                        Navigator.pop(ctx);
+                      },
                     ),
                     const SizedBox(height: 8),
                     _PaymentOption(
@@ -388,10 +396,19 @@ class _CartPageState extends State<CartPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a delivery address')));
       return;
     }
+
+    if (_selectedPaymentMethod == 'card') {
+      await _placeOrderWithStripe(authState, cartState);
+    } else {
+      await _placeOrderCod(authState, cartState);
+    }
+  }
+
+  Future<void> _placeOrderCod(AuthAuthenticated authState, CartLoaded cartState) async {
     final selectedAddress = _addresses.firstWhere((a) => a.id == _selectedAddressId);
     final shipping = _addressToShipping(selectedAddress, authState.user.email);
     final orderItems = _cartToOrderItems(cartState.cart.items);
-    final promoCode = _appliedCouponCode != null && _appliedCouponCode!.trim().isNotEmpty ? _appliedCouponCode!.trim() : null;
+    final promoCode = _appliedCouponCode?.trim().isNotEmpty == true ? _appliedCouponCode!.trim() : null;
 
     setState(() {
       _placing = true;
@@ -402,16 +419,16 @@ class _CartPageState extends State<CartPage> {
       final order = await sl<CreateOrderUseCase>().call(
         items: orderItems,
         shippingInfo: shipping,
-        paymentMethod: _selectedPaymentMethod,
+        paymentMethod: 'cod',
         promotionCode: promoCode,
       );
-      if (kDebugMode) debugPrint('[CartPage] Order placed: id=${order.id}');
+      if (kDebugMode) debugPrint('[CartPage] COD order placed: id=${order.id}');
       if (!mounted) return;
       context.read<CartBloc>().add(const CartClearRequested());
       context.go('/order-confirmation/${order.id}');
     } catch (e, st) {
       final message = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
-      if (kDebugMode) debugPrint('[CartPage] _placeOrder failed: $message\n$st');
+      if (kDebugMode) debugPrint('[CartPage] _placeOrderCod failed: $message\n$st');
       if (mounted) {
         setState(() {
           _placing = false;
@@ -424,21 +441,135 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  void _applyCoupon() {
-    final code = _couponController.text.trim().toUpperCase();
-    final discount = _couponCodes[code];
-    if (discount != null) {
-      setState(() {
-        _appliedCouponCode = code;
-        _appliedCouponDiscount = discount;
-        _showCouponInput = false;
-      });
+  Future<void> _placeOrderWithStripe(AuthAuthenticated authState, CartLoaded cartState) async {
+    if (kStripePublishableKey.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Coupon $code applied! $discount% off')),
+        const SnackBar(content: Text('Card payments are not configured. Please use Cash on Delivery.')),
       );
-    } else {
+      return;
+    }
+
+    final selectedAddress = _addresses.firstWhere((a) => a.id == _selectedAddressId);
+    final shipping = _addressToShipping(selectedAddress, authState.user.email);
+    final orderItems = _cartToOrderItems(cartState.cart.items);
+    final promoCode = _appliedCouponCode?.trim().isNotEmpty == true ? _appliedCouponCode!.trim() : null;
+
+    final subtotal = cartState.cart.items.fold(0.0, (s, i) => s + i.price * i.quantity);
+    final discount = _appliedCouponDiscount ?? 0.0;
+    final total = subtotal - discount;
+
+    setState(() {
+      _placing = true;
+      _error = null;
+    });
+
+    try {
+      // Step 1: Create the order first so we have an order ID for the payment intent
+      final order = await sl<CreateOrderUseCase>().call(
+        items: orderItems,
+        shippingInfo: shipping,
+        paymentMethod: 'stripe',
+        promotionCode: promoCode,
+      );
+      if (kDebugMode) debugPrint('[CartPage] Stripe order created: id=${order.id}');
+
+      // Step 2: Create a PaymentIntent on the backend
+      final currencyCode = CurrencyScope.maybeOf(context)?.region.currencyCode ?? 'USD';
+      final intent = await sl<CreatePaymentIntentUseCase>().call(
+        orderId: order.id,
+        amount: total,
+        currency: currencyCode,
+      );
+      if (kDebugMode) debugPrint('[CartPage] PaymentIntent created: id=${intent.id}');
+
+      // Step 3: Initialize Stripe Payment Sheet
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          paymentIntentClientSecret: intent.clientSecret,
+          merchantDisplayName: 'Rloco',
+          style: ThemeMode.system,
+          billingDetailsCollectionConfiguration:
+              const BillingDetailsCollectionConfiguration(
+            name: CollectionMode.always,
+          ),
+        ),
+      );
+
+      // Step 4: Present Payment Sheet (native Stripe UI)
+      await Stripe.instance.presentPaymentSheet();
+
+      // Payment confirmed
+      if (kDebugMode) debugPrint('[CartPage] Stripe payment confirmed for order ${order.id}');
+      if (!mounted) return;
+      context.read<CartBloc>().add(const CartClearRequested());
+      context.go('/order-confirmation/${order.id}');
+    } on StripeException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _placing = false;
+        _error = null;
+      });
+      // User cancelled — silent dismiss; do not show error
+      if (e.error.code == FailureCode.Canceled) return;
+      final msg = e.error.localizedMessage ?? e.error.message ?? 'Payment failed';
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid coupon code')),
+        SnackBar(content: Text(msg), backgroundColor: AppTheme.destructive),
+      );
+    } catch (e, st) {
+      final message = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
+      if (kDebugMode) debugPrint('[CartPage] _placeOrderWithStripe failed: $message\n$st');
+      if (mounted) {
+        setState(() {
+          _placing = false;
+          _error = message;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
+        );
+      }
+    }
+  }
+
+  Future<void> _applyCoupon() async {
+    final code = _couponController.text.trim().toUpperCase();
+    if (code.isEmpty) return;
+    setState(() => _applyingCoupon = true);
+    try {
+      final cartState = context.read<CartBloc>().state;
+      final subtotal = cartState is CartLoaded
+          ? cartState.cart.items.fold(0.0, (s, i) => s + i.price * i.quantity)
+          : 0.0;
+      final result = await sl<ValidatePromotionUseCase>().call(code, subtotal);
+      if (!mounted) return;
+      if (result.valid && result.discount != null) {
+        final promo = result.promotion;
+        final label = promo != null
+            ? (promo.type == 'percentage'
+                ? '$code applied (${promo.value.toStringAsFixed(0)}% off)'
+                : '$code applied (\$${result.discount!.toStringAsFixed(2)} off)')
+            : '$code applied';
+        setState(() {
+          _appliedCouponCode = code;
+          _appliedCouponDiscount = result.discount;
+          _appliedCouponLabel = label;
+          _showCouponInput = false;
+          _applyingCoupon = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(label)),
+        );
+      } else {
+        setState(() => _applyingCoupon = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid or expired coupon code')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _applyingCoupon = false);
+      final msg = getApiException(e)?.message ?? 'Failed to validate coupon';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
       );
     }
   }
@@ -447,6 +578,7 @@ class _CartPageState extends State<CartPage> {
     setState(() {
       _appliedCouponCode = null;
       _appliedCouponDiscount = null;
+      _appliedCouponLabel = null;
       _couponController.clear();
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -502,7 +634,9 @@ class _CartPageState extends State<CartPage> {
                   items: state.cart.items,
                   appliedCouponCode: _appliedCouponCode,
                   appliedCouponDiscount: _appliedCouponDiscount,
+                  appliedCouponLabel: _appliedCouponLabel,
                   showCouponInput: _showCouponInput,
+                  applyingCoupon: _applyingCoupon,
                   couponController: _couponController,
                   onShowCouponInput: () => setState(() => _showCouponInput = true),
                   onApplyCoupon: _applyCoupon,
@@ -543,7 +677,9 @@ class _CartContent extends StatelessWidget {
     required this.items,
     required this.appliedCouponCode,
     required this.appliedCouponDiscount,
+    this.appliedCouponLabel,
     required this.showCouponInput,
+    required this.applyingCoupon,
     required this.couponController,
     required this.onShowCouponInput,
     required this.onApplyCoupon,
@@ -564,8 +700,10 @@ class _CartContent extends StatelessWidget {
 
   final List<CartItemEntity> items;
   final String? appliedCouponCode;
-  final int? appliedCouponDiscount;
+  final double? appliedCouponDiscount;
+  final String? appliedCouponLabel;
   final bool showCouponInput;
+  final bool applyingCoupon;
   final TextEditingController couponController;
   final VoidCallback onShowCouponInput;
   final VoidCallback onApplyCoupon;
@@ -585,10 +723,7 @@ class _CartContent extends StatelessWidget {
 
   double get _subtotal =>
       items.fold(0.0, (sum, item) => sum + item.price * item.quantity);
-  double get _discount =>
-      appliedCouponDiscount != null
-          ? (_subtotal * appliedCouponDiscount!) / 100
-          : 0;
+  double get _discount => appliedCouponDiscount ?? 0.0;
   double get _total => _subtotal - _discount;
   bool get _canPlaceOrder =>
       isAuthenticated &&
@@ -653,7 +788,7 @@ class _CartContent extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                '$appliedCouponCode Applied (${appliedCouponDiscount}% off)',
+                                appliedCouponLabel ?? '$appliedCouponCode Applied',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -690,7 +825,7 @@ class _CartContent extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               FilledButton(
-                                onPressed: onApplyCoupon,
+                                onPressed: applyingCoupon ? null : onApplyCoupon,
                                 style: FilledButton.styleFrom(
                                   backgroundColor: AppTheme.primaryColor(context),
                                   padding: const EdgeInsets.symmetric(
@@ -698,7 +833,15 @@ class _CartContent extends StatelessWidget {
                                   shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12)),
                                 ),
-                                child: const Text('Apply'),
+                                child: applyingCoupon
+                                    ? const SizedBox(
+                                        height: 18,
+                                        width: 18,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white),
+                                      )
+                                    : const Text('Apply'),
                               ),
                             ],
                           )
@@ -944,7 +1087,7 @@ class _CartContent extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
-                      Text('\$${_subtotal.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      Text(CurrencyScope.of(context).formatPrice(_subtotal, null), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                     ],
                   ),
                   if (_discount > 0) ...[
@@ -953,7 +1096,7 @@ class _CartContent extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Discount', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF16A34A))),
-                        Text('-\$${_discount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF16A34A))),
+                        Text('-${CurrencyScope.of(context).formatPrice(_discount, null)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF16A34A))),
                       ],
                     ),
                   ],
@@ -964,7 +1107,7 @@ class _CartContent extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      Text('\$${_total.toStringAsFixed(2)}', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
+                      Text(CurrencyScope.of(context).formatPrice(_total, null), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -982,7 +1125,7 @@ class _CartContent extends StatelessWidget {
                             ),
                             child: placing
                                 ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : Text('Place order • \$${_total.toStringAsFixed(2)}'),
+                                : Text('Place order • ${CurrencyScope.of(context).formatPrice(_total, null)}'),
                           )
                         : FilledButton(
                             onPressed: () => context.push('/login', extra: '/cart'),
@@ -1073,7 +1216,7 @@ class _CartItemTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '\$${item.price.toStringAsFixed(2)}',
+                  CurrencyScope.of(context).formatPrice(item.price, item.priceInr),
                   style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
