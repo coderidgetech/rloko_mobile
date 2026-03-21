@@ -11,7 +11,7 @@ import '../../../address/domain/entities/address_entity.dart';
 import '../../../address/domain/usecases/address_usecases.dart';
 import '../../../address/presentation/bloc/address_list_bloc.dart';
 
-/// Delivery location – uses addresses API (AddressListBloc); design matches React MobileDeliveryLocationPage.
+/// Delivery location – uses addresses API (AddressListBloc); parity with web DeliveryLocationPage.
 class DeliveryLocationPage extends StatefulWidget {
   const DeliveryLocationPage({super.key});
 

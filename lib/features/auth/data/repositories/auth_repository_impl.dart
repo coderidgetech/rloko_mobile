@@ -76,9 +76,19 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> updateProfile({String? phone, DateTime? birthday}) async {
+  Future<void> updateProfile({
+    String? name,
+    String? email,
+    String? phone,
+    DateTime? birthday,
+  }) async {
     try {
-      await _dataSource.updateProfile(phone: phone, birthday: birthday);
+      await _dataSource.updateProfile(
+        name: name,
+        email: email,
+        phone: phone,
+        birthday: birthday,
+      );
     } on DioException catch (e) {
       throw getApiException(e) ?? e;
     }

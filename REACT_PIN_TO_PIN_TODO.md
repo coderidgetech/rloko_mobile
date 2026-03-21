@@ -31,7 +31,7 @@ Use this list to verify each Flutter page matches the corresponding React mobile
 | 9 | AccountPage `/account` | MobileAccountPage | Menu items, layout |
 | 10 | ProfileEditPage `/profile/edit` | MobileProfileEditPage | Form fields |
 | 11 | AddressesPage `/addresses` | MobileAddressesPage | List + add |
-| 12 | AddressFormPage (add/edit) | MobileAddAddressPage | Form |
+| 12 | AddressFormPage (add/edit) | AddAddressPage (`pages/AddAddressPage.tsx`) | Form |
 | 13 | PaymentMethodsPage `/payment-methods` | MobilePaymentMethodsPage | Cards list |
 | 14 | AddPaymentMethodPage | MobileAddPaymentMethodPage | Form |
 
@@ -46,7 +46,7 @@ Use this list to verify each Flutter page matches the corresponding React mobile
 ### Settings & info
 | # | Flutter | React | Notes |
 |---|---------|--------|--------|
-| 19 | DeliveryLocationPage `/delivery-location` | MobileDeliveryLocationPage | Address / pincode |
+| 19 | DeliveryLocationPage `/delivery-location` | DeliveryLocationPage | Address / pincode |
 | 20 | CouponsPage `/coupons` | MobileCouponsPage | Promo list |
 | 21 | ReturnsPage `/returns` | MobileReturnsPage | Returns list + policy |
 | 22 | ShippingInfoPage `/shipping` | MobileShippingPage | Methods / info |

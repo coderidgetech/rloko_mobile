@@ -7,5 +7,10 @@ abstract class AuthRepository {
   Future<void> logout();
   Future<UserEntity?> getMe();
   Future<AuthResult?> refresh();
-  Future<void> updateProfile({String? phone, DateTime? birthday});
+  Future<void> updateProfile({
+    String? name,
+    String? email,
+    String? phone,
+    DateTime? birthday,
+  });
 }

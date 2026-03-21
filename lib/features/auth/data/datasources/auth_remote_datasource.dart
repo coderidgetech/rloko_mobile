@@ -140,8 +140,15 @@ class AuthRemoteDataSource {
     return dto;
   }
 
-  Future<void> updateProfile({String? phone, DateTime? birthday}) async {
+  Future<void> updateProfile({
+    String? name,
+    String? email,
+    String? phone,
+    DateTime? birthday,
+  }) async {
     final body = <String, dynamic>{};
+    if (name != null) body['name'] = name;
+    if (email != null) body['email'] = email;
     if (phone != null) body['phone'] = phone;
     if (birthday != null) body['birthday'] = birthday.toIso8601String().split('T').first;
     await _dio.put<void>('/auth/profile', data: body);

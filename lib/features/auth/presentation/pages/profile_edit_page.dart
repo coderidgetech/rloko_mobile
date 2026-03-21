@@ -57,6 +57,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     setState(() => _saving = true);
     try {
       await sl<UpdateProfileUseCase>().call(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
         phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         birthday: _birthdayStr != null ? DateTime.tryParse(_birthdayStr!) : null,
       );
