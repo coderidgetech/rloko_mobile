@@ -381,6 +381,31 @@ class _CartPageState extends State<CartPage> {
         .toList();
   }
 
+  AddressEntity? _resolveSelectedAddress() {
+    if (_addresses.isEmpty) return null;
+    final id = _selectedAddressId;
+    if (id != null) {
+      for (final a in _addresses) {
+        if (a.id == id) return a;
+      }
+    }
+    for (final a in _addresses) {
+      if (a.isDefault) return a;
+    }
+    return _addresses.first;
+  }
+
+  /// Stripe currency aligned with backend `expectedCurrencyByCountry`.
+  String _stripeCurrencyForCountry(String country) {
+    final c = country.trim().toLowerCase();
+    if (c == 'in' ||
+        c == 'india' ||
+        c.contains('india')) {
+      return 'inr';
+    }
+    return 'usd';
+  }
+
   Future<void> _placeOrder() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) {
@@ -392,7 +417,7 @@ class _CartPageState extends State<CartPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your cart is empty')));
       return;
     }
-    if (_selectedAddressId == null || _addresses.isEmpty) {
+    if (_resolveSelectedAddress() == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a delivery address')));
       return;
     }
@@ -405,7 +430,11 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<void> _placeOrderCod(AuthAuthenticated authState, CartLoaded cartState) async {
-    final selectedAddress = _addresses.firstWhere((a) => a.id == _selectedAddressId);
+    final selectedAddress = _resolveSelectedAddress();
+    if (selectedAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a delivery address')));
+      return;
+    }
     final shipping = _addressToShipping(selectedAddress, authState.user.email);
     final orderItems = _cartToOrderItems(cartState.cart.items);
     final promoCode = _appliedCouponCode?.trim().isNotEmpty == true ? _appliedCouponCode!.trim() : null;
@@ -449,14 +478,14 @@ class _CartPageState extends State<CartPage> {
       return;
     }
 
-    final selectedAddress = _addresses.firstWhere((a) => a.id == _selectedAddressId);
+    final selectedAddress = _resolveSelectedAddress();
+    if (selectedAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a delivery address')));
+      return;
+    }
     final shipping = _addressToShipping(selectedAddress, authState.user.email);
     final orderItems = _cartToOrderItems(cartState.cart.items);
     final promoCode = _appliedCouponCode?.trim().isNotEmpty == true ? _appliedCouponCode!.trim() : null;
-
-    final subtotal = cartState.cart.items.fold(0.0, (s, i) => s + i.price * i.quantity);
-    final discount = _appliedCouponDiscount ?? 0.0;
-    final total = subtotal - discount;
 
     setState(() {
       _placing = true;
@@ -473,12 +502,13 @@ class _CartPageState extends State<CartPage> {
       );
       if (kDebugMode) debugPrint('[CartPage] Stripe order created: id=${order.id}');
 
-      // Step 2: Create a PaymentIntent on the backend
-      final currencyCode = CurrencyScope.maybeOf(context)?.region.currencyCode ?? 'USD';
+      // Step 2: Create a PaymentIntent on the backend (amount is enforced server-side from order.total)
+      final payCurrency = _stripeCurrencyForCountry(shipping.country);
       final intent = await sl<CreatePaymentIntentUseCase>().call(
         orderId: order.id,
-        amount: total,
-        currency: currencyCode,
+        amount: order.total,
+        currency: payCurrency,
+        paymentMethod: 'card',
       );
       if (kDebugMode) debugPrint('[CartPage] PaymentIntent created: id=${intent.id}');
 

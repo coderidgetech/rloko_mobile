@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/di/injection.dart';
+import '../../features/auth/presentation/models/login_otp_route_extra.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
+import '../../features/auth/presentation/pages/login_otp_verification_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/profile_edit_page.dart';
 import '../../features/auth/presentation/pages/signup_page.dart';
@@ -35,7 +37,6 @@ import '../../features/cart/presentation/pages/cart_page.dart';
 import '../../features/wishlist/presentation/pages/wishlist_page.dart';
 import '../../features/order/domain/usecases/order_usecases.dart';
 import '../../features/order/presentation/bloc/order_detail_bloc.dart';
-import '../../features/order/presentation/bloc/order_list_bloc.dart';
 import '../../features/order/presentation/pages/order_detail_page.dart';
 import '../../features/order/presentation/pages/orders_page.dart';
 import '../../features/address/presentation/pages/address_form_page.dart';
@@ -83,7 +84,17 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/otp-verification',
-        redirect: (_, __) => '/login',
+        redirect: (context, state) {
+          if (state.extra is! LoginOtpRouteExtra) return '/login';
+          return null;
+        },
+        builder: (context, state) {
+          final extra = state.extra! as LoginOtpRouteExtra;
+          return LoginOtpVerificationPage(
+            phone: extra.phone,
+            returnTo: extra.returnTo,
+          );
+        },
       ),
       GoRoute(
         path: '/splash',

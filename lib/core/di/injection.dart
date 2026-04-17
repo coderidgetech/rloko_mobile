@@ -9,10 +9,13 @@ import '../region/region_repository_impl.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
+import '../../features/auth/domain/usecases/complete_login_otp_usecase.dart';
 import '../../features/auth/domain/usecases/get_me_usecase.dart';
 import '../../features/auth/domain/usecases/login_usecase.dart';
+import '../../features/auth/domain/usecases/login_with_google_usecase.dart';
 import '../../features/auth/domain/usecases/logout_usecase.dart';
 import '../../features/auth/domain/usecases/register_usecase.dart';
+import '../../features/auth/domain/usecases/send_login_otp_usecase.dart';
 import '../../features/auth/domain/usecases/update_profile_usecase.dart';
 import '../../features/product/data/datasources/category_remote_datasource.dart';
 import '../../features/product/data/datasources/product_remote_datasource.dart';
@@ -92,6 +95,15 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<LoginUseCase>(
     () => LoginUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<SendLoginOtpUseCase>(
+    () => SendLoginOtpUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<CompleteLoginOtpUseCase>(
+    () => CompleteLoginOtpUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<LoginWithGoogleUseCase>(
+    () => LoginWithGoogleUseCase(sl<AuthRepository>()),
   );
   sl.registerLazySingleton<RegisterUseCase>(
     () => RegisterUseCase(sl<AuthRepository>()),

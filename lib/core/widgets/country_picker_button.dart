@@ -44,7 +44,7 @@ class CountryPickerButton extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 selected.dialCode,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.foregroundColor(context),
@@ -132,9 +132,9 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
       maxChildSize: 0.9,
       builder: (context, scrollController) {
         return Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppTheme.backgroundColor(context),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
             children: [

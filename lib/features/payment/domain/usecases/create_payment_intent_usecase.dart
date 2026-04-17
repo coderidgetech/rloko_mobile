@@ -10,11 +10,13 @@ class CreatePaymentIntentUseCase {
     required String orderId,
     required double amount,
     required String currency,
+    String paymentMethod = 'card',
   }) =>
       _dataSource.createPaymentIntent(
         orderId: orderId,
         amount: amount,
         currency: currency,
         gateway: 'stripe',
+        paymentMethod: paymentMethod,
       );
 }

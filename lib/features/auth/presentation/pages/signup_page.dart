@@ -5,7 +5,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/form_hints.dart';
+import '../../../../core/constants/phone_input_formatters.dart';
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/api_exception.dart';
+import '../../../../core/network/dio_client.dart' show getApiException;
 import '../../../../core/theme/app_theme.dart';
+import '../../data/datasources/auth_remote_datasource.dart';
 import '../../../../core/widgets/auth_logo.dart';
 import '../../../../core/widgets/otp_input.dart';
 import '../bloc/auth_bloc.dart';
@@ -56,7 +61,7 @@ class _SignupPageState extends State<SignupPage> {
     });
   }
 
-  void _sendOtp() {
+  Future<void> _sendOtp() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
@@ -83,7 +88,8 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
     setState(() => _loading = true);
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    try {
+      await sl<AuthRemoteDataSource>().sendRegistrationOtp(phone);
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -92,13 +98,19 @@ class _SignupPageState extends State<SignupPage> {
       });
       _startCountdown();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OTP sent to your phone')),
+        const SnackBar(content: Text('Verification code sent to your phone')),
       );
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      final msg = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    }
   }
 
-  /// Accept any 6-digit OTP until SMTP is integrated; no backend verification.
-  void _verifyOtp() {
+  Future<void> _verifyOtp() async {
     final otpValue = _otp.join('');
     if (otpValue.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,25 +119,45 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
     setState(() => _loading = true);
-    context.read<AuthBloc>().add(
-          AuthRegisterRequested(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-            name: _nameController.text.trim(),
-          ),
-        );
+    try {
+      await sl<AuthRemoteDataSource>().completeRegistrationOtp(
+        phone: _phoneController.text.trim(),
+        code: otpValue,
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        name: _nameController.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+      context.read<AuthBloc>().add(const AuthCheckRequested());
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      final msg = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    }
   }
 
   void _continueWithGoogle() {
     context.pushReplacement('/login');
   }
 
-  void _resendOtp() {
+  Future<void> _resendOtp() async {
     if (_countdown > 0) return;
-    _startCountdown();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('OTP resent!')),
-    );
+    try {
+      await sl<AuthRemoteDataSource>().sendRegistrationOtp(_phoneController.text.trim());
+      if (!mounted) return;
+      _startCountdown();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Code resent')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
   }
 
   @override
@@ -233,7 +265,8 @@ class _SignupPageState extends State<SignupPage> {
         const SizedBox(height: 8),
         TextField(
           controller: _phoneController,
-          keyboardType: TextInputType.phone,
+          keyboardType: TextInputType.number,
+          inputFormatters: kPhoneLocal10DigitFormatters,
           decoration: _inputDecoration(
             hint: FormHints.phone,
             icon: Icons.phone_outlined,

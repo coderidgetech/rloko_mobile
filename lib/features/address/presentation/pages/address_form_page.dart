@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/form_hints.dart';
+import '../../../../core/constants/phone_input_formatters.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/region/app_region.dart';
 import '../../../../core/region/currency_scope.dart';
@@ -221,7 +223,8 @@ class _AddressFormPageState extends State<AddressFormPage> {
                     _input(
                       controller: _mobileController,
                       hint: FormHints.phone,
-                      keyboardType: TextInputType.phone,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: kPhoneLocal10DigitFormatters,
                       validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                     ),
                     const SizedBox(height: 24),
@@ -408,6 +411,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
     String? hint,
     TextInputType? keyboardType,
     int maxLines = 1,
+    List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
@@ -420,6 +424,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       maxLines: maxLines,
       validator: validator,
     );

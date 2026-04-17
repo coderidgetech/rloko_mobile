@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/auth_logo.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../onboarding/presentation/pages/onboarding_page.dart';
 
@@ -139,15 +140,7 @@ class _SplashPageState extends State<SplashPage>
                         scale: _logoScale.value,
                         child: Opacity(
                           opacity: _logoOpacity.value,
-                          child: Text(
-                            'Rloco',
-                            style: TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.foregroundColor(context),
-                              letterSpacing: 1.2,
-                            ),
-                          ),
+                          child: const AuthLogo(height: 64),
                         ),
                       );
                     },

@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
+import 'auth_logo.dart';
 import '../../features/cart/presentation/bloc/cart_bloc.dart';
-import '../../features/config/presentation/bloc/config_bloc.dart';
 import '../../features/wishlist/presentation/bloc/wishlist_bloc.dart';
 
 /// Common header matching React MobileSubPageHeader: Logo, Search, Wishlist (fav), Cart.
@@ -45,23 +45,13 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
             )
           : null,
       leadingWidth: showBackButton ? 48 : null,
-      title: BlocBuilder<ConfigBloc, ConfigState>(
-        buildWhen: (a, b) => b is ConfigLoaded,
-        builder: (context, state) {
-          final siteName = state is ConfigLoaded ? state.config.general.siteName : 'Rloco';
-          return GestureDetector(
-            onTap: () => context.go('/'),
-            behavior: HitTestBehavior.opaque,
-            child: Text(
-              siteName,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foregroundColor(context),
-              ),
-            ),
-          );
-        },
+      title: GestureDetector(
+        onTap: () => context.go('/'),
+        behavior: HitTestBehavior.opaque,
+        child: const Align(
+          alignment: Alignment.centerLeft,
+          child: AuthLogo(height: 24),
+        ),
       ),
       titleSpacing: showBackButton ? 0 : 16,
       centerTitle: false,

@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 import '../dto/auth_response_dto.dart';
 import '../dto/user_dto.dart';
@@ -11,6 +10,90 @@ class AuthRemoteDataSource {
 
   final DioClient _client;
   Dio get _dio => _client.dio;
+
+  Future<void> sendLoginOtp(String phone) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        '/auth/login-otp/send',
+        data: {'phone': phone},
+      );
+    } on DioException catch (e) {
+      throw Exception(_otpDioMessage(e, 'Could not send verification code'));
+    }
+  }
+
+  Future<AuthResponseDto> completeLoginOtp(String phone, String code) async {
+    return _postAuthExchange(
+      {'phone': phone, 'code': code},
+      '/auth/login-otp/complete',
+    );
+  }
+
+  Future<AuthResponseDto> googleSignInWithIdToken(String idToken) async {
+    return _postAuthExchange(
+      {'id_token': idToken},
+      '/auth/google',
+    );
+  }
+
+  Future<AuthResponseDto> _postAuthExchange(
+    Map<String, dynamic> body,
+    String path,
+  ) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(path, data: body);
+      final data = response.data;
+      if (data == null) {
+        throw Exception('Server returned success status but empty response body');
+      }
+      if (kDebugMode) {
+        debugPrint('[AuthRemoteDataSource] $path response: $data');
+      }
+      final rawToken = data['token'] ?? data['auth_token'] ?? data['access_token'];
+      if (rawToken == null || (rawToken is String && rawToken.isEmpty)) {
+        throw Exception('No valid authentication token found in response');
+      }
+      final token = rawToken is String ? rawToken : rawToken.toString();
+      await _client.saveToken(token);
+      return AuthResponseDto.fromJson(data);
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        debugPrint('[AuthRemoteDataSource] $path DioException: ${e.response?.data}');
+      }
+      throw Exception(_authExchangeDioMessage(e));
+    } on Exception catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
+  String _otpDioMessage(DioException e, String fallback) {
+    final statusCode = e.response?.statusCode;
+    final serverMessage = e.response?.data?['message'] ?? e.response?.data?['error'];
+    final apiEx = getApiException(e);
+    if (e.response == null && apiEx != null) return apiEx.message;
+    if (statusCode == 429) return 'Too many attempts. Please try again later.';
+    return serverMessage?.toString() ?? fallback;
+  }
+
+  String _authExchangeDioMessage(DioException e) {
+    final statusCode = e.response?.statusCode;
+    final serverMessage = e.response?.data?['message'] ?? e.response?.data?['error'];
+    final apiEx = getApiException(e);
+    if (e.response == null && apiEx != null) return apiEx.message;
+    switch (statusCode) {
+      case 400:
+        return serverMessage?.toString() ?? 'Invalid request';
+      case 401:
+        return serverMessage?.toString() ?? 'Authentication failed';
+      case 403:
+        return serverMessage?.toString() ?? 'Account not allowed';
+      case 429:
+        return 'Too many attempts. Please try again later.';
+      default:
+        return serverMessage?.toString() ??
+            'Request failed (HTTP ${statusCode ?? '?'})';
+    }
+  }
 
   Future<AuthResponseDto> login(String email, String password) async {
     try {
@@ -138,6 +221,36 @@ class AuthRemoteDataSource {
       await _client.saveToken(token);
     }
     return dto;
+  }
+
+  Future<void> sendRegistrationOtp(String phone) async {
+    try {
+      await _dio.post<Map<String, dynamic>>(
+        '/auth/register-otp/send',
+        data: {'phone': phone},
+      );
+    } on DioException catch (e) {
+      throw Exception(_otpDioMessage(e, 'Could not send verification code'));
+    }
+  }
+
+  Future<AuthResponseDto> completeRegistrationOtp({
+    required String phone,
+    required String code,
+    required String email,
+    required String password,
+    required String name,
+  }) async {
+    return _postAuthExchange(
+      {
+        'phone': phone,
+        'code': code,
+        'email': email,
+        'password': password,
+        'name': name,
+      },
+      '/auth/register-otp/complete',
+    );
   }
 
   Future<void> updateProfile({

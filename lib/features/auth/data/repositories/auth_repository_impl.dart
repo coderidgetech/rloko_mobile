@@ -27,6 +27,35 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> sendLoginOtp(String phone) async {
+    try {
+      await _dataSource.sendLoginOtp(phone);
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
+
+  @override
+  Future<AuthResult> completeLoginOtp(String phone, String code) async {
+    try {
+      final dto = await _dataSource.completeLoginOtp(phone, code);
+      return AuthResult(user: dto.user.toEntity(), token: dto.token);
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
+
+  @override
+  Future<AuthResult> loginWithGoogle(String idToken) async {
+    try {
+      final dto = await _dataSource.googleSignInWithIdToken(idToken);
+      return AuthResult(user: dto.user.toEntity(), token: dto.token);
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
+
+  @override
   Future<AuthResult> register(String email, String password, String name) async {
     try {
       final dto = await _dataSource.register(email, password, name);

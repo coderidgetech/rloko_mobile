@@ -5,19 +5,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'app/router/app_router.dart';
+import 'core/constants/google_auth_constants.dart';
 import 'core/constants/stripe_constants.dart';
 import 'core/di/injection.dart';
 import 'core/network/dio_client.dart';
 import 'core/region/currency_scope.dart';
 import 'core/region/region_repository.dart';
 import 'core/region/presentation/region_bloc.dart';
-import 'core/theme/app_theme.dart';
 import 'features/config/domain/entities/site_config.dart';
 import 'features/config/utils/config_theme_builder.dart';
+import 'features/auth/domain/usecases/complete_login_otp_usecase.dart';
 import 'features/auth/domain/usecases/get_me_usecase.dart';
 import 'features/auth/domain/usecases/login_usecase.dart';
+import 'features/auth/domain/usecases/login_with_google_usecase.dart';
 import 'features/auth/domain/usecases/logout_usecase.dart';
 import 'features/auth/domain/usecases/register_usecase.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
@@ -56,6 +59,9 @@ void main() async {
   }
 
   await initInjection();
+  await GoogleSignIn.instance.initialize(
+    serverClientId: kGoogleWebClientId.isEmpty ? null : kGoogleWebClientId,
+  );
   runApp(const RlocoApp());
 }
 
@@ -71,6 +77,8 @@ class RlocoApp extends StatelessWidget {
         BlocProvider(
           create: (context) => AuthBloc(
             loginUseCase: sl<LoginUseCase>(),
+            completeLoginOtpUseCase: sl<CompleteLoginOtpUseCase>(),
+            loginWithGoogleUseCase: sl<LoginWithGoogleUseCase>(),
             registerUseCase: sl<RegisterUseCase>(),
             logoutUseCase: sl<LogoutUseCase>(),
             getMeUseCase: sl<GetMeUseCase>(),

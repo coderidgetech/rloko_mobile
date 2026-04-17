@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/phone_input_formatters.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
@@ -171,7 +172,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                 icon: Icons.phone_outlined,
                 child: TextFormField(
                   controller: _phoneController,
-                  keyboardType: TextInputType.phone,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: kPhoneLocal10DigitFormatters,
                   decoration: _inputDecoration('Enter your phone', Icons.phone_outlined),
                   validator: (v) {
                     final t = v?.trim() ?? '';

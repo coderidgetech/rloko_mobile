@@ -15,14 +15,16 @@ class PaymentRemoteDataSource {
     required double amount,
     required String currency,
     String gateway = 'stripe',
+    String paymentMethod = 'card',
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/payments/intent',
       data: {
         'order_id': orderId,
         'amount': amount,
-        'currency': currency.toUpperCase(),
+        'currency': currency.toLowerCase(),
         'gateway': gateway,
+        'payment_method': paymentMethod,
       },
     );
     final data = response.data;

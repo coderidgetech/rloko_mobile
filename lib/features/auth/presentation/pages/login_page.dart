@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-import '../../../../core/constants/form_hints.dart';
+import '../../../../core/constants/dial_countries.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/auth_logo.dart';
+import '../../domain/usecases/send_login_otp_usecase.dart';
 import '../bloc/auth_bloc.dart';
+import '../models/login_otp_route_extra.dart';
+import '../widgets/google_g_logo.dart';
+import '../widgets/phone_country_row.dart';
 
-/// Login page aligned with React MobileLoginPage: close X, Welcome Back, form, OR, Google, Sign up link.
-/// Keeps email/password auth (React mobile uses phone/OTP).
+/// Matches web [MobileLoginPage]: phone + Send OTP → OR → Google → sign up.
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, this.redirectAfterLogin});
 
@@ -19,36 +24,91 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  String _phoneLocal = '';
+  DialCountry _country = kDialCountries[1];
+  bool _otpSendLoading = false;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
+  String get _returnTo => widget.redirectAfterLogin ?? '/account';
+
+  void _goSignup() {
+    if (_returnTo != '/account') {
+      context.push('/signup?redirect=${Uri.encodeComponent(_returnTo)}');
+    } else {
+      context.push('/signup');
+    }
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    context.read<AuthBloc>().add(AuthLoginRequested(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        ));
+  Future<void> _sendPhoneOtp() async {
+    final digits = buildPhoneDigitsForApi(_country.dialCode, _phoneLocal);
+    if (digits.length < 11) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose country and enter your full mobile number')),
+      );
+      return;
+    }
+    setState(() => _otpSendLoading = true);
+    try {
+      await sl<SendLoginOtpUseCase>()(digits);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('OTP sent to your phone')),
+      );
+      context.push(
+        '/otp-verification',
+        extra: LoginOtpRouteExtra(phone: digits, returnTo: _returnTo),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _otpSendLoading = false);
+    }
+  }
+
+  Future<void> _onGoogle() async {
+    try {
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No Google ID token. Set GOOGLE_WEB_CLIENT_ID when building (same as web OAuth client).',
+            ),
+          ),
+        );
+        return;
+      }
+      if (!mounted) return;
+      context.read<AuthBloc>().add(AuthLoginWithGoogleRequested(idToken));
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        return;
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final fromCheckout = widget.redirectAfterLogin == '/checkout';
+    final fg = AppTheme.foregroundColor(context);
+    final primary = AppTheme.primaryColor(context);
+    final borderSoft = fg.withValues(alpha: 0.12);
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor(context),
       body: SafeArea(
         child: BlocConsumer<AuthBloc, AuthState>(
           listener: (context, state) {
             if (state is AuthAuthenticated) {
-              // Navigate after state is committed so Account (and other pages) see AuthAuthenticated
               final redirect = widget.redirectAfterLogin ?? '/';
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (context.mounted) context.go(redirect);
@@ -66,19 +126,18 @@ class _LoginPageState extends State<LoginPage> {
             }
           },
           builder: (context, state) {
-            final loading = state is AuthLoading;
+            final googleLoading = state is AuthLoading;
             return Column(
               children: [
-                // React: Header with Close (X) button only
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                     child: IconButton(
                       onPressed: () => context.go(fromCheckout ? '/cart' : '/'),
-                      icon: Icon(Icons.close, size: 24, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                      icon: Icon(Icons.close, size: 24, color: fg.withValues(alpha: 0.7)),
                       style: IconButton.styleFrom(
-                        backgroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
+                        backgroundColor: fg.withValues(alpha: 0.05),
                       ),
                     ),
                   ),
@@ -86,168 +145,164 @@ class _LoginPageState extends State<LoginPage> {
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (fromCheckout) ...[
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.shopping_cart_outlined, size: 20, color: AppTheme.primaryColor(context)),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Sign in to place your order. You\'ll return to checkout after.',
-                                      style: TextStyle(fontSize: 13, color: AppTheme.primaryColor(context), fontWeight: FontWeight.w500),
-                                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (fromCheckout) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Row(
+                              children: [
+                                Icon(Icons.shopping_cart_outlined, size: 20, color: primary),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Sign in to place your order. You\'ll return to checkout after.',
+                                    style: TextStyle(fontSize: 13, color: primary, fontWeight: FontWeight.w500),
                                   ),
-                                ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 32),
+                        const Center(child: AuthLogo()),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Welcome Back',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, color: fg),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Sign in with your phone number',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 16, color: fg.withValues(alpha: 0.6)),
+                        ),
+                        const SizedBox(height: 28),
+                        Text(
+                          'Phone Number',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: fg.withValues(alpha: 0.7),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        PhoneCountryRow(
+                          localPhone: _phoneLocal,
+                          onLocalPhoneChanged: (v) => setState(() => _phoneLocal = v),
+                          selectedCountry: _country,
+                          onSelectCountry: (c) => setState(() => _country = c),
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: _otpSendLoading ? null : _sendPhoneOtp,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                              side: BorderSide(color: borderSoft),
+                            ),
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                          ).copyWith(
+                            overlayColor: WidgetStateProperty.resolveWith(
+                              (s) => s.contains(WidgetState.pressed)
+                                  ? Colors.white.withValues(alpha: 0.12)
+                                  : null,
+                            ),
+                          ),
+                          child: _otpSendLoading
+                              ? const SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Text(
+                                  'Send OTP',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                                ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(child: Divider(color: fg.withValues(alpha: 0.12))),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'OR',
+                                style: TextStyle(fontSize: 14, color: fg.withValues(alpha: 0.4)),
+                              ),
+                            ),
+                            Expanded(child: Divider(color: fg.withValues(alpha: 0.12))),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        OutlinedButton(
+                          onPressed: googleLoading ? null : _onGoogle,
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: fg,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: BorderSide(color: fg.withValues(alpha: 0.12), width: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: googleLoading
+                              ? SizedBox(
+                                  height: 22,
+                                  width: 22,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: primary),
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const GoogleGLogo(size: 20),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Continue with Google',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: fg,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                        const SizedBox(height: 32),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Don't have an account? ",
+                              style: TextStyle(fontSize: 14, color: fg.withValues(alpha: 0.6)),
+                            ),
+                            TextButton(
+                              onPressed: _goSignup,
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'Sign up',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: primary,
+                                ),
                               ),
                             ),
                           ],
-                          const SizedBox(height: 32),
-                          // React: Logo & Title - "Welcome Back", "Sign in with your email"
-                          const Center(child: AuthLogo()),
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Welcome Back',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 30, fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Sign in with your email',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 16, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
-                          ),
-                          const SizedBox(height: 32),
-                          // React: inputs h-[54px] bg-foreground/5 border border-border/30 rounded-xl
-                          Text(
-                            'Email',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: InputDecoration(
-                              hintText: FormHints.email,
-                              filled: true,
-                              fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Email is required';
-                              if (!v.contains('@') || !v.contains('.')) return 'Please enter a valid email';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Password',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                          ),
-                          const SizedBox(height: 8),
-                          TextFormField(
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            decoration: InputDecoration(
-                              hintText: FormHints.password,
-                              filled: true,
-                              fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              suffixIcon: IconButton(
-                                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
-                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                              ),
-                            ),
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Password is required';
-                              if (v.length < 6) return 'Password must be at least 6 characters';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                          // React: w-full primary py-4 rounded-full
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              onPressed: loading ? null : _submit,
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                              ),
-                              child: loading
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : const Text('Sign in'),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // React: Divider OR
-                          Row(
-                            children: [
-                              Expanded(child: Divider(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                child: Text('OR', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4))),
-                              ),
-                              Expanded(child: Divider(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          // React: Continue with Google - border-2 rounded-full
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Google sign-in can be enabled with Firebase')),
-                              );
-                            },
-                            icon: Icon(Icons.g_mobiledata, size: 24, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                            label: const Text('Continue with Google'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          // React: "Don't have an account? Sign up"
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Don't have an account? ",
-                                style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
-                              ),
-                              TextButton(
-                                onPressed: () => context.push('/signup'),
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: Size.zero,
-                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                ),
-                                child: Text('Sign up', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.primaryColor(context))),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                     ),
                   ),
                 ),

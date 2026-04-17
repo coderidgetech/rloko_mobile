@@ -1,16 +1,21 @@
-# rloco_mobile
+# Rloko Mobile App
 
-A new Flutter project.
+Flutter client for Rloko commerce.
+
+## Production Scope
+
+- Consumer shopping flows only (auth, browse, cart, checkout, orders, addresses).
+- Admin and vendor management flows are out of scope for this mobile app.
+
+## Explicitly Unsupported in Mobile
+
+- Admin dashboard and operations
+- Vendor portal and vendor analytics
+- Mock-only account utilities are not production business workflows
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run
+```
