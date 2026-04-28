@@ -9,6 +9,7 @@ class ShippingMethodDto {
     required this.carrier,
     required this.type,
     required this.baseCost,
+    required this.currency,
     required this.estimatedDays,
     required this.isActive,
   });
@@ -20,6 +21,7 @@ class ShippingMethodDto {
       carrier: json['carrier'] as String? ?? '',
       type: json['type'] as String? ?? 'standard',
       baseCost: (json['base_cost'] as num?)?.toDouble() ?? 0,
+      currency: (json['currency'] as String?)?.toUpperCase() ?? 'USD',
       estimatedDays: json['estimated_days'] as int? ?? 5,
       isActive: json['is_active'] == true,
     );
@@ -30,6 +32,7 @@ class ShippingMethodDto {
   final String carrier;
   final String type;
   final double baseCost;
+  final String currency;
   final int estimatedDays;
   final bool isActive;
 
@@ -39,6 +42,7 @@ class ShippingMethodDto {
         carrier: carrier,
         type: type,
         baseCost: baseCost,
+        currency: currency,
         estimatedDays: estimatedDays,
         isActive: isActive,
       );

@@ -39,6 +39,7 @@ import '../../features/order/domain/usecases/order_usecases.dart';
 import '../../features/order/presentation/bloc/order_detail_bloc.dart';
 import '../../features/order/presentation/pages/order_detail_page.dart';
 import '../../features/order/presentation/pages/orders_page.dart';
+import '../../features/order/presentation/pages/checkout_page.dart';
 import '../../features/address/presentation/pages/address_form_page.dart';
 import '../../features/address/presentation/pages/addresses_page.dart';
 import '../../features/order/presentation/pages/order_confirmation_page.dart';
@@ -297,7 +298,7 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/checkout',
-        redirect: (_, __) => '/cart',
+        builder: (context, state) => const CheckoutPage(),
       ),
       GoRoute(
         path: '/order-confirmation/:id',

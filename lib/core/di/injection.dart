@@ -66,9 +66,12 @@ import '../../features/config/data/datasources/config_remote_datasource.dart';
 import '../../features/config/data/repositories/config_repository_impl.dart';
 import '../../features/config/domain/repositories/config_repository.dart';
 import '../../features/config/domain/usecases/get_site_config_usecase.dart';
+import '../../features/shipping/domain/usecases/calculate_shipping_usecase.dart';
 import '../../features/shipping/domain/usecases/get_shipping_methods_usecase.dart';
 import '../../features/payment/data/datasources/payment_remote_datasource.dart';
 import '../../features/payment/domain/usecases/create_payment_intent_usecase.dart';
+import '../../features/review/data/datasources/review_remote_datasource.dart';
+import '../../features/review/domain/usecases/get_my_reviews_usecase.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -301,6 +304,9 @@ Future<void> initInjection() async {
   sl.registerLazySingleton<GetShippingMethodsUseCase>(
     () => GetShippingMethodsUseCase(sl<ShippingRepository>()),
   );
+  sl.registerLazySingleton<CalculateShippingUseCase>(
+    () => CalculateShippingUseCase(sl<ShippingRepository>()),
+  );
 
   // Payment (Stripe)
   sl.registerLazySingleton<PaymentRemoteDataSource>(
@@ -308,6 +314,14 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<CreatePaymentIntentUseCase>(
     () => CreatePaymentIntentUseCase(sl<PaymentRemoteDataSource>()),
+  );
+
+  // Reviews (my reviews)
+  sl.registerLazySingleton<ReviewRemoteDataSource>(
+    () => ReviewRemoteDataSource(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<GetMyReviewsUseCase>(
+    () => GetMyReviewsUseCase(sl<ReviewRemoteDataSource>()),
   );
 }
 

@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/delivery_constants.dart';
 import '../../../../core/constants/form_hints.dart';
+import '../../../../core/constants/shipping.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/region/app_region.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
-import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
@@ -16,6 +18,8 @@ import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../address/domain/entities/address_entity.dart';
 import '../../../address/domain/usecases/address_usecases.dart';
 import '../../../address/presentation/pages/address_form_page.dart';
+import '../../../shipping/domain/entities/calculate_shipping_params.dart';
+import '../../../shipping/domain/usecases/calculate_shipping_usecase.dart';
 import '../../domain/entities/order_entity.dart';
 import '../../domain/usecases/order_usecases.dart';
 
@@ -34,6 +38,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
   bool _placing = false;
   String? _error;
   bool _retriedAddressesAfterAuth = false;
+  double? _quotedShipping;
+  String _quotedShippingCurrency = 'USD';
+  bool _shippingQuoteLoading = false;
 
   @override
   void initState() {
@@ -64,6 +71,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
           _selectedAddressId =
               list.where((a) => a.isDefault).firstOrNull?.id ?? list.firstOrNull?.id;
           _addressesLoading = false;
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _refreshShippingQuote();
         });
       }
     } catch (e, st) {
@@ -154,6 +164,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           onTap: () {
                             setState(() => _selectedAddressId = a.id);
                             Navigator.pop(ctx);
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) _refreshShippingQuote();
+                            });
                           },
                           borderRadius: BorderRadius.circular(16),
                           child: Container(
@@ -261,6 +274,82 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
       ),
     );
+  }
+
+  double _cartSubtotalUsd(Iterable<CartItemEntity> items, AppRegion region) {
+    const usdToInr = 75.0;
+    return items.fold(0.0, (s, i) {
+      if (region == AppRegion.india && i.priceInr != null) {
+        return s + (i.priceInr! * i.quantity) / usdToInr;
+      }
+      return s + i.price * i.quantity;
+    });
+  }
+
+  double _cartWeightLb(Iterable<CartItemEntity> items) {
+    return items.fold(0.0, (s, i) => s + i.quantity * kDefaultItemWeightLb);
+  }
+
+  Future<void> _refreshShippingQuote() async {
+    final auth = context.read<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) return;
+    final cartState = context.read<CartBloc>().state;
+    if (cartState is! CartLoaded || cartState.cart.items.isEmpty) return;
+    if (_selectedAddressId == null || _addresses.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _quotedShipping = null;
+          _shippingQuoteLoading = false;
+        });
+      }
+      return;
+    }
+    final region = CurrencyScope.of(context).region;
+    final sub = _cartSubtotalUsd(cartState.cart.items, region);
+    final w = _cartWeightLb(cartState.cart.items);
+    final weight = w > 0 ? w : kDefaultItemWeightLb;
+    final addr = _addresses.firstWhere((a) => a.id == _selectedAddressId);
+    final ship = _addressToShipping(addr, auth.user.email);
+    if (mounted) setState(() => _shippingQuoteLoading = true);
+    try {
+      final methods = await sl<CalculateShippingUseCase>().call(
+        CalculateShippingParams(
+          country: ship.country,
+          state: ship.state,
+          city: ship.city,
+          address: ship.address,
+          postalCode: ship.zipCode,
+          firstName: ship.firstName,
+          lastName: ship.lastName,
+          email: ship.email,
+          phone: ship.phone,
+          subtotal: sub,
+          weight: weight,
+        ),
+      );
+      if (!mounted) return;
+      if (methods.isNotEmpty) {
+        final m = methods.first;
+        setState(() {
+          _quotedShipping = m.baseCost;
+          _quotedShippingCurrency = m.currency;
+          _shippingQuoteLoading = false;
+        });
+      } else {
+        setState(() {
+          _quotedShipping = null;
+          _shippingQuoteLoading = false;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('[CheckoutPage] shipping quote: $e');
+      if (mounted) {
+        setState(() {
+          _quotedShipping = null;
+          _shippingQuoteLoading = false;
+        });
+      }
+    }
   }
 
   ShippingInfoEntity _addressToShipping(
@@ -427,9 +516,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
           );
         }
 
-        return Scaffold(
-          backgroundColor: AppTheme.backgroundColor(context),
-          body: BlocBuilder<CartBloc, CartState>(
+        return BlocListener<CartBloc, CartState>(
+          listenWhen: (p, c) => c is CartLoaded,
+          listener: (context, state) {
+            if (state is CartLoaded && state.cart.items.isNotEmpty) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) _refreshShippingQuote();
+              });
+            }
+          },
+          child: Scaffold(
+            backgroundColor: AppTheme.backgroundColor(context),
+            body: BlocBuilder<CartBloc, CartState>(
             builder: (context, cartState) {
               if (cartState is CartLoading) {
                 return const Center(
@@ -480,8 +578,36 @@ class _CheckoutPageState extends State<CheckoutPage> {
               }
 
               final cart = cartState.cart;
-              final subtotal =
-                  cart.items.fold(0.0, (s, i) => s + i.price * i.quantity);
+              final region = CurrencyScope.of(context).region;
+              final subtotal = cart.items.fold(0.0, (s, i) {
+                if (region == AppRegion.india && i.priceInr != null) {
+                  return s + i.priceInr! * i.quantity;
+                }
+                return s + i.price * i.quantity;
+              });
+              final shipAdd = _quotedShipping == null
+                  ? 0.0
+                  : (region == AppRegion.india && _quotedShippingCurrency == 'USD'
+                      ? _quotedShipping! * 75.0
+                      : _quotedShipping!);
+              final totalWithShipping = subtotal + (_quotedShipping == null ? 0.0 : shipAdd);
+              final subtotalText = region == AppRegion.india
+                  ? CurrencyScope.of(context).formatPrice(subtotal / 75.0, subtotal)
+                  : CurrencyScope.of(context).formatPrice(subtotal, null);
+              final shippingText = _shippingQuoteLoading
+                  ? '...'
+                  : _quotedShipping == null
+                      ? 'Add address to estimate'
+                      : (region == AppRegion.india && _quotedShippingCurrency == 'USD')
+                          ? CurrencyScope.of(context).formatPrice(_quotedShipping!,
+                              _quotedShipping! * 75.0)
+                          : (_quotedShippingCurrency == 'USD'
+                              ? '\$${_quotedShipping!.toStringAsFixed(2)}'
+                              : '₹${_quotedShipping!.round()}');
+              final totalText = region == AppRegion.india
+                  ? CurrencyScope.of(context)
+                      .formatPrice(totalWithShipping / 75.0, totalWithShipping)
+                  : CurrencyScope.of(context).formatPrice(totalWithShipping, null);
 
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -638,13 +764,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           ),
                           child: Column(
                             children: [
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text(CurrencyScope.of(context).formatPrice(subtotal, null), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text(subtotalText, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))]),
                               const SizedBox(height: 8),
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Shipping', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text(DeliveryConstants.calculatedAtCheckout, style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)))]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('Shipping', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))), Text(shippingText, style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.86), fontWeight: FontWeight.w500))]),
                               const SizedBox(height: 12),
                               Divider(height: 1, color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
                               const SizedBox(height: 12),
-                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total (approx)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), Text(CurrencyScope.of(context).formatPrice(subtotal, null), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
+                              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total (approx)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)), Text(totalText, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600))]),
                             ],
                           ),
                         ),
@@ -686,6 +812,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ],
               );
             },
+            ),
           ),
         );
       },
