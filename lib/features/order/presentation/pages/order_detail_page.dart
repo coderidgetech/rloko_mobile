@@ -461,20 +461,25 @@ class _OrderStatusCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    order.orderNumber,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Placed on ${_formatDateShort(order.createdAt)}',
-                    style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      order.orderNumber,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Placed on ${_formatDateShort(order.createdAt)}',
+                      style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
