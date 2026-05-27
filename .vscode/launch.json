@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run (dev)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--flavor", "dev",
+        "--dart-define-from-file", "assets/env/app.dev.env"
+      ]
+    },
+    {
+      "name": "Run (local)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        "--flavor", "local",
+        "--dart-define-from-file", "assets/env/app.local.env"
+      ]
+    },
+    {
+      "name": "Run (prod — release)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "args": [
+        "--flavor", "prod",
+        "--dart-define-from-file", "assets/env/app.prod.env"
+      ]
+    }
+  ]
+}

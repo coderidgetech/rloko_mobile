@@ -23,12 +23,31 @@ android {
 
     defaultConfig {
         applicationId = "com.coderidge.rloko"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "Rloko Dev")
+        }
+        create("local") {
+            dimension = "environment"
+            applicationIdSuffix = ".local"
+            versionNameSuffix = "-local"
+            resValue("string", "app_name", "Rloko Local")
+        }
+        create("prod") {
+            dimension = "environment"
+            // No suffix — uses base applicationId com.coderidge.rloko
+            resValue("string", "app_name", "Rloko")
+        }
     }
 
     // To sign the release build, create android/key.properties with:

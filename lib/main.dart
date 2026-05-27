@@ -56,7 +56,8 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: 'assets/env/app.env', isOptional: true);
+  const _kFlavor = String.fromEnvironment('APP_FLAVOR', defaultValue: 'local');
+  await dotenv.load(fileName: 'assets/env/app.$_kFlavor.env', isOptional: true);
   await loadStripePublishableKeyFromAssets();
 
   try {

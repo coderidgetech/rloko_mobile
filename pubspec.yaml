@@ -81,6 +81,9 @@ flutter:
 
   assets:
     - assets/env/app.env
+    - assets/env/app.dev.env
+    - assets/env/app.local.env
+    - assets/env/app.prod.env
 
   # To add assets to your application, add an assets section, like this:
   # assets:
