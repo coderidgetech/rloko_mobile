@@ -21,7 +21,7 @@ import '../../features/home/presentation/pages/language_page.dart';
 import '../../features/home/presentation/pages/notifications_page.dart';
 import '../../features/home/presentation/pages/payment_methods_page.dart';
 import '../../features/home/presentation/pages/returns_page.dart';
-import '../../features/home/presentation/pages/rewards_page.dart';
+import '../../features/rewards/presentation/pages/rewards_page.dart';
 import '../../features/home/presentation/pages/reviews_page.dart';
 import '../../features/home/presentation/pages/shipping_info_page.dart';
 import '../../features/home/presentation/pages/settings_page.dart';
@@ -36,8 +36,10 @@ import '../../features/product/presentation/pages/search_page.dart';
 import '../../features/cart/presentation/pages/cart_page.dart';
 import '../../features/wishlist/presentation/pages/wishlist_page.dart';
 import '../../features/order/domain/usecases/order_usecases.dart';
+import '../../features/return_order/domain/usecases/create_return_usecase.dart';
 import '../../features/order/presentation/bloc/order_detail_bloc.dart';
 import '../../features/order/presentation/pages/order_detail_page.dart';
+import '../../features/order/presentation/pages/order_tracking_page.dart';
 import '../../features/order/presentation/pages/orders_page.dart';
 import '../../features/order/presentation/pages/checkout_page.dart';
 import '../../features/address/presentation/pages/address_form_page.dart';
@@ -49,6 +51,9 @@ import '../../features/home/presentation/pages/privacy_page.dart';
 import '../../features/home/presentation/pages/size_guide_page.dart';
 import '../../features/home/presentation/pages/terms_page.dart';
 import '../../features/onboarding/presentation/pages/onboarding_page.dart';
+import '../../features/review/presentation/pages/write_review_page.dart';
+import '../../features/video/presentation/pages/video_player_page.dart';
+import '../../features/order/presentation/pages/guest_checkout_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavKey = GlobalKey<NavigatorState>();
 
@@ -256,6 +261,14 @@ GoRouter createAppRouter() {
         builder: (context, state) => const ReviewsPage(),
       ),
       GoRoute(
+        path: '/reviews/write/:productId',
+        builder: (context, state) {
+          final productId = state.pathParameters['productId'] ?? '';
+          final productName = state.uri.queryParameters['name'];
+          return WriteReviewPage(productId: productId, productName: productName);
+        },
+      ),
+      GoRoute(
         path: '/about',
         builder: (context, state) => const AboutPage(),
       ),
@@ -276,6 +289,7 @@ GoRouter createAppRouter() {
               getOrderByIdUseCase: sl<GetOrderByIdUseCase>(),
               getOrderTrackingUseCase: sl<GetOrderTrackingUseCase>(),
               cancelOrderUseCase: sl<CancelOrderUseCase>(),
+              createReturnUseCase: sl<CreateReturnUseCase>(),
             )..add(OrderDetailLoadRequested(id)),
             child: OrderDetailPage(orderId: id),
           );
@@ -298,7 +312,17 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/checkout',
-        builder: (context, state) => const CheckoutPage(),
+        builder: (context, state) {
+          final e = state.extra;
+          final pm = e is String && (e == 'card' || e == 'upi' || e == 'cod')
+              ? e
+              : null;
+          return CheckoutPage(initialPaymentMethod: pm);
+        },
+      ),
+      GoRoute(
+        path: '/checkout/guest',
+        builder: (context, state) => const GuestCheckoutPage(),
       ),
       GoRoute(
         path: '/order-confirmation/:id',
@@ -332,12 +356,31 @@ GoRouter createAppRouter() {
         builder: (context, state) => const SizeGuidePage(),
       ),
       GoRoute(
+        path: '/tracking/:orderId',
+        builder: (context, state) {
+          final orderId = state.pathParameters['orderId'] ?? '';
+          return OrderTrackingPage(orderId: orderId);
+        },
+      ),
+      GoRoute(
         path: '/shipping',
         builder: (context, state) => const ShippingInfoPage(),
       ),
       GoRoute(
         path: '/returns',
         builder: (context, state) => const ReturnsPage(),
+      ),
+      GoRoute(
+        path: '/video/:id',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return VideoPlayerPage(
+            videoUrl: extra?['videoUrl'] as String? ?? '',
+            title: extra?['title'] as String? ?? '',
+            category: extra?['category'] as String? ?? '',
+            thumbnailUrl: extra?['thumbnailUrl'] as String?,
+          );
+        },
       ),
     ],
   );

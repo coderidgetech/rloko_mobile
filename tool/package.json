@@ -1,0 +1,7 @@
+{
+  "name": "rloco-mobile-tooling",
+  "private": true,
+  "devDependencies": {
+    "sharp": "^0.33.5"
+  }
+}

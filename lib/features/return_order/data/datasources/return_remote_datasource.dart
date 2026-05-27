@@ -28,6 +28,25 @@ class ReturnRemoteDataSource {
     if (data == null) throw Exception('Invalid response');
     return ReturnDto.fromJson(data);
   }
+
+  Future<ReturnDto> create({
+    required String orderId,
+    required List<Map<String, dynamic>> items,
+    required String reason,
+    String description = '',
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/orders/$orderId/return',
+      data: {
+        'items': items,
+        'reason': reason,
+        'description': description,
+      },
+    );
+    final data = response.data;
+    if (data == null) throw Exception('Invalid response');
+    return ReturnDto.fromJson(data);
+  }
 }
 
 class ReturnListResponse {

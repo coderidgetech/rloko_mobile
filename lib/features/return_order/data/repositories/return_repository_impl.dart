@@ -32,4 +32,24 @@ class ReturnRepositoryImpl implements ReturnRepository {
       throw getApiException(e) ?? e;
     }
   }
+
+  @override
+  Future<ReturnEntity> create({
+    required String orderId,
+    required List<Map<String, dynamic>> items,
+    required String reason,
+    String description = '',
+  }) async {
+    try {
+      final dto = await _dataSource.create(
+        orderId: orderId,
+        items: items,
+        reason: reason,
+        description: description,
+      );
+      return dto.toEntity();
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
 }

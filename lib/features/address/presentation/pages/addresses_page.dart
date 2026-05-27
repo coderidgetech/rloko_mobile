@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/widgets/sign_in_to_continue_panel.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
 import '../../domain/entities/address_entity.dart';
 import '../bloc/address_list_bloc.dart';
@@ -16,34 +17,19 @@ class AddressesPage extends StatefulWidget {
 }
 
 class _AddressesPageState extends State<AddressesPage> {
-  bool _retriedAfterAuth = false;
-
   @override
   void initState() {
     super.initState();
-    context.read<AddressListBloc>().add(const AddressListLoadRequested());
-  }
-
-  void _retryIfAuthenticated() {
-    if (_retriedAfterAuth) return;
-    final authState = context.read<AuthBloc>().state;
-    final listState = context.read<AddressListBloc>().state;
-    if (authState is AuthAuthenticated &&
-        listState is AddressListError &&
-        listState.message.contains('Sign in')) {
-      _retriedAfterAuth = true;
-      context.read<AddressListBloc>().add(const AddressListLoadRequested());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (context.read<AuthBloc>().state is AuthAuthenticated) {
+        context.read<AddressListBloc>().add(const AddressListLoadRequested());
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // When opened from Account while logged in, retry if we're still showing 401
-    if (context.read<AuthBloc>().state is AuthAuthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _retryIfAuthenticated();
-      });
-    }
     return Scaffold(
       backgroundColor: AppTheme.mutedColor(context),
       appBar: AppBar(
@@ -61,103 +47,136 @@ class _AddressesPageState extends State<AddressesPage> {
         backgroundColor: AppTheme.backgroundColor(context),
         foregroundColor: AppTheme.foregroundColor(context),
       ),
-      body: BlocBuilder<AddressListBloc, AddressListState>(
-        builder: (context, state) {
-          if (state is AddressListLoading) {
-            return const Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            );
+      body: BlocListener<AuthBloc, AuthState>(
+        listenWhen: (prev, curr) =>
+            prev is! AuthAuthenticated && curr is AuthAuthenticated,
+        listener: (context, state) {
+          if (state is AuthAuthenticated) {
+            context.read<AddressListBloc>().add(const AddressListLoadRequested());
           }
-          if (state is AddressListError) {
-            final isUnauth = state.message.contains('Sign in');
-            return EmptyState(
-              title: isUnauth ? 'Sign in to view addresses' : 'Could not load addresses',
-              subtitle: state.message,
-              icon: Icons.location_on_outlined,
-              actionLabel: isUnauth ? 'Sign in' : 'Retry',
-              onAction: () {
-                if (isUnauth) {
-                  context.push('/login', extra: '/addresses');
-                } else {
-                  context.read<AddressListBloc>().add(const AddressListLoadRequested());
-                }
-              },
-            );
-          }
-          if (state is AddressListLoaded) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // React: h1 text-2xl font-medium, p text-sm text-foreground/60 mt-1
-                  const Text(
-                    'Saved Addresses',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage your delivery addresses',
-                    style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
-                  ),
-                  const SizedBox(height: 16),
-                  // React: w-full bg-primary p-4 rounded-2xl, Plus 20, "Add New Address" font-medium
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: () async {
-                        await context.push('/addresses/add');
-                        if (context.mounted) {
-                          context.read<AddressListBloc>().add(const AddressListLoadRequested());
-                        }
-                      },
-                      icon: const Icon(Icons.add, size: 20),
-                      label: const Text('Add New Address'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      ),
+        },
+        child: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, authState) {
+            if (authState is AuthInitial || authState is AuthLoading) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(color: AppTheme.primaryColor(context)),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Loading…',
+                      style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (state.addresses.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 24),
-                      child: EmptyState(
-                        title: 'No addresses yet',
-                        subtitle: 'Add an address for faster checkout',
-                        icon: Icons.location_on_outlined,
-                        actionLabel: 'Add address',
-                        onAction: () => context.push('/addresses/add'),
-                      ),
-                    )
-                  else
-                    ...List.generate(state.addresses.length, (index) {
-                      final address = state.addresses[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _AddressCard(
-                          address: address,
-                          onEdit: () {
-                            context.push('/addresses/edit/${address.id}').then((_) {
+                  ],
+                ),
+              );
+            }
+            if (authState is! AuthAuthenticated) {
+              return SignInToContinuePanel(
+                title: 'Sign in to view your addresses',
+                subtitle:
+                    'Your saved delivery addresses are available after you sign in — same as on the Account tab.',
+                returnPath: '/addresses',
+                icon: Icons.location_on_outlined,
+              );
+            }
+            return BlocBuilder<AddressListBloc, AddressListState>(
+              builder: (context, state) {
+                if (state is AddressListLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
+                }
+                if (state is AddressListError) {
+                  return EmptyState(
+                    title: 'Could not load addresses',
+                    subtitle: state.message,
+                    icon: Icons.location_on_outlined,
+                    actionLabel: 'Retry',
+                    onAction: () {
+                      context.read<AddressListBloc>().add(const AddressListLoadRequested());
+                    },
+                  );
+                }
+                if (state is AddressListLoaded) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Saved Addresses',
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Manage your delivery addresses',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () async {
+                              await context.push('/addresses/add');
                               if (context.mounted) {
                                 context.read<AddressListBloc>().add(const AddressListLoadRequested());
                               }
-                            });
-                          },
-                          onDelete: () => _confirmDelete(context, address),
-                          onSetDefault: () => context
-                              .read<AddressListBloc>()
-                              .add(AddressListSetDefaultRequested(address.id)),
+                            },
+                            icon: const Icon(Icons.add, size: 20),
+                            label: const Text('Add New Address'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            ),
+                          ),
                         ),
-                      );
-                    }),
-                ],
-              ),
+                        const SizedBox(height: 16),
+                        if (state.addresses.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 24),
+                            child: EmptyState(
+                              title: 'No addresses yet',
+                              subtitle: 'Add an address for faster checkout',
+                              icon: Icons.location_on_outlined,
+                              actionLabel: 'Add address',
+                              onAction: () => context.push('/addresses/add'),
+                            ),
+                          )
+                        else
+                          ...List.generate(state.addresses.length, (index) {
+                            final address = state.addresses[index];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _AddressCard(
+                                address: address,
+                                onEdit: () {
+                                  context.push('/addresses/edit/${address.id}').then((_) {
+                                    if (context.mounted) {
+                                      context.read<AddressListBloc>().add(const AddressListLoadRequested());
+                                    }
+                                  });
+                                },
+                                onDelete: () => _confirmDelete(context, address),
+                                onSetDefault: () => context
+                                    .read<AddressListBloc>()
+                                    .add(AddressListSetDefaultRequested(address.id)),
+                              ),
+                            );
+                          }),
+                      ],
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             );
-          }
-          return const SizedBox.shrink();
-        },
+          },
+        ),
       ),
     );
   }

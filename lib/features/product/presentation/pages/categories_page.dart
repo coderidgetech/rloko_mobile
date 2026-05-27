@@ -1,20 +1,25 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/bottom_nav.dart';
 import '../../../../core/widgets/safe_network_image.dart';
+import '../../../config/domain/entities/site_config.dart';
+import '../../../config/presentation/bloc/config_bloc.dart';
+import '../../../config/utils/config_category_utils.dart';
+import '../../domain/entities/category_entity.dart';
+import '../bloc/category_list_bloc.dart';
 
-/// Static category item matching React MobileCategoriesPage CATEGORIES.
+/// One row in the category grid: from API, config fallback, or a fixed nav link (e.g. new, sale, all).
 class _CategoryItem {
   const _CategoryItem({
     required this.id,
     required this.name,
     required this.image,
     required this.description,
-    required this.itemCount,
     required this.link,
     this.badge,
     this.subcategories,
@@ -24,7 +29,6 @@ class _CategoryItem {
   final String name;
   final String image;
   final String description;
-  final String itemCount;
   final String link;
   final String? badge;
   final List<_SubcategoryItem>? subcategories;
@@ -33,176 +37,89 @@ class _CategoryItem {
 class _SubcategoryItem {
   const _SubcategoryItem({
     required this.name,
-    required this.count,
     required this.link,
     this.badge,
   });
 
   final String name;
-  final String count;
   final String link;
   final String? badge;
 }
 
-/// Static list matching React MobileCategoriesPage exactly.
-const List<_CategoryItem> _kCategories = [
-  _CategoryItem(
-    id: 'all-products',
-    name: 'All Products',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80',
-    description: 'Browse our complete collection',
-    itemCount: '5,000+ Items',
-    badge: 'Shop All',
-    link: '/all-products',
-  ),
-  _CategoryItem(
-    id: 'women',
-    name: 'Women',
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80',
-    description: "Explore the latest trends in women's fashion",
-    itemCount: '2,450+ Items',
-    link: '/category/women',
-    subcategories: [
-      _SubcategoryItem(name: 'Dresses', count: '450+', link: '/category/women/dresses'),
-      _SubcategoryItem(name: 'Tops & Blouses', count: '380+', link: '/category/women/tops'),
-      _SubcategoryItem(name: 'Bottoms', count: '320+', link: '/category/women/bottoms'),
-      _SubcategoryItem(name: 'Outerwear & Jackets', count: '280+', link: '/category/women/outerwear'),
-      _SubcategoryItem(name: 'Activewear', count: '240+', link: '/category/women/activewear'),
-      _SubcategoryItem(name: 'Lingerie & Sleepwear', count: '190+', link: '/category/women/lingerie'),
-      _SubcategoryItem(name: 'Shoes', count: '520+', link: '/category/women/shoes'),
-      _SubcategoryItem(name: 'Bags & Handbags', count: '340+', link: '/category/women/bags'),
-      _SubcategoryItem(name: 'Jewelry', count: '230+', link: '/category/women/jewelry'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'men',
-    name: 'Men',
-    image: 'https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=600&q=80',
-    description: "Discover sophisticated men's styles",
-    itemCount: '1,850+ Items',
-    link: '/category/men',
-    subcategories: [
-      _SubcategoryItem(name: 'Shirts & T-Shirts', count: '420+', link: '/category/men/shirts'),
-      _SubcategoryItem(name: 'Pants & Jeans', count: '350+', link: '/category/men/pants'),
-      _SubcategoryItem(name: 'Suits & Blazers', count: '180+', link: '/category/men/suits'),
-      _SubcategoryItem(name: 'Outerwear', count: '220+', link: '/category/men/outerwear'),
-      _SubcategoryItem(name: 'Activewear', count: '190+', link: '/category/men/activewear'),
-      _SubcategoryItem(name: 'Shoes', count: '380+', link: '/category/men/shoes'),
-      _SubcategoryItem(name: 'Accessories', count: '110+', link: '/category/men/accessories'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'new',
-    name: 'New Arrivals',
-    image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=600&q=80',
-    description: 'Fresh styles just landed',
-    itemCount: '580+ Items',
-    badge: 'New',
-    link: '/new-arrivals',
-    subcategories: [
-      _SubcategoryItem(name: 'This Week', count: '120+', link: '/new-arrivals', badge: 'Hot'),
-      _SubcategoryItem(name: 'This Month', count: '280+', link: '/new-arrivals'),
-      _SubcategoryItem(name: "Women's New", count: '340+', link: '/new-arrivals'),
-      _SubcategoryItem(name: "Men's New", count: '240+', link: '/new-arrivals'),
-      _SubcategoryItem(name: 'Coming Soon', count: '95+', link: '/new-arrivals', badge: 'Soon'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'sale',
-    name: 'Sale',
-    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80',
-    description: 'Amazing deals up to 70% off',
-    itemCount: '920+ Items',
-    badge: 'Up to 70% Off',
-    link: '/sale',
-    subcategories: [
-      _SubcategoryItem(name: 'Up to 30% Off', count: '280+', link: '/sale', badge: '30%'),
-      _SubcategoryItem(name: 'Up to 50% Off', count: '340+', link: '/sale', badge: '50%'),
-      _SubcategoryItem(name: 'Up to 70% Off', count: '180+', link: '/sale', badge: '70%'),
-      _SubcategoryItem(name: 'Final Sale', count: '120+', link: '/sale', badge: 'Final'),
-      _SubcategoryItem(name: "Women's Sale", count: '520+', link: '/sale'),
-      _SubcategoryItem(name: "Men's Sale", count: '400+', link: '/sale'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'dresses',
-    name: 'Dresses',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&q=80',
-    description: 'Perfect dresses for every occasion',
-    itemCount: '680+ Items',
-    link: '/category/women/dresses',
-    subcategories: [
-      _SubcategoryItem(name: 'Casual Dresses', count: '180+', link: '/category/women/dresses'),
-      _SubcategoryItem(name: 'Evening Dresses', count: '140+', link: '/category/women/dresses'),
-      _SubcategoryItem(name: 'Cocktail Dresses', count: '120+', link: '/category/women/dresses'),
-      _SubcategoryItem(name: 'Maxi Dresses', count: '95+', link: '/category/women/dresses'),
-      _SubcategoryItem(name: 'Mini Dresses', count: '85+', link: '/category/women/dresses'),
-      _SubcategoryItem(name: 'Midi Dresses', count: '60+', link: '/category/women/dresses'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'shoes',
-    name: 'Shoes',
-    image: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&q=80',
-    description: 'Step into style and comfort',
-    itemCount: '920+ Items',
-    link: '/category/women/shoes',
-    subcategories: [
-      _SubcategoryItem(name: 'Sneakers & Athletic', count: '280+', link: '/category/women/shoes'),
-      _SubcategoryItem(name: 'Heels & Pumps', count: '190+', link: '/category/women/shoes'),
-      _SubcategoryItem(name: 'Boots & Booties', count: '220+', link: '/category/women/shoes'),
-      _SubcategoryItem(name: 'Sandals & Slides', count: '140+', link: '/category/women/shoes'),
-      _SubcategoryItem(name: 'Flats & Loafers', count: '90+', link: '/category/women/shoes'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'bags',
-    name: 'Bags & Accessories',
-    image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600&q=80',
-    description: 'Complete your look with perfect accessories',
-    itemCount: '540+ Items',
-    link: '/category/women/clothing',
-    subcategories: [
-      _SubcategoryItem(name: 'Handbags & Totes', count: '180+', link: '/category/women/bags'),
-      _SubcategoryItem(name: 'Backpacks', count: '95+', link: '/category/women/bags'),
-      _SubcategoryItem(name: 'Clutches & Evening Bags', count: '80+', link: '/category/women/bags'),
-      _SubcategoryItem(name: 'Wallets & Cardholders', count: '120+', link: '/category/women/bags'),
-      _SubcategoryItem(name: 'Belts', count: '65+', link: '/category/women/bags'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'jewelry',
-    name: 'Jewelry',
-    image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80',
-    description: 'Elegant pieces to elevate any outfit',
-    itemCount: '450+ Items',
-    link: '/category/women/jewelry',
-    subcategories: [
-      _SubcategoryItem(name: 'Necklaces & Pendants', count: '120+', link: '/category/women/jewelry'),
-      _SubcategoryItem(name: 'Earrings', count: '140+', link: '/category/women/jewelry'),
-      _SubcategoryItem(name: 'Bracelets & Bangles', count: '90+', link: '/category/women/jewelry'),
-      _SubcategoryItem(name: 'Rings', count: '75+', link: '/category/women/jewelry'),
-      _SubcategoryItem(name: 'Watches', count: '25+', link: '/category/women/jewelry'),
-    ],
-  ),
-  _CategoryItem(
-    id: 'cosmetics',
-    name: 'Cosmetics & Beauty',
-    image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&q=80',
-    description: 'Premium beauty and skincare essentials',
-    itemCount: '620+ Items',
-    link: '/category/women/clothing',
-    subcategories: [
-      _SubcategoryItem(name: 'Makeup', count: '220+', link: '/category/women/clothing'),
-      _SubcategoryItem(name: 'Skincare', count: '180+', link: '/category/women/clothing'),
-      _SubcategoryItem(name: 'Fragrance', count: '95+', link: '/category/women/clothing'),
-      _SubcategoryItem(name: 'Haircare', count: '85+', link: '/category/women/clothing'),
-      _SubcategoryItem(name: 'Beauty Tools', count: '40+', link: '/category/women/clothing'),
-    ],
-  ),
-];
+String _slugifySubName(String s) {
+  return s
+      .toLowerCase()
+      .replaceAll('&', 'and')
+      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+      .replaceAll(RegExp(r'-+'), '-')
+      .replaceAll(RegExp(r'^-|-$'), '');
+}
 
-/// Categories page matching React MobileCategoriesPage exactly:
+List<_CategoryItem> _categoriesListFromState({
+  required CategoryListState? categoryState,
+  required SiteConfig config,
+}) {
+  var list = <CategoryEntity>[];
+  if (categoryState is CategoryListLoaded) {
+    list = List<CategoryEntity>.from(categoryState.categories)..sort((a, b) => a.order.compareTo(b.order));
+  }
+  if (list.isEmpty) {
+    list = categoriesFromConfig(config.categories)..sort((a, b) => a.order.compareTo(b.order));
+  }
+  final out = <_CategoryItem>[
+    const _CategoryItem(
+      id: 'all-products',
+      name: 'All Products',
+      image: '',
+      description: 'Browse the full catalog',
+      badge: 'Shop All',
+      link: '/all-products',
+    ),
+  ];
+  for (final c in list) {
+    final subItems = c.subcategories
+        .map(
+          (s) => _SubcategoryItem(
+            name: s,
+            link: '/category/${c.gender}/${_slugifySubName(s)}',
+          ),
+        )
+        .toList();
+    out.add(
+      _CategoryItem(
+        id: c.id,
+        name: c.name,
+        image: c.image,
+        description: subItems.isNotEmpty ? 'Collections in this category' : 'Shop this collection',
+        link: '/category/${c.gender}/${c.slug}',
+        subcategories: subItems.isEmpty ? null : subItems,
+      ),
+    );
+  }
+  out.add(
+    const _CategoryItem(
+      id: 'new',
+      name: 'New Arrivals',
+      image: '',
+      description: 'Just added to the store',
+      badge: 'New',
+      link: '/new-arrivals',
+    ),
+  );
+  out.add(
+    const _CategoryItem(
+      id: 'sale',
+      name: 'Sale',
+      image: '',
+      description: 'Current offers',
+      badge: 'Sale',
+      link: '/sale',
+    ),
+  );
+  return out;
+}
+
+/// Categories page: grid of collections from the API (or config fallback) plus all / new / sale.
 /// 2-col grid, aspect 3/4 cards, gradient overlay, badge, tap to expand bottom sheet for subcategories.
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
@@ -214,6 +131,12 @@ class CategoriesPage extends StatefulWidget {
 class _CategoriesPageState extends State<CategoriesPage> {
   /// Ref: expandedCategory state - tap category with subcategories toggles this; overlay shows when set.
   String? _expandedCategoryId;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<CategoryListBloc>().add(const CategoryListLoadRequested());
+  }
 
   void _onCategoryTap(_CategoryItem category) {
     if (category.subcategories != null && category.subcategories!.isNotEmpty) {
@@ -227,78 +150,88 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   @override
   Widget build(BuildContext context) {
-    _CategoryItem? expandedCategory;
-    if (_expandedCategoryId != null) {
-      for (final c in _kCategories) {
-        if (c.id == _expandedCategoryId) {
-          expandedCategory = c;
-          break;
-        }
-      }
-    }
-
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor(context),
-      appBar: const AppHeader(showBackButton: false),
-      body: Stack(
-        children: [
-          // Main content - Ref: flex-1 flex flex-col overflow-hidden
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Page header - React: px-4 py-2, text-lg font-semibold, text-[9px] text-foreground/60
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Categories',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.foregroundColor(context),
+    return BlocBuilder<ConfigBloc, ConfigState>(
+      buildWhen: (a, b) => b is ConfigLoaded || a is! ConfigLoaded,
+      builder: (context, configState) {
+        final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
+        return BlocBuilder<CategoryListBloc, CategoryListState>(
+          builder: (context, categoryState) {
+            final display = _categoriesListFromState(
+              categoryState: categoryState,
+              config: config,
+            );
+            _CategoryItem? expandedCategory;
+            if (_expandedCategoryId != null) {
+              for (final c in display) {
+                if (c.id == _expandedCategoryId) {
+                  expandedCategory = c;
+                  break;
+                }
+              }
+            }
+            return Scaffold(
+              backgroundColor: AppTheme.backgroundColor(context),
+              appBar: const AppHeader(showBackButton: false),
+              body: Stack(
+                children: [
+                  // Main content - Ref: flex-1 flex flex-col overflow-hidden
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Page header - React: px-4 py-2, text-lg font-semibold, text-[9px] text-foreground/60
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Categories',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.foregroundColor(context),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Tap to explore collections',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Tap to explore collections',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                          children: [
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 3 / 4,
+                              ),
+                              itemCount: display.length,
+                              itemBuilder: (context, index) {
+                                final category = display[index];
+                                return _CategoryGridCard(
+                                  category: category,
+                                  totalLabel: '',
+                                  isExpanded: _expandedCategoryId == category.id,
+                                  onTap: () => _onCategoryTap(category),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                  children: [
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 12,
-                        crossAxisSpacing: 12,
-                        childAspectRatio: 3 / 4,
-                      ),
-                      itemCount: _kCategories.length,
-                      itemBuilder: (context, index) {
-                        final category = _kCategories[index];
-                        return _CategoryGridCard(
-                          category: category,
-                          isExpanded: _expandedCategoryId == category.id,
-                          onTap: () => _onCategoryTap(category),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                    ],
+                  ),
           // Ref: Expandable Subcategories Overlay - fixed inset-0 bg-black/60 z-50 flex items-end
           if (expandedCategory != null && expandedCategory.subcategories != null) ...[
             Positioned.fill(
@@ -326,6 +259,10 @@ class _CategoriesPageState extends State<CategoriesPage> {
       ),
       bottomNavigationBar: const BottomNav(currentIndex: 1),
     );
+          },
+        );
+      },
+    );
   }
 }
 
@@ -334,11 +271,13 @@ class _CategoriesPageState extends State<CategoriesPage> {
 class _CategoryGridCard extends StatelessWidget {
   const _CategoryGridCard({
     required this.category,
+    required this.totalLabel,
     required this.isExpanded,
     required this.onTap,
   });
 
   final _CategoryItem category;
+  final String totalLabel;
   final bool isExpanded;
   final VoidCallback onTap;
 
@@ -366,16 +305,36 @@ class _CategoryGridCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Image
-              CachedNetworkImage(
-                imageUrl: safeImageUrl(category.image),
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
-                errorWidget: (_, __, ___) => Container(
-                  color: AppTheme.mutedColor(context),
-                  child: const Icon(Icons.image, size: 40),
+              if (safeImageUrl(category.image).isEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.mutedColor(context),
+                        AppTheme.primaryColor(context).withValues(alpha: 0.3),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.checkroom,
+                      size: 48,
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                    ),
+                  ),
+                )
+              else
+                CachedNetworkImage(
+                  imageUrl: safeImageUrl(category.image),
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                  errorWidget: (_, __, ___) => Container(
+                    color: AppTheme.mutedColor(context),
+                    child: const Icon(Icons.image, size: 40),
+                  ),
                 ),
-              ),
               // Gradient - React: from-black/90 via-black/40 to-transparent
               Container(
                 decoration: BoxDecoration(
@@ -456,6 +415,19 @@ class _CategoryGridCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (totalLabel.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        totalLabel,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                     if (hasSubs) ...[
                       const SizedBox(height: 4),
                       Row(
@@ -651,14 +623,6 @@ class _SubcategoryGridTile extends StatelessWidget {
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      sub.count,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
-                      ),
                     ),
                   ],
                 ),

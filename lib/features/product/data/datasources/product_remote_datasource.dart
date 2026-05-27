@@ -17,6 +17,7 @@ class ProductRemoteDataSource {
     String? gender,
     bool? onSale,
     bool? featured,
+    bool? newArrival,
     bool? gift,
     double? minPrice,
     double? maxPrice,
@@ -29,6 +30,7 @@ class ProductRemoteDataSource {
     if (gender != null && gender.isNotEmpty) query['gender'] = gender;
     if (onSale == true) query['on_sale'] = 'true';
     if (featured == true) query['featured'] = 'true';
+    if (newArrival == true) query['new_arrival'] = 'true';
     if (gift == true) query['gift'] = 'true';
     if (minPrice != null) query['min_price'] = minPrice;
     if (maxPrice != null) query['max_price'] = maxPrice;
@@ -81,6 +83,20 @@ class ProductRemoteDataSource {
     final data = response.data;
     if (data == null) return [];
     return data
+        .map((e) => ProductDto.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<ProductDto>> getRecommendations(String productId, {int limit = 8}) async {
+    final response = await _dio.get<dynamic>(
+      '/products/$productId/recommendations',
+      queryParameters: {'limit': limit},
+    );
+    final data = response.data;
+    if (data is! Map) return [];
+    final raw = data['products'];
+    if (raw is! List) return [];
+    return raw
         .map((e) => ProductDto.fromJson(e as Map<String, dynamic>))
         .toList();
   }

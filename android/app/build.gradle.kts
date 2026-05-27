@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.rloco.rloco_mobile"
+    namespace = "com.coderidge.rloko"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.rloco.rloco_mobile"
+        applicationId = "com.coderidge.rloko"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -69,6 +69,11 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+}
+
+dependencies {
+    // Required for Theme.AppCompat (Stripe Payment Sheet / flutter_stripe on Android).
+    implementation("androidx.appcompat:appcompat:1.7.0")
 }
 
 flutter {

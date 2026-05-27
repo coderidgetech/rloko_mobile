@@ -72,4 +72,22 @@ class OrderRemoteDataSource {
       rethrow;
     }
   }
+
+  Future<OrderDto> createGuest(CreateGuestOrderRequestDto request) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/orders/guest',
+        data: request.toJson(),
+        options: Options(extra: {'requiresAuth': false}),
+      );
+      final data = response.data;
+      if (data == null) throw Exception('Invalid response');
+      return OrderDto.fromJson(data);
+    } on DioException catch (e) {
+      if (kDebugMode) {
+        debugPrint('[OrderRemoteDataSource] createGuest DioException: ${e.response?.data}');
+      }
+      rethrow;
+    }
+  }
 }

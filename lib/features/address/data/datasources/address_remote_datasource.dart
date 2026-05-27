@@ -21,8 +21,11 @@ class AddressRemoteDataSource {
           .toList();
     } on DioException catch (e) {
       if (kDebugMode) {
-        debugPrint('[AddressRemoteDataSource] list DioException: type=${e.type}, '
-            'status=${e.response?.statusCode}, message=${e.message}, response=${e.response?.data}');
+        debugPrint(
+          '[AddressRemoteDataSource] list DioException: type=${e.type}, '
+          'status=${e.response?.statusCode}, message=${e.message}, error=${e.error}, '
+          'uri=${e.requestOptions.uri} response=${e.response?.data}',
+        );
       }
       rethrow;
     }

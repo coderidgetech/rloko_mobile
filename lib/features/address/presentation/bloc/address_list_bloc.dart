@@ -20,11 +20,16 @@ class AddressListBloc extends Bloc<AddressListEvent, AddressListState> {
     on<AddressListLoadRequested>(_onLoad);
     on<AddressListDeleteRequested>(_onDelete);
     on<AddressListSetDefaultRequested>(_onSetDefault);
+    on<AddressListReset>(_onReset);
   }
 
   final ListAddressesUseCase _listAddressesUseCase;
   final DeleteAddressUseCase _deleteAddressUseCase;
   final SetDefaultAddressUseCase _setDefaultAddressUseCase;
+
+  void _onReset(AddressListReset event, Emitter<AddressListState> emit) {
+    emit(const AddressListInitial());
+  }
 
   Future<void> _onLoad(
     AddressListLoadRequested event,
@@ -38,6 +43,9 @@ class AddressListBloc extends Bloc<AddressListEvent, AddressListState> {
       final api = getApiException(e);
       if (api?.statusCode == 401) {
         emit(const AddressListError('Sign in to view your addresses'));
+      } else if (api?.statusCode == 429) {
+        emit(const AddressListError(
+            'Too many requests. Please wait a moment, then use Retry or reopen this screen.'));
       } else {
         emit(AddressListError(api?.message ?? e.toString()));
       }

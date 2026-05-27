@@ -1,19 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/di/injection.dart';
+import '../../../../core/locale/app_locale.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 
-/// Language selection (mock UI to match React MobileLanguagePage).
-/// Selection is stored in state; full app locale would require localization package.
-class LanguagePage extends StatefulWidget {
+/// English / Hindi — choice is persisted and drives [MaterialApp] locale.
+class LanguagePage extends StatelessWidget {
   const LanguagePage({super.key});
 
-  @override
-  State<LanguagePage> createState() => _LanguagePageState();
-}
-
-class _LanguagePageState extends State<LanguagePage> {
-  String _selectedLanguage = 'en';
+  Future<void> _setLocale(
+    BuildContext context,
+    Locale locale,
+  ) async {
+    await setAppLocale(sl<SharedPreferences>(), locale);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            locale.languageCode == 'hi'
+                ? 'भाषा हिन्दी पर सेट की गई'
+                : 'Language set to English',
+          ),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,31 +46,31 @@ class _LanguagePageState extends State<LanguagePage> {
             style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
           ),
           const SizedBox(height: 24),
-          ListTile(
-            leading: Icon(
-              _selectedLanguage == 'en' ? Icons.check_circle : Icons.circle_outlined,
-              color: _selectedLanguage == 'en' ? AppTheme.primaryColor(context) : AppTheme.mutedForegroundColor(context),
-              size: 24,
-            ),
-            title: const Text('English'),
-            onTap: () {
-              setState(() => _selectedLanguage = 'en');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Language set to English')),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(
-              _selectedLanguage == 'hi' ? Icons.check_circle : Icons.circle_outlined,
-              color: _selectedLanguage == 'hi' ? AppTheme.primaryColor(context) : AppTheme.mutedForegroundColor(context),
-              size: 24,
-            ),
-            title: const Text('Hindi'),
-            onTap: () {
-              setState(() => _selectedLanguage = 'hi');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Language set to Hindi')),
+          ListenableBuilder(
+            listenable: appLocale,
+            builder: (context, __) {
+              final code = appLocale.value.languageCode;
+              return Column(
+                children: [
+                  ListTile(
+                    leading: Icon(
+                      code == 'en' ? Icons.check_circle : Icons.circle_outlined,
+                      color: code == 'en' ? AppTheme.primaryColor(context) : AppTheme.mutedForegroundColor(context),
+                      size: 24,
+                    ),
+                    title: const Text('English'),
+                    onTap: () => _setLocale(context, const Locale('en')),
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      code == 'hi' ? Icons.check_circle : Icons.circle_outlined,
+                      color: code == 'hi' ? AppTheme.primaryColor(context) : AppTheme.mutedForegroundColor(context),
+                      size: 24,
+                    ),
+                    title: const Text('Hindi (हिन्दी)'),
+                    onTap: () => _setLocale(context, const Locale('hi')),
+                  ),
+                ],
               );
             },
           ),

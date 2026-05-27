@@ -19,3 +19,16 @@ final class OrderDetailCancelRequested extends OrderDetailEvent {
   @override
   List<Object?> get props => [reason];
 }
+
+final class OrderDetailReturnRequested extends OrderDetailEvent {
+  const OrderDetailReturnRequested({
+    required this.items,
+    required this.reason,
+    this.description = '',
+  });
+  final List<Map<String, dynamic>> items;
+  final String reason;
+  final String description;
+  @override
+  List<Object?> get props => [reason];
+}

@@ -35,3 +35,14 @@ final class OrderDetailError extends OrderDetailState {
 final class OrderDetailCancelSuccess extends OrderDetailState {
   const OrderDetailCancelSuccess();
 }
+
+final class OrderDetailReturnSuccess extends OrderDetailState {
+  const OrderDetailReturnSuccess();
+}
+
+final class OrderDetailReturnError extends OrderDetailState {
+  const OrderDetailReturnError(this.message);
+  final String message;
+  @override
+  List<Object?> get props => [message];
+}

@@ -46,3 +46,22 @@ class CreateOrderUseCase {
         promotionCode: promotionCode,
       );
 }
+
+class CreateGuestOrderUseCase {
+  CreateGuestOrderUseCase(this._repo);
+  final OrderRepository _repo;
+  Future<OrderEntity> call({
+    required String guestEmail,
+    required String guestName,
+    required List<OrderItemEntity> items,
+    required ShippingInfoEntity shippingInfo,
+    String? promotionCode,
+  }) =>
+      _repo.createGuest(
+        guestEmail: guestEmail,
+        guestName: guestName,
+        items: items,
+        shippingInfo: shippingInfo,
+        promotionCode: promotionCode,
+      );
+}

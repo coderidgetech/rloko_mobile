@@ -10,6 +10,7 @@ class UserEntity extends Equatable {
     this.avatar,
     this.phone,
     this.birthday,
+    this.city,
     this.active,
     required this.createdAt,
     required this.updatedAt,
@@ -23,10 +24,11 @@ class UserEntity extends Equatable {
   final String? avatar;
   final String? phone;
   final String? birthday;
+  final String? city;
   final bool? active;
   final String createdAt;
   final String updatedAt;
 
   @override
-  List<Object?> get props => [id, email, name, role];
+  List<Object?> get props => [id, email, name, role, city];
 }

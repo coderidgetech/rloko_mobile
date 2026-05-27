@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +28,8 @@ class _LoginPageState extends State<LoginPage> {
   String _phoneLocal = '';
   DialCountry _country = kDialCountries[1];
   bool _otpSendLoading = false;
+  /// True while the native Google account picker is open (before we hit the API).
+  bool _googleFlowActive = false;
 
   String get _returnTo => widget.redirectAfterLogin ?? '/account';
 
@@ -57,10 +60,10 @@ class _LoginPageState extends State<LoginPage> {
         '/otp-verification',
         extra: LoginOtpRouteExtra(phone: digits, returnTo: _returnTo),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        const SnackBar(content: Text("We couldn't send the code. Please try again.")),
       );
     } finally {
       if (mounted) setState(() => _otpSendLoading = false);
@@ -68,15 +71,20 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _onGoogle() async {
+    setState(() => _googleFlowActive = true);
     try {
-      final account = await GoogleSignIn.instance.authenticate();
+      // scopeHint helps some platforms return OIDC id_token together with sign-in.
+      final account = await GoogleSignIn.instance.authenticate(
+        scopeHint: const <String>['openid', 'email', 'profile'],
+      );
       final idToken = account.authentication.idToken;
       if (idToken == null || idToken.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'No Google ID token. Set GOOGLE_WEB_CLIENT_ID when building (same as web OAuth client).',
+              'No Google ID token. Set GOOGLE_WEB_CLIENT_ID in app env (web client) '
+              'and on iOS GOOGLE_IOS_CLIENT_ID, then try again. You can also use phone OTP.',
             ),
           ),
         );
@@ -89,10 +97,27 @@ class _LoginPageState extends State<LoginPage> {
           e.code == GoogleSignInExceptionCode.interrupted) {
         return;
       }
+      if (kDebugMode) {
+        debugPrint(
+          '[LoginPage] GoogleSignInException: code=${e.code} description=${e.description}',
+        );
+      }
+      if (!mounted) return;
+      final detail = e.description?.trim();
+      final message = kDebugMode
+          ? 'Google sign-in: ${(detail != null && detail.isNotEmpty) ? detail : e.code}'
+          : "Google sign-in didn't work. Check app configuration (client IDs) or use phone sign-in.";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      if (kDebugMode) debugPrint('[LoginPage] Google: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text("Google sign-in error. $e")),
       );
+    } finally {
+      if (mounted) setState(() => _googleFlowActive = false);
     }
   }
 
@@ -126,7 +151,7 @@ class _LoginPageState extends State<LoginPage> {
             }
           },
           builder: (context, state) {
-            final googleLoading = state is AuthLoading;
+            final googleLoading = _googleFlowActive || state is AuthLoading;
             return Column(
               children: [
                 Align(
@@ -175,9 +200,9 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in with your phone number',
+                          "Enter your mobile number — we'll send you a code to sign in (no password)",
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 16, color: fg.withValues(alpha: 0.6)),
+                          style: TextStyle(fontSize: 15, height: 1.35, color: fg.withValues(alpha: 0.62)),
                         ),
                         const SizedBox(height: 28),
                         Text(

@@ -2,9 +2,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/currency_constants.dart';
 import '../../../../core/constants/delivery_constants.dart';
 import '../../../../core/constants/form_hints.dart';
 import '../../../../core/constants/shipping.dart';
@@ -12,14 +12,18 @@ import '../../../../core/constants/stripe_constants.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
-import '../../../payment/domain/usecases/create_payment_intent_usecase.dart';
 import '../../../promotion/domain/usecases/validate_promotion_usecase.dart';
 import '../../../../core/region/app_region.dart';
 import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/bottom_nav.dart';
+import '../../../../core/widgets/deliver_to_location_sheet.dart';
+import '../../../../core/widgets/delivery_location_strip.dart';
+import '../../../../core/widgets/payment_method_picker.dart';
 import '../../../../core/widgets/safe_network_image.dart';
+import '../../../../core/delivery/presentation/guest_delivery_cubit.dart';
+import '../../../../core/region/presentation/region_bloc.dart';
 import '../../domain/entities/cart_item_entity.dart';
 import '../bloc/cart_bloc.dart';
 import '../../../address/domain/entities/address_entity.dart';
@@ -27,7 +31,6 @@ import '../../../address/domain/usecases/address_usecases.dart';
 import '../../../address/presentation/pages/address_form_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../order/domain/entities/order_entity.dart';
-import '../../../order/domain/usecases/order_usecases.dart';
 import '../../../shipping/domain/entities/calculate_shipping_params.dart';
 import '../../../shipping/domain/usecases/calculate_shipping_usecase.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
@@ -52,8 +55,7 @@ class _CartPageState extends State<CartPage> {
   List<AddressEntity> _addresses = [];
   bool _addressesLoading = true;
   String? _selectedAddressId;
-  String _selectedPaymentMethod = 'cod';
-  bool _placing = false;
+  late String _selectedPaymentMethod;
   String? _error;
   bool _retriedAddressesAfterAuth = false;
   double? _quotedShipping;
@@ -63,6 +65,8 @@ class _CartPageState extends State<CartPage> {
   @override
   void initState() {
     super.initState();
+    _selectedPaymentMethod =
+        kStripePublishableKey.isNotEmpty ? 'card' : 'cod';
     context.read<CartBloc>().add(const CartLoadRequested());
     _loadAddresses();
   }
@@ -82,6 +86,17 @@ class _CartPageState extends State<CartPage> {
   }
 
   Future<void> _loadAddresses() async {
+    if (context.read<AuthBloc>().state is! AuthAuthenticated) {
+      if (mounted) {
+        setState(() {
+          _addresses = [];
+          _selectedAddressId = null;
+          _addressesLoading = false;
+          _error = null;
+        });
+      }
+      return;
+    }
     setState(() {
       _addressesLoading = true;
       _error = null;
@@ -93,7 +108,8 @@ class _CartPageState extends State<CartPage> {
         setState(() {
           _addresses = list;
           _selectedAddressId =
-              list.where((a) => a.isDefault).firstOrNull?.id ?? list.firstOrNull?.id;
+              list.where((a) => a.isDefault).firstOrNull?.id ??
+              list.firstOrNull?.id;
           _addressesLoading = false;
         });
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -101,8 +117,11 @@ class _CartPageState extends State<CartPage> {
         });
       }
     } catch (e, st) {
-      final message = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
-      if (kDebugMode) debugPrint('[CartPage] _loadAddresses failed: $message\n$st');
+      final message = e is ApiException
+          ? e.message
+          : (getApiException(e)?.message ?? e.toString());
+      if (kDebugMode)
+        debugPrint('[CartPage] _loadAddresses failed: $message\n$st');
       if (mounted) {
         setState(() {
           _addressesLoading = false;
@@ -112,7 +131,10 @@ class _CartPageState extends State<CartPage> {
     }
   }
 
-  Future<bool?> _showAddressFormSheet({String? addressId, AddressEntity? initialAddress}) async {
+  Future<bool?> _showAddressFormSheet({
+    String? addressId,
+    AddressEntity? initialAddress,
+  }) async {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -136,7 +158,9 @@ class _CartPageState extends State<CartPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.6),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+        ),
         decoration: BoxDecoration(
           color: AppTheme.backgroundColor(context),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -158,8 +182,14 @@ class _CartPageState extends State<CartPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Delivery address', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                  IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+                  const Text(
+                    'Delivery address',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                  ),
                 ],
               ),
             ),
@@ -187,42 +217,74 @@ class _CartPageState extends State<CartPage> {
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: selected
-                                  ? AppTheme.primaryColor(context).withValues(alpha: 0.08)
+                                  ? AppTheme.primaryColor(
+                                      context,
+                                    ).withValues(alpha: 0.08)
                                   : AppTheme.backgroundColor(context),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: selected
                                     ? AppTheme.primaryColor(context)
-                                    : AppTheme.foregroundColor(context).withValues(alpha: 0.12),
+                                    : AppTheme.foregroundColor(
+                                        context,
+                                      ).withValues(alpha: 0.12),
                               ),
                             ),
                             child: Row(
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(a.name, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                                      Text(
+                                        a.name,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
                                       const SizedBox(height: 4),
                                       Text(
                                         '${a.addressLine}, ${a.city}, ${a.pincode}',
-                                        style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: AppTheme.foregroundColor(
+                                            context,
+                                          ).withValues(alpha: 0.7),
+                                        ),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
-                                      Text(a.mobile, style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
+                                      Text(
+                                        a.mobile,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.foregroundColor(
+                                            context,
+                                          ).withValues(alpha: 0.6),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ),
                                 IconButton(
                                   onPressed: () async {
-                                    final result = await _showAddressFormSheet(addressId: a.id);
+                                    final result = await _showAddressFormSheet(
+                                      addressId: a.id,
+                                    );
                                     if (result == true && mounted) {
                                       await _loadAddresses();
                                       if (ctx.mounted) Navigator.pop(ctx);
                                     }
                                   },
-                                  icon: Icon(Icons.edit_outlined, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                                  icon: Icon(
+                                    Icons.edit_outlined,
+                                    size: 20,
+                                    color: AppTheme.foregroundColor(
+                                      context,
+                                    ).withValues(alpha: 0.6),
+                                  ),
                                 ),
                               ],
                             ),
@@ -244,16 +306,33 @@ class _CartPageState extends State<CartPage> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor(context).withValues(alpha: 0.08),
+                          color: AppTheme.primaryColor(
+                            context,
+                          ).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: AppTheme.primaryColor(
+                              context,
+                            ).withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add, size: 22, color: AppTheme.primaryColor(context)),
+                            Icon(
+                              Icons.add,
+                              size: 22,
+                              color: AppTheme.primaryColor(context),
+                            ),
                             const SizedBox(width: 8),
-                            Text('Add new address', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
+                            Text(
+                              'Add new address',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryColor(context),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -268,102 +347,18 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  static String _paymentMethodLabel(String id) {
-    switch (id) {
-      case 'cod':
-        return 'Cash on Delivery';
-      case 'card':
-        return 'Credit / Debit Card';
-      case 'upi':
-        return 'UPI';
-      default:
-        return id;
+  Future<void> _showPaymentPickerSheet() async {
+    final next = await showPaymentMethodPicker(
+      context,
+      selected: _selectedPaymentMethod,
+    );
+    if (next != null && mounted) {
+      setState(() => _selectedPaymentMethod = next);
     }
   }
 
-  void _showPaymentPickerSheet() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: AppTheme.backgroundColor(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Payment method', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                    IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                child: Column(
-                  children: [
-                    _PaymentOption(
-                      id: 'cod',
-                      label: _paymentMethodLabel('cod'),
-                      subtitle: 'Pay when you receive your order',
-                      icon: Icons.money_outlined,
-                      selected: _selectedPaymentMethod == 'cod',
-                      onTap: () {
-                        setState(() => _selectedPaymentMethod = 'cod');
-                        Navigator.pop(ctx);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _PaymentOption(
-                      id: 'card',
-                      label: _paymentMethodLabel('card'),
-                      subtitle: 'Pay securely via Stripe',
-                      icon: Icons.credit_card_outlined,
-                      selected: _selectedPaymentMethod == 'card',
-                      enabled: kStripePublishableKey.isNotEmpty,
-                      onTap: () {
-                        setState(() => _selectedPaymentMethod = 'card');
-                        Navigator.pop(ctx);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    _PaymentOption(
-                      id: 'upi',
-                      label: _paymentMethodLabel('upi'),
-                      subtitle: 'Coming soon',
-                      icon: Icons.phone_android_outlined,
-                      selected: false,
-                      enabled: false,
-                      onTap: () {},
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   double _cartSubtotalUsd(Iterable<CartItemEntity> items, AppRegion region) {
-    const usdToInr = 75.0;
+    const usdToInr = kUsdToInrDisplay;
     return items.fold(0.0, (s, i) {
       if (region == AppRegion.india && i.priceInr != null) {
         return s + (i.priceInr! * i.quantity) / usdToInr;
@@ -467,7 +462,11 @@ class _CartPageState extends State<CartPage> {
     final parts = a.name.trim().split(RegExp(r'\s+'));
     final firstName = parts.isNotEmpty ? parts.first : a.name;
     final lastName = parts.length > 1 ? parts.skip(1).join(' ') : '';
-    final addressLine = a.addressLine + (a.addressLine2 != null && a.addressLine2!.isNotEmpty ? ', ${a.addressLine2}' : '');
+    final addressLine =
+        a.addressLine +
+        (a.addressLine2 != null && a.addressLine2!.isNotEmpty
+            ? ', ${a.addressLine2}'
+            : '');
     return ShippingInfoEntity(
       firstName: firstName,
       lastName: lastName,
@@ -479,19 +478,6 @@ class _CartPageState extends State<CartPage> {
       zipCode: a.pincode,
       country: a.country,
     );
-  }
-
-  List<OrderItemEntity> _cartToOrderItems(List<CartItemEntity> items) {
-    return items
-        .map((e) => OrderItemEntity(
-              productId: e.productId,
-              productName: e.productName,
-              image: e.image,
-              price: e.price,
-              size: e.size,
-              quantity: e.quantity,
-            ))
-        .toList();
   }
 
   AddressEntity? _resolveSelectedAddress() {
@@ -508,169 +494,21 @@ class _CartPageState extends State<CartPage> {
     return _addresses.first;
   }
 
-  /// Stripe currency aligned with backend `expectedCurrencyByCountry`.
-  String _stripeCurrencyForCountry(String country) {
-    final c = country.trim().toLowerCase();
-    if (c == 'in' ||
-        c == 'india' ||
-        c.contains('india')) {
-      return 'inr';
-    }
-    return 'usd';
-  }
-
-  Future<void> _placeOrder() async {
+  /// Same as web cart [handleCheckout]: go to checkout to choose address + payment (no order from cart).
+  void _continueToCheckout() {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) {
-      context.push('/login', extra: '/cart');
+      context.push('/login', extra: '/checkout');
       return;
     }
     final cartState = context.read<CartBloc>().state;
     if (cartState is! CartLoaded || cartState.cart.items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your cart is empty')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Your cart is empty')));
       return;
     }
-    if (_resolveSelectedAddress() == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a delivery address')));
-      return;
-    }
-
-    if (_selectedPaymentMethod == 'card') {
-      await _placeOrderWithStripe(authState, cartState);
-    } else {
-      await _placeOrderCod(authState, cartState);
-    }
-  }
-
-  Future<void> _placeOrderCod(AuthAuthenticated authState, CartLoaded cartState) async {
-    final selectedAddress = _resolveSelectedAddress();
-    if (selectedAddress == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a delivery address')));
-      return;
-    }
-    final shipping = _addressToShipping(selectedAddress, authState.user.email);
-    final orderItems = _cartToOrderItems(cartState.cart.items);
-    final promoCode = _appliedCouponCode?.trim().isNotEmpty == true ? _appliedCouponCode!.trim() : null;
-
-    setState(() {
-      _placing = true;
-      _error = null;
-    });
-
-    try {
-      final order = await sl<CreateOrderUseCase>().call(
-        items: orderItems,
-        shippingInfo: shipping,
-        paymentMethod: 'cod',
-        promotionCode: promoCode,
-      );
-      if (kDebugMode) debugPrint('[CartPage] COD order placed: id=${order.id}');
-      if (!mounted) return;
-      context.read<CartBloc>().add(const CartClearRequested());
-      context.go('/order-confirmation/${order.id}');
-    } catch (e, st) {
-      final message = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
-      if (kDebugMode) debugPrint('[CartPage] _placeOrderCod failed: $message\n$st');
-      if (mounted) {
-        setState(() {
-          _placing = false;
-          _error = message;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
-        );
-      }
-    }
-  }
-
-  Future<void> _placeOrderWithStripe(AuthAuthenticated authState, CartLoaded cartState) async {
-    if (kStripePublishableKey.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Card payments are not configured. Please use Cash on Delivery.')),
-      );
-      return;
-    }
-
-    final selectedAddress = _resolveSelectedAddress();
-    if (selectedAddress == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a delivery address')));
-      return;
-    }
-    final shipping = _addressToShipping(selectedAddress, authState.user.email);
-    final orderItems = _cartToOrderItems(cartState.cart.items);
-    final promoCode = _appliedCouponCode?.trim().isNotEmpty == true ? _appliedCouponCode!.trim() : null;
-
-    setState(() {
-      _placing = true;
-      _error = null;
-    });
-
-    try {
-      // Step 1: Create the order first so we have an order ID for the payment intent
-      final order = await sl<CreateOrderUseCase>().call(
-        items: orderItems,
-        shippingInfo: shipping,
-        paymentMethod: 'stripe',
-        promotionCode: promoCode,
-      );
-      if (kDebugMode) debugPrint('[CartPage] Stripe order created: id=${order.id}');
-
-      // Step 2: Create a PaymentIntent on the backend (amount is enforced server-side from order.total)
-      final payCurrency = _stripeCurrencyForCountry(shipping.country);
-      final intent = await sl<CreatePaymentIntentUseCase>().call(
-        orderId: order.id,
-        amount: order.total,
-        currency: payCurrency,
-        paymentMethod: 'card',
-      );
-      if (kDebugMode) debugPrint('[CartPage] PaymentIntent created: id=${intent.id}');
-
-      // Step 3: Initialize Stripe Payment Sheet
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          paymentIntentClientSecret: intent.clientSecret,
-          merchantDisplayName: 'Rloco',
-          style: ThemeMode.system,
-          billingDetailsCollectionConfiguration:
-              const BillingDetailsCollectionConfiguration(
-            name: CollectionMode.always,
-          ),
-        ),
-      );
-
-      // Step 4: Present Payment Sheet (native Stripe UI)
-      await Stripe.instance.presentPaymentSheet();
-
-      // Payment confirmed
-      if (kDebugMode) debugPrint('[CartPage] Stripe payment confirmed for order ${order.id}');
-      if (!mounted) return;
-      context.read<CartBloc>().add(const CartClearRequested());
-      context.go('/order-confirmation/${order.id}');
-    } on StripeException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _placing = false;
-        _error = null;
-      });
-      // User cancelled — silent dismiss; do not show error
-      if (e.error.code == FailureCode.Canceled) return;
-      final msg = e.error.localizedMessage ?? e.error.message ?? 'Payment failed';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: AppTheme.destructive),
-      );
-    } catch (e, st) {
-      final message = e is ApiException ? e.message : (getApiException(e)?.message ?? e.toString());
-      if (kDebugMode) debugPrint('[CartPage] _placeOrderWithStripe failed: $message\n$st');
-      if (mounted) {
-        setState(() {
-          _placing = false;
-          _error = message;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
-        );
-      }
-    }
+    context.push('/checkout', extra: _selectedPaymentMethod);
   }
 
   Future<void> _applyCoupon() async {
@@ -688,8 +526,8 @@ class _CartPageState extends State<CartPage> {
         final promo = result.promotion;
         final label = promo != null
             ? (promo.type == 'percentage'
-                ? '$code applied (${promo.value.toStringAsFixed(0)}% off)'
-                : '$code applied (\$${result.discount!.toStringAsFixed(2)} off)')
+                  ? '$code applied (${promo.value.toStringAsFixed(0)}% off)'
+                  : '$code applied (\$${result.discount!.toStringAsFixed(2)} off)')
             : '$code applied';
         setState(() {
           _appliedCouponCode = code;
@@ -701,9 +539,9 @@ class _CartPageState extends State<CartPage> {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _refreshShippingQuote();
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(label)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(label)));
       } else {
         setState(() => _applyingCoupon = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -714,9 +552,7 @@ class _CartPageState extends State<CartPage> {
       if (!mounted) return;
       setState(() => _applyingCoupon = false);
       final msg = getApiException(e)?.message ?? 'Failed to validate coupon';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -730,9 +566,9 @@ class _CartPageState extends State<CartPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _refreshShippingQuote();
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Coupon removed')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Coupon removed')));
   }
 
   @override
@@ -748,89 +584,108 @@ class _CartPageState extends State<CartPage> {
           backgroundColor: AppTheme.backgroundColor(context),
           appBar: const AppHeader(showBackButton: false),
           bottomNavigationBar: const BottomNav(currentIndex: 4),
-          body: BlocListener<CartBloc, CartState>(
-            listenWhen: (p, c) => c is CartLoaded,
-            listener: (context, state) {
-              if (state is CartLoaded && state.cart.items.isNotEmpty) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted) _refreshShippingQuote();
-                });
-              }
-            },
-            child: BlocBuilder<CartBloc, CartState>(
-            builder: (context, state) {
-              if (state is CartLoading) {
-                return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-              }
-              if (state is CartError) {
-                final isUnauth = state.message.contains('Sign in');
-                return EmptyState(
-                  title: isUnauth ? 'Sign in to view cart' : 'Could not load cart',
-                  subtitle: state.message,
-                  icon: Icons.shopping_bag_outlined,
-                  actionLabel: isUnauth ? 'Sign in' : 'Retry',
-                  onAction: () {
-                    if (isUnauth) {
-                      context.push('/login', extra: '/cart');
-                    } else {
-                      context.read<CartBloc>().add(const CartLoadRequested());
+          body: Column(
+            children: [
+              const DeliveryLocationStrip(),
+              Expanded(
+                child: BlocListener<CartBloc, CartState>(
+                  listenWhen: (p, c) => c is CartLoaded,
+                  listener: (context, state) {
+                    if (state is CartLoaded && state.cart.items.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _refreshShippingQuote();
+                      });
                     }
                   },
-                );
-              }
-              if (state is CartLoaded) {
-                if (state.cart.items.isEmpty) {
-                  return EmptyState(
-                    title: 'Your cart is empty',
-                    subtitle: 'Start shopping and add items to your cart',
-                    icon: Icons.shopping_bag_outlined,
-                    actionLabel: 'Start Shopping',
-                    onAction: () => context.go('/'),
-                  );
-                }
-                return _CartContent(
-                  items: state.cart.items,
-                  appliedCouponCode: _appliedCouponCode,
-                  appliedCouponDiscount: _appliedCouponDiscount,
-                  appliedCouponLabel: _appliedCouponLabel,
-                  showCouponInput: _showCouponInput,
-                  applyingCoupon: _applyingCoupon,
-                  couponController: _couponController,
-                  onShowCouponInput: () => setState(() => _showCouponInput = true),
-                  onApplyCoupon: _applyCoupon,
-                  onRemoveCoupon: _removeCoupon,
-                  addresses: _addresses,
-                  selectedAddressId: _selectedAddressId,
-                  addressesLoading: _addressesLoading,
-                  placing: _placing,
-                  error: _error,
-                  isAuthenticated: authState is AuthAuthenticated,
-                  onShowAddressPicker: _showAddressPickerSheet,
-                  onAddAddress: () async {
-                    final result = await _showAddressFormSheet();
-                    if (result == true && mounted) await _loadAddresses();
-                  },
-                  selectedPaymentMethod: _selectedPaymentMethod,
-                  paymentMethodLabel: _paymentMethodLabel(_selectedPaymentMethod),
-                  onShowPaymentPicker: _showPaymentPickerSheet,
-                  onPlaceOrder: _placeOrder,
-                  quotedShipping: _quotedShipping,
-                  quotedShippingCurrency: _quotedShippingCurrency,
-                  shippingQuoteLoading: _shippingQuoteLoading,
-                  onOpenFullCheckout: authState is AuthAuthenticated
-                      ? () => context.push('/checkout')
-                      : null,
-                );
-              }
-              return EmptyState(
-                title: 'Your cart is empty',
-                icon: Icons.shopping_bag_outlined,
-                actionLabel: 'Start Shopping',
-                onAction: () => context.go('/'),
-              );
-            },
+                  child: BlocBuilder<CartBloc, CartState>(
+                    builder: (context, state) {
+                      if (state is CartLoading) {
+                        return const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        );
+                      }
+                      if (state is CartError) {
+                        final isUnauth = state.message.contains('Sign in');
+                        return EmptyState(
+                          title: isUnauth
+                              ? 'Sign in to view cart'
+                              : 'Could not load cart',
+                          subtitle: state.message,
+                          icon: Icons.shopping_bag_outlined,
+                          actionLabel: isUnauth ? 'Sign in' : 'Retry',
+                          onAction: () {
+                            if (isUnauth) {
+                              context.push('/login', extra: '/cart');
+                            } else {
+                              context.read<CartBloc>().add(
+                                const CartLoadRequested(),
+                              );
+                            }
+                          },
+                        );
+                      }
+                      if (state is CartLoaded) {
+                        if (state.cart.items.isEmpty) {
+                          return EmptyState(
+                            title: 'Your cart is empty',
+                            subtitle:
+                                'Start shopping and add items to your cart',
+                            icon: Icons.shopping_bag_outlined,
+                            actionLabel: 'Start Shopping',
+                            onAction: () => context.go('/'),
+                          );
+                        }
+                        return _CartContent(
+                          items: state.cart.items,
+                          appliedCouponCode: _appliedCouponCode,
+                          appliedCouponDiscount: _appliedCouponDiscount,
+                          appliedCouponLabel: _appliedCouponLabel,
+                          showCouponInput: _showCouponInput,
+                          applyingCoupon: _applyingCoupon,
+                          couponController: _couponController,
+                          onShowCouponInput: () =>
+                              setState(() => _showCouponInput = true),
+                          onApplyCoupon: _applyCoupon,
+                          onRemoveCoupon: _removeCoupon,
+                          addresses: _addresses,
+                          selectedAddressId: _selectedAddressId,
+                          addressesLoading: _addressesLoading,
+                          error: _error,
+                          isAuthenticated: authState is AuthAuthenticated,
+                          onShowAddressPicker: _showAddressPickerSheet,
+                          onAddAddress: () async {
+                            final result = await _showAddressFormSheet();
+                            if (result == true && mounted)
+                              await _loadAddresses();
+                          },
+                          selectedPaymentMethod: _selectedPaymentMethod,
+                          paymentMethodTitle: paymentMethodLabel(
+                            _selectedPaymentMethod,
+                          ),
+                          paymentMethodDetail: paymentMethodDetailLine(
+                            _selectedPaymentMethod,
+                          ),
+                          onShowPaymentPicker: () {
+                            _showPaymentPickerSheet();
+                          },
+                          onContinueCheckout: _continueToCheckout,
+                          quotedShipping: _quotedShipping,
+                          quotedShippingCurrency: _quotedShippingCurrency,
+                          shippingQuoteLoading: _shippingQuoteLoading,
+                        );
+                      }
+                      return EmptyState(
+                        title: 'Your cart is empty',
+                        icon: Icons.shopping_bag_outlined,
+                        actionLabel: 'Start Shopping',
+                        onAction: () => context.go('/'),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
         );
       },
     );
@@ -852,19 +707,18 @@ class _CartContent extends StatelessWidget {
     required this.addresses,
     required this.selectedAddressId,
     required this.addressesLoading,
-    required this.placing,
     required this.error,
     required this.isAuthenticated,
     required this.onShowAddressPicker,
     required this.onAddAddress,
     required this.selectedPaymentMethod,
-    required this.paymentMethodLabel,
+    required this.paymentMethodTitle,
+    required this.paymentMethodDetail,
     required this.onShowPaymentPicker,
-    required this.onPlaceOrder,
+    required this.onContinueCheckout,
     this.quotedShipping,
     this.quotedShippingCurrency = 'USD',
     this.shippingQuoteLoading = false,
-    this.onOpenFullCheckout,
   });
 
   final List<CartItemEntity> items;
@@ -880,19 +734,18 @@ class _CartContent extends StatelessWidget {
   final List<AddressEntity> addresses;
   final String? selectedAddressId;
   final bool addressesLoading;
-  final bool placing;
   final String? error;
   final bool isAuthenticated;
   final VoidCallback onShowAddressPicker;
   final VoidCallback onAddAddress;
   final String selectedPaymentMethod;
-  final String paymentMethodLabel;
+  final String paymentMethodTitle;
+  final String? paymentMethodDetail;
   final VoidCallback onShowPaymentPicker;
-  final VoidCallback onPlaceOrder;
+  final VoidCallback onContinueCheckout;
   final double? quotedShipping;
   final String quotedShippingCurrency;
   final bool shippingQuoteLoading;
-  final VoidCallback? onOpenFullCheckout;
 
   /// Line subtotal in display currency (INR when region India with priceInr, else USD).
   double _lineSubtotal(BuildContext context) {
@@ -910,7 +763,7 @@ class _CartContent extends StatelessWidget {
     final d = appliedCouponDiscount ?? 0.0;
     if (d == 0) return 0.0;
     final region = CurrencyScope.of(context).region;
-    if (region == AppRegion.india) return d * 75.0;
+    if (region == AppRegion.india) return d * kUsdToInrDisplay;
     return d;
   }
 
@@ -919,7 +772,7 @@ class _CartContent extends StatelessWidget {
     if (quotedShipping == null) return 0.0;
     final region = CurrencyScope.of(context).region;
     if (region == AppRegion.india && quotedShippingCurrency == 'USD') {
-      return quotedShipping! * 75.0;
+      return quotedShipping! * kUsdToInrDisplay;
     }
     return quotedShipping!;
   }
@@ -931,7 +784,7 @@ class _CartContent extends StatelessWidget {
     final region = CurrencyScope.of(context).region;
     final sub = _lineSubtotal(context);
     return region == AppRegion.india
-        ? CurrencyScope.of(context).formatPrice(sub / 75.0, sub)
+        ? CurrencyScope.of(context).formatPrice(sub / kUsdToInrDisplay, sub)
         : CurrencyScope.of(context).formatPrice(sub, null);
   }
 
@@ -944,10 +797,9 @@ class _CartContent extends StatelessWidget {
     }
     final region = CurrencyScope.of(context).region;
     if (region == AppRegion.india && quotedShippingCurrency == 'USD') {
-      return CurrencyScope.of(context).formatPrice(
-        quotedShipping!,
-        quotedShipping! * 75.0,
-      );
+      return CurrencyScope.of(
+        context,
+      ).formatPrice(quotedShipping!, quotedShipping! * kUsdToInrDisplay);
     }
     if (quotedShippingCurrency == 'USD') {
       return '\$${quotedShipping!.toStringAsFixed(2)}';
@@ -959,7 +811,7 @@ class _CartContent extends StatelessWidget {
     final region = CurrencyScope.of(context).region;
     final t = _grandTotal(context);
     return region == AppRegion.india
-        ? CurrencyScope.of(context).formatPrice(t / 75.0, t)
+        ? CurrencyScope.of(context).formatPrice(t / kUsdToInrDisplay, t)
         : CurrencyScope.of(context).formatPrice(t, null);
   }
 
@@ -968,16 +820,12 @@ class _CartContent extends StatelessWidget {
     if (d == 0) return '—';
     final region = CurrencyScope.of(context).region;
     final off = region == AppRegion.india
-        ? CurrencyScope.of(context).formatPrice(d, d * 75.0)
+        ? CurrencyScope.of(context).formatPrice(d, d * kUsdToInrDisplay)
         : '\$${d.toStringAsFixed(2)}';
     return '-$off';
   }
 
-  bool get _canPlaceOrder =>
-      isAuthenticated &&
-      addresses.isNotEmpty &&
-      selectedAddressId != null &&
-      !placing;
+  bool get _canContinueCheckout => isAuthenticated;
 
   @override
   Widget build(BuildContext context) {
@@ -988,38 +836,44 @@ class _CartContent extends StatelessWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = items[index];
-                    return _CartItemTile(
-                      item: item,
-                      onMoveToWishlist: () {
-                        context.read<CartBloc>().add(
-                            CartRemoveItemRequested(item.productId, item.size));
-                        context.read<WishlistBloc>().add(WishlistAddItemRequested(
-                              item.productId,
-                              productName: item.productName,
-                              productImage: item.image,
-                              productPrice: item.price,
-                            ));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Moved to wishlist')),
-                        );
-                      },
-                    );
-                  },
-                  childCount: items.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final item = items[index];
+                  return _CartItemTile(
+                    item: item,
+                    onMoveToWishlist: () {
+                      context.read<CartBloc>().add(
+                        CartRemoveItemRequested(item.productId, item.size),
+                      );
+                      context.read<WishlistBloc>().add(
+                        WishlistAddItemRequested(
+                          item.productId,
+                          productName: item.productName,
+                          productImage: item.image,
+                          productPrice: item.price,
+                        ),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Moved to wishlist')),
+                      );
+                    },
+                  );
+                }, childCount: items.length),
               ),
             ),
             // Coupon section
             SliverToBoxAdapter(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+                      color: AppTheme.foregroundColor(
+                        context,
+                      ).withValues(alpha: 0.12),
+                    ),
                   ),
                 ),
                 child: appliedCouponCode != null
@@ -1031,12 +885,16 @@ class _CartContent extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.local_offer,
-                                size: 16, color: Colors.green.shade700),
+                            Icon(
+                              Icons.local_offer,
+                              size: 16,
+                              color: Colors.green.shade700,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                appliedCouponLabel ?? '$appliedCouponCode Applied',
+                                appliedCouponLabel ??
+                                    '$appliedCouponCode Applied',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -1049,87 +907,106 @@ class _CartContent extends StatelessWidget {
                               child: Text(
                                 'Remove',
                                 style: TextStyle(
-                                    fontSize: 12, color: Colors.red.shade600),
+                                  fontSize: 12,
+                                  color: Colors.red.shade600,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       )
                     : showCouponInput
-                        ? Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: couponController,
-                                  decoration: InputDecoration(
-                                    hintText: FormHints.promoCode,
-                                    border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12)),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                  ),
-                                  onSubmitted: (_) => onApplyCoupon(),
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: couponController,
+                              decoration: InputDecoration(
+                                hintText: FormHints.promoCode,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              FilledButton(
-                                onPressed: applyingCoupon ? null : onApplyCoupon,
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryColor(context),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 24, vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                ),
-                                child: applyingCoupon
-                                    ? const SizedBox(
-                                        height: 18,
-                                        width: 18,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white),
-                                      )
-                                    : const Text('Apply'),
-                              ),
-                            ],
-                          )
-                        : InkWell(
-                            onTap: onShowCouponInput,
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
-                                  width: 2,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.local_offer,
-                                      size: 18,
-                                      color: AppTheme.foregroundColor(context)
-                                          .withValues(alpha: 0.6)),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Apply Coupon',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.foregroundColor(context),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  Icon(Icons.arrow_forward_ios,
-                                      size: 18,
-                                      color: AppTheme.foregroundColor(context)
-                                          .withValues(alpha: 0.4)),
-                                ],
-                              ),
+                              onSubmitted: (_) => onApplyCoupon(),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            onPressed: applyingCoupon ? null : onApplyCoupon,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor(context),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: applyingCoupon
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Apply'),
+                          ),
+                        ],
+                      )
+                    : InkWell(
+                        onTap: onShowCouponInput,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: AppTheme.foregroundColor(
+                                context,
+                              ).withValues(alpha: 0.2),
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.local_offer,
+                                size: 18,
+                                color: AppTheme.foregroundColor(
+                                  context,
+                                ).withValues(alpha: 0.6),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Apply Coupon',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.foregroundColor(context),
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                size: 18,
+                                color: AppTheme.foregroundColor(
+                                  context,
+                                ).withValues(alpha: 0.4),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
               ),
             ),
             // Delivery section (cart + checkout on one page)
@@ -1140,16 +1017,30 @@ class _CartContent extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.backgroundColor(context),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+                  border: Border.all(
+                    color: AppTheme.foregroundColor(
+                      context,
+                    ).withValues(alpha: 0.12),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primaryColor(context)),
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 20,
+                          color: AppTheme.primaryColor(context),
+                        ),
                         const SizedBox(width: 8),
-                        const Text('Delivery Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Delivery Details',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -1160,40 +1051,82 @@ class _CartContent extends StatelessWidget {
                           color: AppTheme.destructive.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(error!, style: const TextStyle(fontSize: 13, color: AppTheme.destructive)),
+                        child: Text(
+                          error!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppTheme.destructive,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                     ],
                     if (addressesLoading)
-                      const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 16), child: CircularProgressIndicator(strokeWidth: 2)))
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
                     else if (addresses.isEmpty)
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: onAddAddress,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            child: Row(
-                              children: [
-                                Icon(Icons.add, size: 22, color: AppTheme.primaryColor(context)),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                      isAuthenticated
+                          ? Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: onAddAddress,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Text('Add delivery address', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.foregroundColor(context))),
-                                      const SizedBox(height: 2),
-                                      Text('Tap to add where you want your order delivered', style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
+                                      Icon(
+                                        Icons.add,
+                                        size: 22,
+                                        color: AppTheme.primaryColor(context),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Add delivery address',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppTheme.foregroundColor(
+                                                  context,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Tap to add where you want your order delivered',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: AppTheme.foregroundColor(
+                                                  context,
+                                                ).withValues(alpha: 0.6),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        color: AppTheme.foregroundColor(
+                                          context,
+                                        ).withValues(alpha: 0.5),
+                                      ),
                                     ],
                                   ),
                                 ),
-                                Icon(Icons.chevron_right, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      )
+                              ),
+                            )
+                          : const _GuestCartDeliveryDetails()
                     else
                       Material(
                         color: Colors.transparent,
@@ -1207,26 +1140,58 @@ class _CartContent extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      addresses.firstWhere((a) => a.id == selectedAddressId).name,
-                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                      addresses
+                                          .firstWhere(
+                                            (a) => a.id == selectedAddressId,
+                                          )
+                                          .name,
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      addresses.firstWhere((a) => a.id == selectedAddressId).addressLine,
-                                      style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
+                                      addresses
+                                          .firstWhere(
+                                            (a) => a.id == selectedAddressId,
+                                          )
+                                          .addressLine,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppTheme.foregroundColor(
+                                          context,
+                                        ).withValues(alpha: 0.7),
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     Text(
-                                      addresses.firstWhere((a) => a.id == selectedAddressId).mobile,
-                                      style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                                      addresses
+                                          .firstWhere(
+                                            (a) => a.id == selectedAddressId,
+                                          )
+                                          .mobile,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.foregroundColor(
+                                          context,
+                                        ).withValues(alpha: 0.6),
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
                               TextButton(
                                 onPressed: onShowAddressPicker,
-                                child: Text('Change', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
+                                child: Text(
+                                  'Change',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.primaryColor(context),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -1235,7 +1200,12 @@ class _CartContent extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       DeliveryConstants.standardDeliveryDays,
-                      style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.foregroundColor(
+                          context,
+                        ).withValues(alpha: 0.6),
+                      ),
                     ),
                   ],
                 ),
@@ -1249,16 +1219,30 @@ class _CartContent extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppTheme.backgroundColor(context),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+                  border: Border.all(
+                    color: AppTheme.foregroundColor(
+                      context,
+                    ).withValues(alpha: 0.12),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.payment_outlined, size: 20, color: AppTheme.primaryColor(context)),
+                        Icon(
+                          Icons.payment_outlined,
+                          size: 20,
+                          color: AppTheme.primaryColor(context),
+                        ),
                         const SizedBox(width: 8),
-                        const Text('Payment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Payment',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -1272,11 +1256,13 @@ class _CartContent extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
+                                color: AppTheme.primaryColor(
+                                  context,
+                                ).withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                selectedPaymentMethod == 'cod' ? Icons.money_outlined : Icons.credit_card_outlined,
+                                paymentMethodLeadingIcon(selectedPaymentMethod),
                                 size: 22,
                                 color: AppTheme.primaryColor(context),
                               ),
@@ -1287,20 +1273,37 @@ class _CartContent extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    paymentMethodLabel,
-                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                                  ),
-                                  if (selectedPaymentMethod == 'cod')
-                                    Text(
-                                      'Pay when you receive your order',
-                                      style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                                    paymentMethodTitle,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
                                     ),
+                                  ),
+                                  if (paymentMethodDetail != null) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      paymentMethodDetail!,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppTheme.foregroundColor(
+                                          context,
+                                        ).withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),
                             TextButton(
                               onPressed: onShowPaymentPicker,
-                              child: Text('Change', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
+                              child: Text(
+                                'Change',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryColor(context),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -1310,9 +1313,7 @@ class _CartContent extends StatelessWidget {
                 ),
               ),
             ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 200),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 200)),
           ],
         ),
         // Fixed bottom: price summary + Place order / Sign in
@@ -1321,10 +1322,21 @@ class _CartContent extends StatelessWidget {
           right: 0,
           bottom: 0,
           child: Container(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.paddingOf(context).bottom,
+            ),
             decoration: BoxDecoration(
               color: AppTheme.backgroundColor(context),
-              border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
+              border: Border(
+                top: BorderSide(
+                  color: AppTheme.foregroundColor(
+                    context,
+                  ).withValues(alpha: 0.12),
+                ),
+              ),
             ),
             child: SafeArea(
               top: false,
@@ -1334,8 +1346,22 @@ class _CartContent extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Subtotal', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
-                      Text(_subtotalLabel(context), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                      Text(
+                        'Subtotal',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.foregroundColor(
+                            context,
+                          ).withValues(alpha: 0.6),
+                        ),
+                      ),
+                      Text(
+                        _subtotalLabel(context),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
                   if (_couponOffDisplay(context) > 0) ...[
@@ -1343,10 +1369,21 @@ class _CartContent extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Discount', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF16A34A))),
+                        const Text(
+                          'Discount',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF16A34A),
+                          ),
+                        ),
                         Text(
                           _discountRowText(context),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Color(0xFF16A34A)),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF16A34A),
+                          ),
                         ),
                       ],
                     ),
@@ -1356,65 +1393,89 @@ class _CartContent extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Shipping (est.)', style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
+                        Text(
+                          'Shipping (est.)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.foregroundColor(
+                              context,
+                            ).withValues(alpha: 0.6),
+                          ),
+                        ),
                         Text(
                           _shippingLabel(context),
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
                   ],
                   const SizedBox(height: 8),
-                  Divider(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+                  Divider(
+                    color: AppTheme.foregroundColor(
+                      context,
+                    ).withValues(alpha: 0.12),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Total', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                      Text(_totalLabel(context), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryColor(context))),
+                      const Text(
+                        'Total',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        _totalLabel(context),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryColor(context),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (onOpenFullCheckout != null) ...[
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton(
-                        onPressed: onOpenFullCheckout,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: AppTheme.primaryColor(context)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                        ),
-                        child: Text('Open full checkout', style: TextStyle(color: AppTheme.primaryColor(context))),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
                   SizedBox(
                     width: double.infinity,
                     height: 52,
                     child: isAuthenticated
                         ? FilledButton(
-                            onPressed: _canPlaceOrder ? onPlaceOrder : null,
+                            onPressed: _canContinueCheckout
+                                ? onContinueCheckout
+                                : null,
                             style: FilledButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor(context),
-                              foregroundColor: AppTheme.primaryForegroundColor(context),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                              foregroundColor: AppTheme.primaryForegroundColor(
+                                context,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
                               elevation: 2,
                             ),
-                            child: placing
-                                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : Text('Place order • ${_totalLabel(context)}'),
+                            child: Text(
+                              'Continue to checkout • ${_totalLabel(context)}',
+                            ),
                           )
                         : FilledButton(
-                            onPressed: () => context.push('/login', extra: '/cart'),
+                            onPressed: () =>
+                                context.push('/login', extra: '/checkout'),
                             style: FilledButton.styleFrom(
                               backgroundColor: AppTheme.primaryColor(context),
-                              foregroundColor: AppTheme.primaryForegroundColor(context),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                              foregroundColor: AppTheme.primaryForegroundColor(
+                                context,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(999),
+                              ),
                               elevation: 2,
                             ),
-                            child: const Text('Sign in to place order'),
+                            child: const Text('Sign in to checkout'),
                           ),
                   ),
                 ],
@@ -1427,12 +1488,78 @@ class _CartContent extends StatelessWidget {
   }
 }
 
+/// Guest delivery area from [GuestDeliveryCubit] (same copy as [DeliveryLocationStrip]).
+class _GuestCartDeliveryDetails extends StatelessWidget {
+  const _GuestCartDeliveryDetails();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<RegionBloc, RegionState>(
+      builder: (context, r) {
+        return BlocBuilder<GuestDeliveryCubit, GuestDeliveryState>(
+          builder: (context, g) {
+            final line = DeliveryLocationStrip.guestDeliveryLine(r.region, g);
+            return Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => showDeliverToLocationSheet(context),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.near_me_outlined,
+                        size: 22,
+                        color: AppTheme.primaryColor(context),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              line,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.foregroundColor(context),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Tap to change area · Sign in for a saved address at checkout',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.foregroundColor(
+                                  context,
+                                ).withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.foregroundColor(
+                          context,
+                        ).withValues(alpha: 0.5),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 /// Single cart row: image w-24 h-32 rounded-xl, name, size, price, quantity +/- , Heart, Trash (match React: py-4 border-b border-border/30)
 class _CartItemTile extends StatelessWidget {
-  const _CartItemTile({
-    required this.item,
-    required this.onMoveToWishlist,
-  });
+  const _CartItemTile({required this.item, required this.onMoveToWishlist});
 
   final CartItemEntity item;
   final VoidCallback onMoveToWishlist;
@@ -1444,7 +1571,8 @@ class _CartItemTile extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-              color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.12),
+          ),
         ),
       ),
       child: Row(
@@ -1461,12 +1589,15 @@ class _CartItemTile extends StatelessWidget {
                       imageUrl: safeImageUrl(item.image),
                       fit: BoxFit.cover,
                       placeholder: (_, __) => Container(
-                          color: AppTheme.mutedColor(context),
-                          child: const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2))),
+                        color: AppTheme.mutedColor(context),
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
                       errorWidget: (_, __, ___) => Container(
-                          color: AppTheme.mutedColor(context),
-                          child: const Icon(Icons.image)),
+                        color: AppTheme.mutedColor(context),
+                        child: const Icon(Icons.image),
+                      ),
                     )
                   : Container(
                       color: AppTheme.mutedColor(context),
@@ -1482,7 +1613,9 @@ class _CartItemTile extends StatelessWidget {
                 Text(
                   item.productName,
                   style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1490,16 +1623,22 @@ class _CartItemTile extends StatelessWidget {
                 Text(
                   'Size: ${item.size}',
                   style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+                    fontSize: 12,
+                    color: AppTheme.foregroundColor(
+                      context,
+                    ).withValues(alpha: 0.5),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  CurrencyScope.of(context).formatPrice(item.price, item.priceInr),
+                  CurrencyScope.of(
+                    context,
+                  ).formatPrice(item.price, item.priceInr),
                   style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.primaryColor(context)),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryColor(context),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -1513,12 +1652,18 @@ class _CartItemTile extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(28, 28),
                           shape: const CircleBorder(),
-                          side: BorderSide(color: AppTheme.borderColor(context)),
+                          side: BorderSide(
+                            color: AppTheme.borderColor(context),
+                          ),
                         ),
                         onPressed: item.quantity > 1
                             ? () => context.read<CartBloc>().add(
                                 CartUpdateItemRequested(
-                                    item.productId, item.size, item.quantity - 1))
+                                  item.productId,
+                                  item.size,
+                                  item.quantity - 1,
+                                ),
+                              )
                             : null,
                         child: const Icon(Icons.remove, size: 14),
                       ),
@@ -1530,7 +1675,9 @@ class _CartItemTile extends StatelessWidget {
                         child: Text(
                           '${item.quantity}',
                           style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w500),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
@@ -1543,11 +1690,17 @@ class _CartItemTile extends StatelessWidget {
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(28, 28),
                           shape: const CircleBorder(),
-                          side: BorderSide(color: AppTheme.borderColor(context)),
+                          side: BorderSide(
+                            color: AppTheme.borderColor(context),
+                          ),
                         ),
                         onPressed: () => context.read<CartBloc>().add(
-                            CartUpdateItemRequested(
-                                item.productId, item.size, item.quantity + 1)),
+                          CartUpdateItemRequested(
+                            item.productId,
+                            item.size,
+                            item.quantity + 1,
+                          ),
+                        ),
                         child: const Icon(Icons.add, size: 14),
                       ),
                     ),
@@ -1557,15 +1710,22 @@ class _CartItemTile extends StatelessWidget {
                       width: 28,
                       height: 28,
                       child: Material(
-                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
+                        color: AppTheme.foregroundColor(
+                          context,
+                        ).withValues(alpha: 0.05),
                         shape: const CircleBorder(),
                         child: InkWell(
                           onTap: onMoveToWishlist,
                           customBorder: const CircleBorder(),
                           child: Center(
-                              child: Icon(Icons.favorite_border,
-                                  size: 14,
-                                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),
+                            child: Icon(
+                              Icons.favorite_border,
+                              size: 14,
+                              color: AppTheme.foregroundColor(
+                                context,
+                              ).withValues(alpha: 0.6),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1579,15 +1739,25 @@ class _CartItemTile extends StatelessWidget {
                         child: InkWell(
                           onTap: () {
                             context.read<CartBloc>().add(
-                                CartRemoveItemRequested(item.productId, item.size));
+                              CartRemoveItemRequested(
+                                item.productId,
+                                item.size,
+                              ),
+                            );
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Removed from cart')),
+                              const SnackBar(
+                                content: Text('Removed from cart'),
+                              ),
                             );
                           },
                           customBorder: const CircleBorder(),
                           child: const Center(
-                              child: Icon(Icons.delete_outline,
-                                  size: 14, color: Color(0xFFEF4444))),
+                            child: Icon(
+                              Icons.delete_outline,
+                              size: 14,
+                              color: Color(0xFFEF4444),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1597,95 +1767,6 @@ class _CartItemTile extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// One payment option row in the payment method bottom sheet.
-class _PaymentOption extends StatelessWidget {
-  const _PaymentOption({
-    required this.id,
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-    this.enabled = true,
-  });
-
-  final String id;
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppTheme.primaryColor(context).withValues(alpha: 0.08)
-                : AppTheme.backgroundColor(context),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected
-                  ? AppTheme.primaryColor(context)
-                  : AppTheme.foregroundColor(context).withValues(alpha: 0.12),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: (selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.15)).withValues(alpha: enabled ? 1 : 0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, size: 22, color: selected ? AppTheme.primaryForegroundColor(context) : AppTheme.foregroundColor(context).withValues(alpha: enabled ? 0.8 : 0.4)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.foregroundColor(context).withValues(alpha: enabled ? 1 : 0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppTheme.foregroundColor(context).withValues(alpha: enabled ? 0.6 : 0.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (selected)
-                Icon(Icons.check_circle, size: 22, color: AppTheme.primaryColor(context))
-              else if (!enabled)
-                Text(
-                  'Coming soon',
-                  style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
-                ),
-            ],
-          ),
-        ),
       ),
     );
   }

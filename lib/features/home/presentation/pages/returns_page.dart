@@ -5,6 +5,8 @@ import '../../../../core/di/injection.dart';
 import '../../../../core/constants/delivery_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../order/domain/entities/order_entity.dart';
+import '../../../order/domain/usecases/order_usecases.dart';
 import '../../../return_order/domain/entities/return_entity.dart';
 import '../../../return_order/domain/usecases/list_returns_usecase.dart';
 
@@ -18,6 +20,7 @@ class ReturnsPage extends StatefulWidget {
 
 class _ReturnsPageState extends State<ReturnsPage> {
   List<ReturnEntity> _returns = [];
+  List<OrderEntity> _deliveredOrders = [];
   bool _loading = true;
   String? _error;
 
@@ -30,10 +33,19 @@ class _ReturnsPageState extends State<ReturnsPage> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final result = await sl<ListReturnsUseCase>().call();
+      final returnsResult = await sl<ListReturnsUseCase>().call();
+      final ordersResult = await sl<GetOrdersUseCase>().call(limit: 50);
       if (!mounted) return;
+      // Only show delivered orders that don't already have a return
+      final returnedOrderIds = returnsResult.returns.map((r) => r.orderId).toSet();
+      final eligible = ordersResult.orders
+          .where((o) =>
+              const {'delivered', 'completed'}.contains(o.status.toLowerCase()) &&
+              !returnedOrderIds.contains(o.id))
+          .toList();
       setState(() {
-        _returns = result.returns;
+        _returns = returnsResult.returns;
+        _deliveredOrders = eligible;
         _loading = false;
       });
     } catch (e) {
@@ -223,6 +235,21 @@ class _ReturnsPageState extends State<ReturnsPage> {
               ),
             ),
             const SizedBox(height: 24),
+            // --- Eligible orders section ---
+            if (!_loading && _deliveredOrders.isNotEmpty) ...[
+              const Text(
+                'Start a Return',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap a delivered order to request a return',
+                style: TextStyle(fontSize: 13, color: AppTheme.mutedForegroundColor(context)),
+              ),
+              const SizedBox(height: 12),
+              ..._deliveredOrders.map((o) => _EligibleOrderCard(order: o)),
+              const SizedBox(height: 20),
+            ],
             const Text(
               'My Returns',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -442,5 +469,78 @@ class _ReturnsPageState extends State<ReturnsPage> {
       default:
         return AppTheme.mutedForegroundColor(context);
     }
+  }
+}
+
+class _EligibleOrderCard extends StatelessWidget {
+  const _EligibleOrderCard({required this.order});
+  final OrderEntity order;
+
+  static String _fmtDate(String iso) {
+    final d = DateTime.tryParse(iso);
+    if (d == null) return iso;
+    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${m[d.month - 1]} ${d.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onTap: () => context.push('/orders/${order.id}'),
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.borderColor(context)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check_circle_outline, size: 20, color: Colors.green.shade700),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '#${order.orderNumber}',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${order.items.length} item${order.items.length == 1 ? '' : 's'} · Delivered ${_fmtDate(order.createdAt)}',
+                      style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor(context),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Text(
+                  'Return',
+                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

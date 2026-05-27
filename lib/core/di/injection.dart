@@ -6,6 +6,8 @@ import '../network/base_url_resolver.dart';
 import '../network/dio_client.dart';
 import '../region/region_repository.dart';
 import '../region/region_repository_impl.dart';
+import '../delivery/guest_delivery_location_repository.dart';
+import '../delivery/guest_delivery_location_repository_impl.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -58,6 +60,7 @@ import '../../features/promotion/domain/usecases/validate_promotion_usecase.dart
 import '../../features/return_order/data/datasources/return_remote_datasource.dart';
 import '../../features/return_order/data/repositories/return_repository_impl.dart';
 import '../../features/return_order/domain/repositories/return_repository.dart';
+import '../../features/return_order/domain/usecases/create_return_usecase.dart';
 import '../../features/return_order/domain/usecases/list_returns_usecase.dart';
 import '../../features/shipping/data/datasources/shipping_remote_datasource.dart';
 import '../../features/shipping/data/repositories/shipping_repository_impl.dart';
@@ -70,8 +73,14 @@ import '../../features/shipping/domain/usecases/calculate_shipping_usecase.dart'
 import '../../features/shipping/domain/usecases/get_shipping_methods_usecase.dart';
 import '../../features/payment/data/datasources/payment_remote_datasource.dart';
 import '../../features/payment/domain/usecases/create_payment_intent_usecase.dart';
+import '../../features/rewards/data/datasources/rewards_remote_datasource.dart';
+import '../../features/rewards/domain/usecases/get_rewards_summary_usecase.dart';
 import '../../features/review/data/datasources/review_remote_datasource.dart';
 import '../../features/review/domain/usecases/get_my_reviews_usecase.dart';
+import '../../features/review/domain/usecases/get_product_reviews_usecase.dart';
+import '../../features/product/data/datasources/product_local_datasource.dart';
+import '../../features/product/domain/usecases/get_recommendations_usecase.dart';
+import '../notifications/fcm_service.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -87,6 +96,9 @@ Future<void> initInjection() async {
   sl.registerLazySingleton<DioClient>(() => DioClient(sharedPreferences: prefs));
   sl.registerLazySingleton<RegionRepository>(
     () => RegionRepositoryImpl(sl<SharedPreferences>()),
+  );
+  sl.registerLazySingleton<GuestDeliveryLocationRepository>(
+    () => GuestDeliveryLocationRepositoryImpl(sl<SharedPreferences>()),
   );
 
   // Auth
@@ -126,7 +138,7 @@ Future<void> initInjection() async {
     () => ProductRemoteDataSource(sl<DioClient>()),
   );
   sl.registerLazySingleton<ProductRepository>(
-    () => ProductRepositoryImpl(sl<ProductRemoteDataSource>()),
+    () => ProductRepositoryImpl(sl<ProductRemoteDataSource>(), sl<ProductLocalDataSource>()),
   );
   sl.registerLazySingleton<GetProductListUseCase>(
     () => GetProductListUseCase(sl<ProductRepository>()),
@@ -231,6 +243,9 @@ Future<void> initInjection() async {
   sl.registerLazySingleton<CreateOrderUseCase>(
     () => CreateOrderUseCase(sl<OrderRepository>()),
   );
+  sl.registerLazySingleton<CreateGuestOrderUseCase>(
+    () => CreateGuestOrderUseCase(sl<OrderRepository>()),
+  );
 
   // Address
   sl.registerLazySingleton<AddressRemoteDataSource>(
@@ -293,6 +308,9 @@ Future<void> initInjection() async {
   sl.registerLazySingleton<ListReturnsUseCase>(
     () => ListReturnsUseCase(sl<ReturnRepository>()),
   );
+  sl.registerLazySingleton<CreateReturnUseCase>(
+    () => CreateReturnUseCase(sl<ReturnRepository>()),
+  );
 
   // Shipping
   sl.registerLazySingleton<ShippingRemoteDataSource>(
@@ -316,12 +334,38 @@ Future<void> initInjection() async {
     () => CreatePaymentIntentUseCase(sl<PaymentRemoteDataSource>()),
   );
 
+  // Rewards (order-derived summary from API)
+  sl.registerLazySingleton<RewardsRemoteDataSource>(
+    () => RewardsRemoteDataSource(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<GetRewardsSummaryUseCase>(
+    () => GetRewardsSummaryUseCase(sl<RewardsRemoteDataSource>()),
+  );
+
   // Reviews (my reviews)
   sl.registerLazySingleton<ReviewRemoteDataSource>(
     () => ReviewRemoteDataSource(sl<DioClient>()),
   );
   sl.registerLazySingleton<GetMyReviewsUseCase>(
     () => GetMyReviewsUseCase(sl<ReviewRemoteDataSource>()),
+  );
+  sl.registerLazySingleton<GetProductReviewsUseCase>(
+    () => GetProductReviewsUseCase(sl<ReviewRemoteDataSource>()),
+  );
+
+  // Product local cache (offline / SharedPreferences)
+  sl.registerLazySingleton<ProductLocalDataSource>(
+    () => ProductLocalDataSource(sl<SharedPreferences>()),
+  );
+
+  // Product recommendations (co-purchase API)
+  sl.registerLazySingleton<GetRecommendationsUseCase>(
+    () => GetRecommendationsUseCase(sl<ProductRepository>()),
+  );
+
+  // FCM push notifications
+  sl.registerLazySingleton<FCMService>(
+    () => FCMService(sl<DioClient>()),
   );
 }
 

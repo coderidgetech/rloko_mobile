@@ -44,3 +44,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Node (icon generation in tool/)
+tool/node_modules/
+
+# Active env file (secrets); commit only app.*.env templates, not the active one
+assets/env/app.env

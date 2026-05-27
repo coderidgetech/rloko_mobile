@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../entities/auth_result.dart';
 import '../entities/user_entity.dart';
 
@@ -15,5 +17,8 @@ abstract class AuthRepository {
     String? email,
     String? phone,
     DateTime? birthday,
+    String? avatar,
+    String? city,
   });
+  Future<String> uploadAvatar(File file);
 }

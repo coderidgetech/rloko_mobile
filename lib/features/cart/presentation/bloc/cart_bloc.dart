@@ -75,7 +75,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     }
     try {
       await _addItem(event.item);
-      add(const CartLoadRequested());
+      final cart = await _getCart();
+      emit(CartLoaded(cart));
     } catch (e) {
       final api = getApiException(e);
       if (api?.statusCode == 401) {
@@ -124,7 +125,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     }
     try {
       await _updateItem(event.productId, event.size, event.quantity);
-      add(const CartLoadRequested());
+      final cart = await _getCart();
+      emit(CartLoaded(cart));
     } catch (e) {
       final api = getApiException(e);
       if (api?.statusCode == 401) {
@@ -183,7 +185,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     }
     try {
       await _removeItem(event.productId, event.size);
-      add(const CartLoadRequested());
+      final cart = await _getCart();
+      emit(CartLoaded(cart));
     } catch (e) {
       final api = getApiException(e);
       if (api?.statusCode == 401) {
@@ -205,7 +208,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     }
     try {
       await _clearCart();
-      add(const CartLoadRequested());
+      final cart = await _getCart();
+      emit(CartLoaded(cart));
     } catch (e) {
       final api = getApiException(e);
       if (api?.statusCode == 401) {
@@ -230,6 +234,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       } catch (_) {}
     }
     await _localCart.clearCart();
-    add(const CartLoadRequested());
+    final cart = await _getCart();
+    emit(CartLoaded(cart));
   }
 }

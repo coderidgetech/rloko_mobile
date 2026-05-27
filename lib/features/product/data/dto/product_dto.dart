@@ -120,6 +120,36 @@ class ProductDto {
   final String createdAt;
   final String updatedAt;
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'price': price,
+        if (originalPrice != null) 'original_price': originalPrice,
+        if (priceInr != null) 'price_inr': priceInr,
+        if (originalPriceInr != null) 'original_price_inr': originalPriceInr,
+        'images': images,
+        'category': category,
+        'subcategory': subcategory,
+        'gender': gender,
+        'colors': colors,
+        'sizes': sizes,
+        'description': description,
+        'details': details,
+        'material': material,
+        'featured': featured,
+        'new_arrival': newArrival,
+        'on_sale': onSale,
+        'is_gift': isGift,
+        'rating': rating,
+        'reviews': reviews,
+        if (badge != null) 'badge': badge,
+        if (videoUrl != null) 'video_url': videoUrl,
+        'stock': stock,
+        if (vendorId != null) 'vendor_id': vendorId,
+        'created_at': createdAt,
+        'updated_at': updatedAt,
+      };
+
   static String _string(dynamic v) => v?.toString() ?? '';
   static double _double(dynamic v) =>
       (v is num) ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0.0;

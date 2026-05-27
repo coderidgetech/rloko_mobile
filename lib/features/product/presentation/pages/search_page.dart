@@ -2,33 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../config/domain/entities/site_config.dart';
+import '../../../config/presentation/bloc/config_bloc.dart';
+import '../../../config/utils/config_category_utils.dart';
 import '../../../../core/constants/form_hints.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/bottom_nav.dart';
+import '../../domain/entities/category_entity.dart';
+import '../bloc/category_list_bloc.dart';
 import '../bloc/product_list_bloc.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/product_grid_skeleton.dart';
 import '../widgets/product_grid_tile.dart';
-
-/// Match React MobileSearchPage: search bar (rounded-full, bg-foreground/5), suggestions when empty, grid when results.
-const _trendingSearches = [
-  'Dresses',
-  'Summer Collection',
-  'Designer Bags',
-  'Sneakers',
-  'Jewelry',
-  'Sale Items',
-];
-
-const _categories = <({String name, String link})>[
-  (name: 'Women', link: '/category/women'),
-  (name: 'Men', link: '/category/men'),
-  (name: 'Dresses', link: '/category/women/dresses'),
-  (name: 'Shoes', link: '/category/women/shoes'),
-  (name: 'Bags', link: '/category/women/bags'),
-  (name: 'Jewelry', link: '/category/women/jewelry'),
-];
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -47,6 +33,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     context.read<ProductListBloc>().add(const ProductListLoadRequested(limit: 200));
+    context.read<CategoryListBloc>().add(const CategoryListLoadRequested());
     _listener = () => setState(() => _query = _searchController.text);
     _searchController.addListener(_listener);
   }
@@ -242,107 +229,123 @@ class _SuggestionsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (recentSearches.isNotEmpty) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+    return BlocBuilder<CategoryListBloc, CategoryListState>(
+      builder: (context, catState) {
+        final configState = context.watch<ConfigBloc>().state;
+        final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
+        var categories = catState is CategoryListLoaded ? catState.categories : <CategoryEntity>[];
+        if (categories.isEmpty) {
+          categories = categoriesFromConfig(config.categories);
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (recentSearches.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recent',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                    ),
+                    TextButton(
+                      onPressed: onClearRecent,
+                      child: Text(
+                        'Clear All',
+                        style: TextStyle(
+                            fontSize: 12, color: AppTheme.primaryColor(context)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...recentSearches.map((s) => ListTile(
+                      leading: Icon(
+                        Icons.access_time,
+                        size: 18,
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
+                      ),
+                      title: Text(s, style: const TextStyle(fontSize: 14)),
+                      trailing: Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                      ),
+                      onTap: () => onSearch(s),
+                    )),
+                const SizedBox(height: 24),
+              ],
+              if (categories.isNotEmpty) ...[
                 Text(
-                  'Recent',
+                  'From your catalog',
                   style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                 ),
-                TextButton(
-                  onPressed: onClearRecent,
-                  child: Text(
-                    'Clear All',
-                    style: TextStyle(
-                        fontSize: 12, color: AppTheme.primaryColor(context)),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...recentSearches.map((s) => ListTile(
-                  leading: Icon(
-                    Icons.access_time,
-                    size: 18,
-                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
-                  ),
-                  title: Text(s, style: const TextStyle(fontSize: 14)),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    size: 16,
-                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
-                  ),
-                  onTap: () => onSearch(s),
-                )),
-            const SizedBox(height: 24),
-          ],
-          Text(
-            'Trending',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
-          ),
-          const SizedBox(height: 12),
-          ..._trendingSearches.map((s) => ListTile(
-                leading: Icon(
-                  Icons.trending_up,
-                  size: 18,
-                  color: AppTheme.primaryColor(context),
-                ),
-                title: Text(s, style: const TextStyle(fontSize: 14)),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
-                ),
-                onTap: () => onSearch(s),
-              )),
-          const SizedBox(height: 24),
-          Text(
-            'Browse Categories',
-            style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
-          ),
-          const SizedBox(height: 12),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.5,
-            children: _categories.map((cat) {
-              return Material(
-                color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(20),
-                child: InkWell(
-                  onTap: () => context.go(cat.link),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Center(
-                    child: Text(
-                      cat.name,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w500),
+                const SizedBox(height: 12),
+                ...categories.take(6).map((c) {
+                  return ListTile(
+                    leading: Icon(
+                      Icons.label_outline,
+                      size: 18,
+                      color: AppTheme.primaryColor(context),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
+                    title: Text(c.name, style: const TextStyle(fontSize: 14)),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                    ),
+                    onTap: () => onSearch(c.name),
+                  );
+                }),
+                const SizedBox(height: 24),
+              ],
+              Text(
+                'Browse categories',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+              ),
+              const SizedBox(height: 12),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 2.5,
+                children: categories
+                    .map(
+                      (c) => Material(
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(20),
+                        child: InkWell(
+                          onTap: () => context.go('/category/${c.gender}/${c.slug}'),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Center(
+                            child: Text(
+                              c.name,
+                              style: const TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

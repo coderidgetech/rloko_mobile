@@ -20,12 +20,31 @@ class OrderDetailPage extends StatefulWidget {
 }
 
 class _OrderDetailPageState extends State<OrderDetailPage> {
+  bool _showReturnForm = false;
+  String _returnReason = 'wrong_size';
+  final _returnDescController = TextEditingController();
+  bool _submittingReturn = false;
+
+  static const _returnReasons = [
+    ('wrong_size', 'Wrong size'),
+    ('defective', 'Defective / damaged'),
+    ('not_as_described', 'Not as described'),
+    ('changed_mind', 'Changed mind'),
+    ('other', 'Other'),
+  ];
+
   @override
   void initState() {
     super.initState();
     context
         .read<OrderDetailBloc>()
         .add(OrderDetailLoadRequested(widget.orderId));
+  }
+
+  @override
+  void dispose() {
+    _returnDescController.dispose();
+    super.dispose();
   }
 
   @override
@@ -48,6 +67,21 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               const SnackBar(content: Text('Order cancelled')),
             );
             context.pop();
+          }
+          if (state is OrderDetailReturnSuccess) {
+            setState(() {
+              _showReturnForm = false;
+              _submittingReturn = false;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Return request submitted')),
+            );
+          }
+          if (state is OrderDetailReturnError) {
+            setState(() => _submittingReturn = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(state.message)),
+            );
           }
         },
         builder: (context, state) {
@@ -97,6 +131,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   _OrderSummaryCard(order: state.order),
                   const SizedBox(height: 16),
                   _OrderActionButtons(),
+                  if (_isTrackable(state.order)) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () => context.push('/tracking/${state.order.id}'),
+                      icon: const Icon(Icons.local_shipping_outlined, size: 18),
+                      label: const Text('Track Order'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
                   if (state.trackingUpdates.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     _TrackingSection(updates: state.trackingUpdates),
@@ -112,6 +158,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       child: const Text('Cancel order'),
                     ),
                   ],
+                  if (state.order.status == 'delivered') ...[
+                    const SizedBox(height: 16),
+                    _buildReviewCard(context, state.order),
+                    const SizedBox(height: 12),
+                    _buildReturnCard(context, state.order),
+                  ],
                 ],
               ),
             );
@@ -124,6 +176,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   bool _canCancel(OrderEntity order) {
     return order.status == 'pending' || order.status == 'processing';
+  }
+
+  bool _isTrackable(OrderEntity order) {
+    return const {'shipped', 'in_transit', 'in-transit', 'out_for_delivery', 'delivered'}
+        .contains(order.status.toLowerCase());
   }
 
   void _showCancelDialog(BuildContext context, String orderId) {
@@ -152,6 +209,210 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildReviewCard(BuildContext context, OrderEntity order) {
+    if (order.items.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderColor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.star_border_rounded, size: 20, color: AppTheme.primaryColor(context)),
+              const SizedBox(width: 8),
+              const Text('Write a Review', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Share your thoughts on the items you received.',
+            style: TextStyle(fontSize: 13, color: AppTheme.mutedForegroundColor(context)),
+          ),
+          const SizedBox(height: 12),
+          ...order.items.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: InkWell(
+              onTap: () => context.push(
+                '/reviews/write/${item.productId}',
+                extra: {'productName': item.productName},
+              ),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                child: Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: SafeCachedNetworkImage(
+                        imageUrl: item.image,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item.productName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right, size: 18, color: AppTheme.mutedForegroundColor(context)),
+                  ],
+                ),
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReturnCard(BuildContext context, OrderEntity order) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.undo_outlined, size: 18, color: AppTheme.foregroundColor(context)),
+              const SizedBox(width: 8),
+              const Text('Return Order', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            ],
+          ),
+          if (!_showReturnForm) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Not satisfied with your purchase? You can request a return within 30 days.',
+              style: TextStyle(fontSize: 13, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => setState(() => _showReturnForm = true),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                ),
+                child: const Text('Request Return'),
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 16),
+            Text('Reason', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7))),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButton<String>(
+                value: _returnReason,
+                isExpanded: true,
+                underline: const SizedBox.shrink(),
+                borderRadius: BorderRadius.circular(12),
+                items: _returnReasons
+                    .map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2, style: const TextStyle(fontSize: 14))))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) setState(() => _returnReason = v);
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text('Description (optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7))),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _returnDescController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Describe the issue...',
+                hintStyle: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
+                ),
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _submittingReturn ? null : () => setState(() => _showReturnForm = false),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.3)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _submittingReturn ? null : () => _submitReturn(context, order),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    ),
+                    child: _submittingReturn
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Submit Return'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _submitReturn(BuildContext context, OrderEntity order) {
+    setState(() => _submittingReturn = true);
+    final items = order.items
+        .map((item) => {
+              'product_id': item.productId,
+              'product_name': item.productName,
+              'image': item.image,
+              'price': item.price,
+              'size': item.size,
+              'quantity': item.quantity,
+            })
+        .toList();
+    context.read<OrderDetailBloc>().add(
+          OrderDetailReturnRequested(
+            items: items,
+            reason: _returnReason,
+            description: _returnDescController.text.trim(),
+          ),
+        );
   }
 }
 
@@ -256,7 +517,7 @@ class _OrderStatusCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  Text('${_estimatedDelivery(order.createdAt)}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  Text(_estimatedDelivery(order.createdAt), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                   if (order.trackingNumber != null && order.trackingNumber!.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text('Tracking: ${order.trackingNumber}', style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6))),

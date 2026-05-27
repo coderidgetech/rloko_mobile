@@ -20,6 +20,7 @@ import '../../../video/domain/entities/inspiration_video_entity.dart';
 import '../../../video/presentation/bloc/inspiration_videos_bloc.dart';
 import '../../../product/presentation/widgets/product_grid_skeleton.dart';
 import '../../../product/presentation/widgets/product_grid_tile.dart';
+import '../../../../core/widgets/delivery_location_strip.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -48,7 +49,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Delivery address bar matching React MobileHomeHeader row 2
-            const _HomeDeliveryBar(),
+            const DeliveryLocationStrip(),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -96,75 +97,16 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-/// Delivery address row matching React MobileHomeHeader: "Deliver to [Name] - [address...]"
-class _HomeDeliveryBar extends StatelessWidget {
-  const _HomeDeliveryBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.backgroundColor(context),
-      child: InkWell(
-        onTap: () => context.push('/delivery-location'),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1))),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.location_on_outlined, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Deliver to Praneeth - 202 flat, 2nd floor, datta Krup...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.foregroundColor(context),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(Icons.keyboard_arrow_down_rounded, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _HeroSlide {
   const _HeroSlide({required this.title, required this.subtitle, required this.image, required this.cta, required this.link});
   final String title, subtitle, image, cta, link;
 }
-
-const _defaultHeroImages = [
-  'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80',
-  'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&q=80',
-  'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80',
-];
 
 List<_HeroSlide> _defaultHeroSlides() => [
   const _HeroSlide(title: 'New Season', subtitle: 'Spring Collection 2026', image: '', cta: 'Shop Now', link: '/new-arrivals'),
   const _HeroSlide(title: 'Designer Bags', subtitle: 'Luxury Accessories', image: '', cta: 'Explore', link: '/categories'),
   const _HeroSlide(title: 'Summer Sale', subtitle: 'Up to 50% Off', image: '', cta: 'Shop Sale', link: '/sale'),
 ];
-
-List<_HeroSlide> _buildHeroSlidesWithImages(List<_HeroSlide> slides) {
-  return [
-    for (var i = 0; i < slides.length; i++)
-      _HeroSlide(
-        title: slides[i].title,
-        subtitle: slides[i].subtitle,
-        image: slides[i].image.isNotEmpty ? slides[i].image : _defaultHeroImages[i % _defaultHeroImages.length],
-        cta: slides[i].cta,
-        link: slides[i].link,
-      ),
-  ];
-}
 
 List<_HeroSlide> _heroSlidesFromConfig(SiteConfig config) {
   final hero = config.homepage.hero;
@@ -221,8 +163,7 @@ class _HeroSectionState extends State<_HeroSection> {
       buildWhen: (a, b) => b is ConfigLoaded,
       builder: (context, state) {
         final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
-        final raw = _heroSlidesFromConfig(config);
-        final slides = _buildHeroSlidesWithImages(raw);
+        final slides = _heroSlidesFromConfig(config);
         _startTimer(slides.length);
         return _HeroCarousel(slides: slides, pageController: _pageController);
       },
@@ -235,7 +176,7 @@ class _StoryCirclesSection extends StatelessWidget {
 
   static List<_StoryItem> _itemsFromCategories(List<CategoryEntity> categories) {
     final items = <_StoryItem>[
-      _StoryItem(id: 'new', title: 'New', image: placeholderImageUrl, isNew: true, link: '/new-arrivals'),
+      _StoryItem(id: 'new', title: 'New', image: '', isNew: true, link: '/new-arrivals'),
     ];
     for (final c in categories.take(5)) {
       items.add(_StoryItem(
@@ -245,7 +186,7 @@ class _StoryCirclesSection extends StatelessWidget {
         link: '/category/${c.gender}/${c.slug}',
       ));
     }
-    items.add(_StoryItem(id: 'sale', title: 'Sale', image: placeholderImageUrl, link: '/sale'));
+    items.add(_StoryItem(id: 'sale', title: 'Sale', image: '', link: '/sale'));
     return items;
   }
 
@@ -262,8 +203,8 @@ class _StoryCirclesSection extends StatelessWidget {
         final items = categories.isNotEmpty
             ? _itemsFromCategories(categories)
             : [
-                _StoryItem(id: 'new', title: 'New', image: placeholderImageUrl, isNew: true, link: '/new-arrivals'),
-                _StoryItem(id: 'sale', title: 'Sale', image: placeholderImageUrl, link: '/sale'),
+                _StoryItem(id: 'new', title: 'New', image: '', isNew: true, link: '/new-arrivals'),
+                _StoryItem(id: 'sale', title: 'Sale', image: '', link: '/sale'),
               ];
         return _StoryCirclesStrip(items: items);
       },
@@ -289,15 +230,31 @@ class _HeroCarousel extends StatelessWidget {
             itemCount: slides.length,
             itemBuilder: (context, index) {
               final s = slides[index];
+              final bgUrl = safeImageUrl(s.image);
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  CachedNetworkImage(
-                    imageUrl: safeImageUrl(s.image),
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
-                    errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image)),
-                  ),
+                  if (bgUrl.isEmpty)
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppTheme.mutedColor(context),
+                            AppTheme.primaryColor(context).withValues(alpha: 0.35),
+                            AppTheme.foregroundColor(context).withValues(alpha: 0.15),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    CachedNetworkImage(
+                      imageUrl: bgUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                      errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image)),
+                    ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -412,6 +369,29 @@ class _StoryCirclesStrip extends StatelessWidget {
           itemCount: items.length,
           itemBuilder: (context, index) {
             final item = items[index];
+            Widget storyAvatar() {
+              final u = safeImageUrl(item.image);
+              if (u.isEmpty) {
+                return Container(
+                  width: 60,
+                  height: 60,
+                  color: AppTheme.mutedColor(context),
+                  child: Icon(
+                    item.isNew ? Icons.fiber_new : Icons.label_outline,
+                    size: 28,
+                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.45),
+                  ),
+                );
+              }
+              return CachedNetworkImage(
+                imageUrl: u,
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                errorWidget: (_, __, ___) => const Icon(Icons.image),
+              );
+            }
             return Padding(
               padding: const EdgeInsets.only(right: 16),
               child: InkWell(
@@ -437,14 +417,7 @@ class _StoryCirclesStrip extends StatelessWidget {
                             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
                           ),
                           child: ClipOval(
-                            child: CachedNetworkImage(
-                              imageUrl: safeImageUrl(item.image),
-                              width: 60,
-                              height: 60,
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
-                              errorWidget: (_, __, ___) => const Icon(Icons.image),
-                            ),
+                            child: storyAvatar(),
                           ),
                         ),
                         if (item.isNew)
@@ -568,40 +541,54 @@ class _InspirationVideosContent extends StatelessWidget {
                     final video = videos[index];
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            CachedNetworkImage(
-                              imageUrl: safeImageUrl(video.thumbnailUrl),
-                              fit: BoxFit.cover,
-                              placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
-                              errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.videocam_off)),
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6), Colors.black.withValues(alpha: 0.85)],
+                      child: GestureDetector(
+                        onTap: () => context.push(
+                          '/video/${video.id}',
+                          extra: {
+                            'videoUrl': video.videoUrl,
+                            'title': video.title,
+                            'category': video.category,
+                            'thumbnailUrl': video.thumbnailUrl,
+                          },
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              CachedNetworkImage(
+                                imageUrl: safeImageUrl(video.thumbnailUrl),
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                                errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.videocam_off)),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6), Colors.black.withValues(alpha: 0.85)],
+                                  ),
                                 ),
                               ),
-                            ),
-                            Positioned(
-                              left: 12,
-                              right: 12,
-                              bottom: 12,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(video.title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
-                                  const SizedBox(height: 2),
-                                  Text(video.category.toUpperCase(), style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 10, letterSpacing: 1)),
-                                ],
+                              const Center(
+                                child: Icon(Icons.play_circle_outline, color: Colors.white70, size: 52),
                               ),
-                            ),
-                          ],
+                              Positioned(
+                                left: 12,
+                                right: 12,
+                                bottom: 12,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(video.title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+                                    const SizedBox(height: 2),
+                                    Text(video.category.toUpperCase(), style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 10, letterSpacing: 1)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -695,7 +682,7 @@ class _QuickStatsBanner extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _QuickStat(icon: Icons.trending_up, label: 'Trending', onTap: () => context.push('/all-products')),
+          _QuickStat(icon: Icons.storefront_outlined, label: 'Shop all', onTap: () => context.push('/all-products')),
           _QuickStat(icon: Icons.bolt, label: 'New In', onTap: () => context.push('/new-arrivals')),
           _QuickStat(icon: Icons.local_offer, label: 'Sale', onTap: () => context.push('/sale')),
         ],
@@ -857,6 +844,7 @@ class _ShopCategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final link = '/category/${category.gender}/${category.slug}';
     final imageUrl = category.image.isNotEmpty ? category.image : fallbackImageForCategory(category.gender, category.slug);
+    final networkUrl = safeImageUrl(imageUrl);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -867,13 +855,34 @@ class _ShopCategoryCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CachedNetworkImage(
-                imageUrl: safeImageUrl(imageUrl),
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
-                errorWidget: (_, __, ___) =>
-                    Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image)),
-              ),
+              if (networkUrl.isEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppTheme.mutedColor(context),
+                        AppTheme.primaryColor(context).withValues(alpha: 0.2),
+                      ],
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.checkroom,
+                      size: 48,
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                    ),
+                  ),
+                )
+              else
+                CachedNetworkImage(
+                  imageUrl: networkUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                  errorWidget: (_, __, ___) =>
+                      Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image)),
+                ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -927,11 +936,6 @@ class _ShopCategoryCard extends StatelessWidget {
 class _GiftsSection extends StatelessWidget {
   const _GiftsSection();
 
-  static const _giftForHerImage =
-      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=600&q=80';
-  static const _giftForHimImage =
-      'https://images.unsplash.com/photo-1549298240-0d8e60513026?w=600&q=80';
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -970,21 +974,21 @@ class _GiftsSection extends StatelessWidget {
           _GiftCard(
             title: 'Gift For Her',
             subtitle: 'Thoughtful presents she\'ll treasure',
-            imageUrl: _giftForHerImage,
+            imageUrl: '',
             link: '/gift-for-her',
             accentColor: Colors.pink,
             icon: Icons.favorite,
-            itemsLabel: '127 items',
+            itemsLabel: null,
           ),
           const SizedBox(height: 16),
           _GiftCard(
             title: 'Gift For Him',
             subtitle: 'Perfect gifts for every gentleman',
-            imageUrl: _giftForHimImage,
+            imageUrl: '',
             link: '/gift-for-him',
             accentColor: AppTheme.primaryColor(context),
             icon: Icons.card_giftcard_outlined,
-            itemsLabel: '94 items',
+            itemsLabel: null,
           ),
         ],
       ),
@@ -1009,7 +1013,7 @@ class _GiftCard extends StatelessWidget {
   final String link;
   final Color accentColor;
   final IconData icon;
-  final String itemsLabel;
+  final String? itemsLabel;
 
   /// Ref mobile: h-[280px] total, image h-[160px], content flex-1; rounded-2xl, icon w-14 h-14 (56), top-4
   static const double _cardHeight = 280;
@@ -1049,16 +1053,30 @@ class _GiftCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      CachedNetworkImage(
-                        imageUrl: safeImageUrl(imageUrl),
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) =>
-                            Container(color: AppTheme.mutedColor(context)),
-                        errorWidget: (_, __, ___) => Container(
-                          color: AppTheme.mutedColor(context),
-                          child: Icon(Icons.image, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+                      if (safeImageUrl(imageUrl).isEmpty)
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                accentColor.withValues(alpha: 0.35),
+                                AppTheme.mutedColor(context),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        CachedNetworkImage(
+                          imageUrl: safeImageUrl(imageUrl),
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) =>
+                              Container(color: AppTheme.mutedColor(context)),
+                          errorWidget: (_, __, ___) => Container(
+                            color: AppTheme.mutedColor(context),
+                            child: Icon(Icons.image, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+                          ),
                         ),
-                      ),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -1090,25 +1108,26 @@ class _GiftCard extends StatelessWidget {
                           child: Icon(icon, size: 26, color: accentColor),
                         ),
                       ),
-                      Positioned(
-                        top: 16,
-                        left: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.95),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            itemsLabel,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.foregroundColor(context),
+                      if (itemsLabel != null && itemsLabel!.isNotEmpty)
+                        Positioned(
+                          top: 16,
+                          left: 16,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.95),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              itemsLabel!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.foregroundColor(context),
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -1376,9 +1395,9 @@ class _TrustBadges extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _TrustBadge(emoji: '🚚', title: 'Free Shipping', subtitle: 'On orders \$50+'),
-          _TrustBadge(emoji: '↩️', title: 'Easy Returns', subtitle: '30-day policy'),
-          _TrustBadge(emoji: '🔒', title: 'Secure Pay', subtitle: '100% protected'),
+          _TrustBadge(emoji: '🚚', title: 'Shipping', subtitle: 'Rates at checkout'),
+          _TrustBadge(emoji: '↩️', title: 'Returns', subtitle: 'See return policy'),
+          _TrustBadge(emoji: '🔒', title: 'Payments', subtitle: 'Processed securely'),
         ],
       ),
     );

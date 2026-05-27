@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/constants/phone_input_formatters.dart';
 import '../../../../core/di/injection.dart';
@@ -9,7 +12,6 @@ import '../../../../core/widgets/app_header.dart';
 import '../../domain/usecases/update_profile_usecase.dart';
 import '../bloc/auth_bloc.dart';
 
-/// Edit profile – design matches React MobileProfileEditPage; API: PUT /auth/profile (phone, birthday).
 class ProfileEditPage extends StatefulWidget {
   const ProfileEditPage({super.key});
 
@@ -25,6 +27,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   late TextEditingController _cityController;
   String? _birthdayStr;
   String _gender = 'male';
+  String? _existingAvatarUrl;
+  File? _pendingAvatarFile;
+  bool _uploadingAvatar = false;
   bool _saving = false;
 
   @override
@@ -40,7 +45,11 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       _emailController.text = state.user.email;
       _phoneController.text = state.user.phone ?? '';
       _birthdayStr = state.user.birthday;
-      _cityController.text = '';
+      _cityController.text = state.user.city ?? '';
+      _existingAvatarUrl = state.user.avatar;
+      if (_existingAvatarUrl != null && _existingAvatarUrl!.isEmpty) {
+        _existingAvatarUrl = null;
+      }
     }
   }
 
@@ -53,6 +62,38 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     super.dispose();
   }
 
+  Future<void> _pickPhoto() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _pendingAvatarFile = File(picked.path);
+      _uploadingAvatar = true;
+    });
+    try {
+      final url = await sl<UpdateProfileUseCase>().uploadAvatar(_pendingAvatarFile!);
+      if (!mounted) return;
+      setState(() {
+        _existingAvatarUrl = url;
+        _uploadingAvatar = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _pendingAvatarFile = null;
+        _uploadingAvatar = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Photo upload failed: $e')),
+      );
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate() || _saving) return;
     setState(() => _saving = true);
@@ -62,6 +103,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         birthday: _birthdayStr != null ? DateTime.tryParse(_birthdayStr!) : null,
+        avatar: _existingAvatarUrl,
+        city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
       );
       if (!mounted) return;
       context.read<AuthBloc>().add(const AuthCheckRequested());
@@ -102,74 +145,85 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               ),
               const SizedBox(height: 24),
               Center(
-                child: Column(
-                  children: [
-                    Stack(
-                      children: [
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                AppTheme.primaryColor(context),
-                                AppTheme.primaryColor(context).withValues(alpha: 0.6),
-                              ],
-                            ),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.person, size: 40, color: Colors.white),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            width: 32,
-                            height: 32,
+                child: GestureDetector(
+                  onTap: _uploadingAvatar ? null : _pickPhoto,
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          Container(
+                            width: 96,
+                            height: 96,
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor(context),
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
+                              color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
                             ),
-                            child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                            child: ClipOval(
+                              child: _buildAvatarContent(context),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Tap to change photo',
-                      style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
-                    ),
-                  ],
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor(context),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: _uploadingAvatar
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(6),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tap to change photo',
+                        style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 32),
               _labeledField(
                 label: 'Full Name',
-                icon: Icons.person_outline,
                 child: TextFormField(
                   controller: _nameController,
-                  readOnly: true,
                   decoration: _inputDecoration('Enter your name', Icons.person_outline),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Name is required';
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(height: 16),
               _labeledField(
                 label: 'Email Address',
-                icon: Icons.email_outlined,
                 child: TextFormField(
                   controller: _emailController,
-                  readOnly: true,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: _inputDecoration('Enter your email', Icons.email_outlined),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (!v.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(height: 16),
               _labeledField(
                 label: 'Phone Number',
-                icon: Icons.phone_outlined,
                 child: TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.number,
@@ -205,7 +259,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                               color: selected ? AppTheme.primaryColor(context) : Colors.white,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                                color: selected
+                                    ? AppTheme.primaryColor(context)
+                                    : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -221,7 +277,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: selected ? Colors.white : AppTheme.mutedForegroundColor(context),
+                                  color: selected
+                                      ? Colors.white
+                                      : AppTheme.mutedForegroundColor(context),
                                 ),
                               ),
                             ),
@@ -235,7 +293,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               const SizedBox(height: 16),
               _labeledField(
                 label: 'Date of Birth',
-                icon: Icons.calendar_today_outlined,
                 child: InkWell(
                   onTap: () async {
                     final date = await showDatePicker(
@@ -264,7 +321,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               const SizedBox(height: 16),
               _labeledField(
                 label: 'City',
-                icon: Icons.location_on_outlined,
                 child: TextFormField(
                   controller: _cityController,
                   decoration: _inputDecoration('Enter your city', Icons.location_on_outlined),
@@ -274,7 +330,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _saving ? null : _save,
+                  onPressed: (_saving || _uploadingAvatar) ? null : _save,
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -302,11 +358,27 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  Widget _labeledField({
-    required String label,
-    required IconData icon,
-    required Widget child,
-  }) {
+  Widget _buildAvatarContent(BuildContext context) {
+    if (_pendingAvatarFile != null) {
+      return Image.file(_pendingAvatarFile!, fit: BoxFit.cover, width: 96, height: 96);
+    }
+    if (_existingAvatarUrl != null) {
+      return Image.network(
+        _existingAvatarUrl!,
+        fit: BoxFit.cover,
+        width: 96,
+        height: 96,
+        errorBuilder: (_, __, ___) => Icon(
+          Icons.person,
+          size: 40,
+          color: AppTheme.primaryColor(context),
+        ),
+      );
+    }
+    return Icon(Icons.person, size: 40, color: AppTheme.primaryColor(context));
+  }
+
+  Widget _labeledField({required String label, required Widget child}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -331,10 +403,16 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
+        borderSide: BorderSide(
+          color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+        ),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      prefixIcon: Icon(icon, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
+      prefixIcon: Icon(
+        icon,
+        size: 20,
+        color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
+      ),
     );
   }
 }

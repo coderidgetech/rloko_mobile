@@ -117,6 +117,31 @@ class ShippingInfoDto {
       };
 }
 
+/// Request body for POST /orders/guest (unauthenticated)
+class CreateGuestOrderRequestDto {
+  CreateGuestOrderRequestDto({
+    required this.guestEmail,
+    required this.guestName,
+    required this.items,
+    required this.shippingInfo,
+    this.promotionCode,
+  });
+
+  final String guestEmail;
+  final String guestName;
+  final List<Map<String, dynamic>> items;
+  final Map<String, dynamic> shippingInfo;
+  final String? promotionCode;
+
+  Map<String, dynamic> toJson() => {
+        'guest_email': guestEmail,
+        'guest_name': guestName,
+        'items': items,
+        'shipping_info': shippingInfo,
+        if (promotionCode != null && promotionCode!.isNotEmpty) 'promotion_code': promotionCode,
+      };
+}
+
 /// Request body for POST /orders
 class CreateOrderRequestDto {
   CreateOrderRequestDto({

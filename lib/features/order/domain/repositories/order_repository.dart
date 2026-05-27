@@ -18,6 +18,14 @@ abstract class OrderRepository {
     Map<String, dynamic>? paymentInfo,
     String? promotionCode,
   });
+
+  Future<OrderEntity> createGuest({
+    required String guestEmail,
+    required String guestName,
+    required List<OrderItemEntity> items,
+    required ShippingInfoEntity shippingInfo,
+    String? promotionCode,
+  });
 }
 
 class OrderListResult {

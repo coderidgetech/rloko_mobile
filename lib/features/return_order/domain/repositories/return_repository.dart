@@ -4,6 +4,13 @@ abstract class ReturnRepository {
   Future<ReturnListResult> list({int limit = 20, int skip = 0});
 
   Future<ReturnEntity> getById(String id);
+
+  Future<ReturnEntity> create({
+    required String orderId,
+    required List<Map<String, dynamic>> items,
+    required String reason,
+    String description,
+  });
 }
 
 class ReturnListResult {

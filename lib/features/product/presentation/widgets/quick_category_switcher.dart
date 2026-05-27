@@ -18,8 +18,8 @@ class QuickCategorySwitcher extends StatelessWidget {
   static const List<({String id, String name, String emoji, String link, String? badge})> _categories = [
     (id: 'women', name: 'Women', emoji: '👗', link: '/category/women', badge: null),
     (id: 'men', name: 'Men', emoji: '👔', link: '/category/men', badge: null),
-    (id: 'new', name: 'New', emoji: '✨', link: '/new-arrivals', badge: 'Hot'),
-    (id: 'sale', name: 'Sale', emoji: '🔥', link: '/sale', badge: '70% Off'),
+    (id: 'new', name: 'New', emoji: '✨', link: '/new-arrivals', badge: null),
+    (id: 'sale', name: 'Sale', emoji: '🔥', link: '/sale', badge: null),
     (id: 'dresses', name: 'Dresses', emoji: '👠', link: '/category/women/dresses', badge: null),
     (id: 'shoes', name: 'Shoes', emoji: '👟', link: '/category/women/shoes', badge: null),
     (id: 'jewelry', name: 'Jewelry', emoji: '💎', link: '/category/women/jewelry', badge: null),

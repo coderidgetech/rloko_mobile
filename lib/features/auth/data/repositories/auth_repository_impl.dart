@@ -1,6 +1,7 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
-import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/auth_result.dart';
 import '../../domain/entities/user_entity.dart';
@@ -84,7 +85,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final dto = await _dataSource.getMe();
       return dto?.toEntity();
     } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
+      final code = e.response?.statusCode ?? getApiException(e)?.statusCode;
+      if (code == 401) {
         await _dioClient.clearToken();
         return null;
       }
@@ -105,11 +107,14 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  @override
   Future<void> updateProfile({
     String? name,
     String? email,
     String? phone,
     DateTime? birthday,
+    String? avatar,
+    String? city,
   }) async {
     try {
       await _dataSource.updateProfile(
@@ -117,7 +122,18 @@ class AuthRepositoryImpl implements AuthRepository {
         email: email,
         phone: phone,
         birthday: birthday,
+        avatar: avatar,
+        city: city,
       );
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
+
+  @override
+  Future<String> uploadAvatar(File file) async {
+    try {
+      return await _dataSource.uploadAvatar(file);
     } on DioException catch (e) {
       throw getApiException(e) ?? e;
     }

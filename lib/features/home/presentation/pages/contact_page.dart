@@ -1,19 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../config/presentation/bloc/config_bloc.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 
-/// Contact Us – email, phone, hours; copy actions.
+/// Contact Us – email, phone, hours; copy actions (values from site config when loaded).
 class ContactPage extends StatelessWidget {
   const ContactPage({super.key});
 
-  static const _email = 'support@rloco.com';
-  static const _phone = '+91 1800-123-4567';
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocBuilder<ConfigBloc, ConfigState>(
+      builder: (context, state) {
+        final g = state is ConfigLoaded ? state.config.general : null;
+        final email = (g?.supportEmail.isNotEmpty == true) ? g!.supportEmail : (g?.email ?? '');
+        final phone = g?.phone ?? '';
+        return Scaffold(
       backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: SingleChildScrollView(
@@ -31,19 +35,29 @@ class ContactPage extends StatelessWidget {
               style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
             ),
             const SizedBox(height: 24),
-            _ContactCard(
-              icon: Icons.mail_outline,
-              title: 'Email',
-              value: _email,
-              onCopy: () => _copyAndSnack(context, _email, 'Email copied'),
-            ),
-            const SizedBox(height: 12),
-            _ContactCard(
-              icon: Icons.phone_outlined,
-              title: 'Phone',
-              value: _phone,
-              onCopy: () => _copyAndSnack(context, _phone, 'Phone number copied'),
-            ),
+            if (email.isNotEmpty) ...[
+              _ContactCard(
+                icon: Icons.mail_outline,
+                title: 'Email',
+                value: email,
+                onCopy: () => _copyAndSnack(context, email, 'Email copied'),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (phone.isNotEmpty) ...[
+              _ContactCard(
+                icon: Icons.phone_outlined,
+                title: 'Phone',
+                value: phone,
+                onCopy: () => _copyAndSnack(context, phone, 'Phone number copied'),
+              ),
+            ],
+            if (email.isEmpty && phone.isEmpty) ...[
+              Text(
+                'Add contact details in the admin site settings to show them here.',
+                style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context), height: 1.5),
+              ),
+            ],
             const SizedBox(height: 24),
             const Text(
               'Support hours',
@@ -51,7 +65,7 @@ class ContactPage extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Mon–Sat: 9:00 AM – 6:00 PM IST\nClosed on public holidays.',
+              'Hours and holidays are announced in the app or in your order emails.',
               style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context), height: 1.5),
             ),
             const SizedBox(height: 24),
@@ -67,6 +81,8 @@ class ContactPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+      },
     );
   }
 

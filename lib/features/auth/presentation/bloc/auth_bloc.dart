@@ -139,9 +139,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } else {
         emit(const AuthUnauthenticated());
       }
-    } catch (e, st) {
+    } catch (e) {
       if (kDebugMode) {
-        debugPrint('[AuthBloc] AuthCheck failed: $e\n$st');
+        debugPrint('[AuthBloc] AuthCheck: could not restore session ($e)');
       }
       emit(const AuthUnauthenticated());
     }

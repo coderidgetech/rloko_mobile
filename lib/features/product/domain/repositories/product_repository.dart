@@ -9,6 +9,7 @@ abstract class ProductRepository {
     String? gender,
     bool? onSale,
     bool? featured,
+    bool? newArrival,
     bool? gift,
     double? minPrice,
     double? maxPrice,
@@ -22,4 +23,6 @@ abstract class ProductRepository {
   Future<List<ProductEntity>> getNewArrivals({int limit = 10});
 
   Future<List<ProductEntity>> getOnSale({int limit = 10});
+
+  Future<List<ProductEntity>> getRecommendations(String productId, {int limit = 8});
 }

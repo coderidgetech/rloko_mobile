@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../constants/currency_constants.dart';
 import 'app_region.dart';
 
 /// Exposes region and price formatting to the widget tree (matches web CurrencyContext).
@@ -26,7 +27,7 @@ class CurrencyScope extends InheritedWidget {
   /// Format price: uses [inrPrice] when region is India, else [usdPrice]. Matches web formatPrice.
   String formatPrice(double usdPrice, [double? inrPrice]) {
     if (region == AppRegion.india) {
-      final amount = inrPrice ?? (usdPrice * 75);
+      final amount = inrPrice ?? (usdPrice * kUsdToInrDisplay);
       return NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0).format(amount.round());
     }
     return '\$${usdPrice.toStringAsFixed(2)}';

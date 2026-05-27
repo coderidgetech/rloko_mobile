@@ -35,25 +35,25 @@ const List<_OnboardingSlide> _slides = [
   _OnboardingSlide(
     title: 'Discover Luxury Fashion',
     description: 'Explore curated collections of premium clothing, accessories, and jewelry from top designers',
-    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80',
+    image: '',
     icon: Icons.auto_awesome,
   ),
   _OnboardingSlide(
     title: 'Personalized Shopping',
     description: 'Get tailored recommendations, exclusive deals, and early access to new arrivals just for you',
-    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&q=80',
+    image: '',
     icon: Icons.shopping_bag_outlined,
   ),
   _OnboardingSlide(
     title: 'Secure & Easy Checkout',
     description: 'Shop with confidence using secure payments, multiple payment options, and buyer protection',
-    image: 'https://images.unsplash.com/photo-1556742502-ec7c0e9f34b1?w=800&q=80',
+    image: '',
     icon: Icons.lock_outline,
   ),
   _OnboardingSlide(
-    title: 'Fast & Free Delivery',
-    description: 'Enjoy complimentary shipping on orders over \$100 and easy returns within 30 days',
-    image: 'https://images.unsplash.com/photo-1558769132-cb1aea1f1d6c?w=800&q=80',
+    title: 'Delivery & returns',
+    description: 'Shipping and return options are shown at checkout and in your order details.',
+    image: '',
     icon: Icons.local_shipping_outlined,
   ),
 ];
@@ -148,12 +148,26 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  CachedNetworkImage(
-                                    imageUrl: safeImageUrl(slide.image),
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
-                                    errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image, size: 48)),
-                                  ),
+                                  if (safeImageUrl(slide.image).isEmpty)
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            AppTheme.mutedColor(context),
+                                            AppTheme.primaryColor(context).withValues(alpha: 0.35),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    CachedNetworkImage(
+                                      imageUrl: safeImageUrl(slide.image),
+                                      fit: BoxFit.cover,
+                                      placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
+                                      errorWidget: (_, __, ___) => Container(color: AppTheme.mutedColor(context), child: const Icon(Icons.image, size: 48)),
+                                    ),
                                   Container(
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(

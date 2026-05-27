@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../../core/constants/delivery_constants.dart';
 import '../../../../core/constants/form_hints.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/region/presentation/region_bloc.dart';
+import '../../../../core/region/app_region.dart';
+import '../../../../core/delivery/presentation/guest_delivery_cubit.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/deliver_to_location_sheet.dart';
+import '../../../../core/delivery/apply_guest_gps_to_stores.dart';
 import '../../../address/domain/entities/address_entity.dart';
 import '../../../address/domain/usecases/address_usecases.dart';
 import '../../../address/presentation/bloc/address_list_bloc.dart';
@@ -26,7 +32,26 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
   @override
   void initState() {
     super.initState();
-    context.read<AddressListBloc>().add(const AddressListLoadRequested());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = context.read<AuthBloc>().state;
+      if (auth is AuthAuthenticated) {
+        context.read<AddressListBloc>().add(const AddressListLoadRequested());
+      }
+    });
+  }
+
+  String _typeLabel(String type) {
+    switch (type.toUpperCase()) {
+      case 'HOME':
+        return 'Home';
+      case 'OFFICE':
+        return 'Work';
+      case 'OTHER':
+        return 'Other';
+      default:
+        return type;
+    }
   }
 
   String _typeIcon(String type) {
@@ -48,24 +73,57 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
       if (context.canPop()) {
         context.pop();
       } else {
-        context.go('/account');
+        context.go('/');
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not set address: $e')),
+        const SnackBar(content: Text("We couldn't save this address. Please try again.")),
       );
     }
   }
 
+  String _loadErrorForUser(String raw, bool isUnauth) {
+    if (isUnauth) {
+      return 'Sign in to see and manage your delivery addresses.';
+    }
+    return "We couldn't load your addresses. Check your connection and try again.";
+  }
+
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthBloc>().state;
+    if (auth is! AuthAuthenticated) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor(context),
+        appBar: const AppHeader(showBackButton: true),
+        body: const _GuestDeliveryLocationBody(),
+      );
+    }
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
-      body: BlocBuilder<AddressListBloc, AddressListState>(
-        builder: (context, state) {
-          if (state is AddressListLoading) {
+      body: BlocListener<AddressListBloc, AddressListState>(
+        listenWhen: (p, c) => c is AddressListLoaded && _selectedId == null,
+        listener: (context, s) {
+          if (s is! AddressListLoaded) return;
+          if (_selectedId != null) return;
+          AddressEntity? def;
+          for (final a in s.addresses) {
+            if (a.isDefault) {
+              def = a;
+              break;
+            }
+          }
+          if (s.addresses.isNotEmpty) {
+            setState(() {
+              _selectedId = (def ?? s.addresses.first).id;
+            });
+          }
+        },
+        child: BlocBuilder<AddressListBloc, AddressListState>(
+          builder: (context, state) {
+          if (state is AddressListLoading || state is AddressListInitial) {
             return const Center(child: CircularProgressIndicator(strokeWidth: 2));
           }
           if (state is AddressListError) {
@@ -77,8 +135,12 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      state.message,
-                      style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
+                      _loadErrorForUser(state.message, isUnauth),
+                      style: TextStyle(
+                        color: AppTheme.mutedForegroundColor(context),
+                        fontSize: 15,
+                        height: 1.35,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -146,65 +208,33 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Location feature coming soon')),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppTheme.primaryColor(context).withValues(alpha: 0.3), width: 2),
-                          borderRadius: BorderRadius.circular(12),
-                          color: AppTheme.primaryColor(context).withValues(alpha: 0.05),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.my_location, size: 20, color: AppTheme.primaryColor(context)),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Use Current Location',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.primaryColor(context),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Enable location to detect your address',
-                                    style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(Icons.chevron_right, size: 20, color: AppTheme.primaryColor(context)),
-                          ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Add a new address',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.foregroundColor(context),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Tap Add New to enter your building, street, and flat details. The address you set as default is used for delivery updates and checkouts.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.45,
+                          color: AppTheme.mutedForegroundColor(context),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
@@ -235,8 +265,11 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                           Icon(Icons.location_off, size: 48, color: AppTheme.mutedForegroundColor(context)),
                           const SizedBox(height: 12),
                           Text(
-                            _searchQuery.isEmpty ? 'No saved addresses' : 'No matches',
+                            _searchQuery.isEmpty
+                                ? "You don't have any saved addresses yet"
+                                : 'No addresses match your search',
                             style: TextStyle(color: AppTheme.mutedForegroundColor(context)),
+                            textAlign: TextAlign.center,
                           ),
                           if (_searchQuery.isEmpty) ...[
                             const SizedBox(height: 12),
@@ -274,10 +307,8 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '• ${DeliveryConstants.standardDeliveryDays}\n'
-                          '• Express delivery available in select areas\n'
-                          '• Free shipping on orders over ₹2000\n'
-                          '• Contactless delivery available',
+                          '${DeliveryConstants.deliveryInfoBulletsFor(context.read<RegionBloc>().state.region)}\n'
+                          '• Contactless delivery available in select areas',
                           style: TextStyle(fontSize: 12, color: Colors.blue.shade800, height: 1.5),
                         ),
                       ],
@@ -288,6 +319,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
             ),
           );
         },
+        ),
       ),
     );
   }
@@ -331,7 +363,7 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
                           Row(
                             children: [
                               Text(
-                                address.type.toUpperCase(),
+                                _typeLabel(address.type),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -411,6 +443,193 @@ class _DeliveryLocationPageState extends State<DeliveryLocationPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Myntra-style: current location or manual pin; sign-in only for saved addresses.
+class _GuestDeliveryLocationBody extends StatefulWidget {
+  const _GuestDeliveryLocationBody();
+
+  @override
+  State<_GuestDeliveryLocationBody> createState() => _GuestDeliveryLocationBodyState();
+}
+
+class _GuestDeliveryLocationBodyState extends State<_GuestDeliveryLocationBody> {
+  bool _gpsBusy = false;
+  String? _gpsError;
+
+  Future<void> _onUseGps() async {
+    if (!mounted) return;
+    setState(() {
+      _gpsBusy = true;
+      _gpsError = null;
+    });
+    String? err;
+    try {
+      err = await resolveGuestLocationFromGpsAndApply(context);
+    } catch (_) {
+      err = "Something went wrong. Try again, or set your location manually from Change location.";
+    }
+    if (!mounted) return;
+    setState(() {
+      _gpsBusy = false;
+      _gpsError = err;
+    });
+    if (err == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location updated for delivery')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Select location',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.foregroundColor(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'We detect your area using your phone location (like Myntra), or you can enter a pincode or ZIP manually. Shop and add to bag now — sign in at checkout to save a full address.',
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.45,
+              color: AppTheme.mutedForegroundColor(context),
+            ),
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: _gpsBusy ? null : _onUseGps,
+            icon: _gpsBusy
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.my_location_rounded, size: 22),
+            label: Text(_gpsBusy ? 'Getting your location…' : 'Use current location'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          if (_gpsError != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _gpsError!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          BlocBuilder<RegionBloc, RegionState>(
+            builder: (context, r) {
+              return BlocBuilder<GuestDeliveryCubit, GuestDeliveryState>(
+                builder: (context, g) {
+                  final market = r.region;
+                  String summary;
+                  if (market == AppRegion.india) {
+                    final p = g.indiaPincode;
+                    if (p != null && p.length == 6) {
+                      final c = g.indiaCityHint;
+                      summary = c != null && c.isNotEmpty
+                          ? 'Currently: $c · $p'
+                          : 'Currently: $p';
+                    } else {
+                      summary = 'Pincode not set';
+                    }
+                  } else {
+                    final z = g.usZip;
+                    summary = (z != null && z.isNotEmpty) ? 'Currently: $z' : 'ZIP not set';
+                  }
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.backgroundColor(context),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.pin_drop_outlined, color: AppTheme.primaryColor(context), size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            summary,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.foregroundColor(context),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => showDeliverToLocationSheet(context),
+            icon: const Icon(Icons.edit_location_outlined, size: 20),
+            label: const Text('Change location'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 28),
+          OutlinedButton.icon(
+            onPressed: () => context.push('/login', extra: '/delivery-location'),
+            icon: const Icon(Icons.login_rounded, size: 20),
+            label: const Text('Sign in to manage saved addresses'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              side: BorderSide(color: AppTheme.primaryColor(context).withValues(alpha: 0.4)),
+            ),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBFDBFE)),
+            ),
+            child: BlocBuilder<RegionBloc, RegionState>(
+              builder: (context, s) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('📦 Delivery', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.blue.shade900)),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${DeliveryConstants.deliveryInfoBulletsFor(s.region)}\n'
+                      '• You can change location anytime from the home screen',
+                      style: TextStyle(fontSize: 12, color: Colors.blue.shade800, height: 1.5),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

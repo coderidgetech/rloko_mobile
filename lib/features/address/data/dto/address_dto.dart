@@ -91,5 +91,6 @@ class AddressDto {
         'pincode': pincode,
         'mobile': mobile,
         'country': country,
+        'is_default': isDefault,
       };
 }

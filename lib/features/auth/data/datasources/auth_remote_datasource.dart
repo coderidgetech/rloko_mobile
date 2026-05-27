@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -168,7 +170,7 @@ class AuthRemoteDataSource {
       throw Exception(errorMsg);
     } on Exception catch (e) {
       throw Exception('Something went wrong during login: ${e.toString()}');
-    } catch (e, stackTrace) {
+    } catch (e) {
       throw Exception('Unexpected critical error during login: $e');
     }
   }
@@ -196,6 +198,10 @@ class AuthRemoteDataSource {
   }
 
   Future<UserDto?> getMe() async {
+    final hasToken = await _client.getToken();
+    if (hasToken == null || hasToken.isEmpty) {
+      return null;
+    }
     try {
       final response = await _dio.get<Map<String, dynamic>>('/auth/me');
       final data = response.data;
@@ -203,6 +209,14 @@ class AuthRemoteDataSource {
       if (data == null) return null;
       return UserDto.fromJson(data);
     } on DioException catch (e) {
+      final st = e.response?.statusCode ?? getApiException(e)?.statusCode;
+      if (st == 401) {
+        if (kDebugMode) {
+          debugPrint('[AuthRemoteDataSource] getMe: session invalid (401) — treating as signed out');
+        }
+        await _client.clearToken();
+        return null;
+      }
       if (kDebugMode) {
         debugPrint('[AuthRemoteDataSource] getMe DioException: status=${e.response?.statusCode}, '
             'data=${e.response?.data}');
@@ -258,12 +272,26 @@ class AuthRemoteDataSource {
     String? email,
     String? phone,
     DateTime? birthday,
+    String? avatar,
+    String? city,
   }) async {
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
     if (email != null) body['email'] = email;
     if (phone != null) body['phone'] = phone;
     if (birthday != null) body['birthday'] = birthday.toIso8601String().split('T').first;
+    if (avatar != null) body['avatar'] = avatar;
+    if (city != null) body['city'] = city;
     await _dio.put<void>('/auth/profile', data: body);
+  }
+
+  Future<String> uploadAvatar(File file) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path, filename: 'avatar.jpg'),
+    });
+    final response = await _dio.post<Map<String, dynamic>>('/auth/avatar', data: formData);
+    final url = response.data?['url'] as String?;
+    if (url == null || url.isEmpty) throw Exception('Upload failed: no URL returned');
+    return url;
   }
 }

@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../auth/presentation/bloc/auth_bloc.dart';
+import '../../../auth/presentation/widgets/sign_in_to_continue_panel.dart';
+import '../../../../core/address/google_places_service.dart';
 import '../../../../core/constants/form_hints.dart';
 import '../../../../core/constants/phone_input_formatters.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/region/app_region.dart';
 import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/address_validation.dart';
 import '../../domain/entities/address_entity.dart';
 import '../../domain/usecases/address_usecases.dart';
 
@@ -29,18 +35,25 @@ class _AddressFormPageState extends State<AddressFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _addressLineController = TextEditingController();
+  final GooglePlacesService _places = GooglePlacesService();
   final _addressLine2Controller = TextEditingController();
   final _cityController = TextEditingController();
   final _stateController = TextEditingController();
   final _pincodeController = TextEditingController();
   final _mobileController = TextEditingController();
-  final _countryController = TextEditingController();
+  String _country = 'United States';
 
-  String _type = 'HOME'; // HOME, OFFICE (Work)
+  String _type = 'HOME'; // HOME, OFFICE, OTHER
   bool _isDefault = false;
   bool _isLoading = false;
   bool _loadingAddress = false;
   String? _error;
+  /// Default country from [CurrencyScope] must not be read in [initState].
+  bool _didApplyDefaultCountry = false;
+
+  /// Defer [GET /addresses/:id] until the user is signed in (avoid 401 + wasted input).
+  bool _editLoadPending = false;
+  bool _editFetchScheduled = false;
 
   bool get isEdit => widget.addressId != null;
 
@@ -51,12 +64,25 @@ class _AddressFormPageState extends State<AddressFormPage> {
     if (a != null) {
       _fillFromEntity(a);
     } else if (isEdit && widget.addressId != null) {
-      _loadingAddress = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _loadAddress());
-    } else {
-      final scope = CurrencyScope.maybeOf(context);
-      _countryController.text = scope?.region == AppRegion.india ? 'India' : 'USA';
+      _editLoadPending = true;
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_didApplyDefaultCountry) return;
+    if (widget.initialAddress != null) {
+      _didApplyDefaultCountry = true;
+      return;
+    }
+    if (isEdit) {
+      _didApplyDefaultCountry = true;
+      return;
+    }
+    _didApplyDefaultCountry = true;
+    final scope = CurrencyScope.maybeOf(context);
+    _country = scope?.region == AppRegion.india ? 'India' : 'United States';
   }
 
   void _fillFromEntity(AddressEntity a) {
@@ -67,8 +93,12 @@ class _AddressFormPageState extends State<AddressFormPage> {
     _stateController.text = a.state;
     _pincodeController.text = a.pincode;
     _mobileController.text = a.mobile;
-    _countryController.text = a.country;
-    _type = a.type;
+    _applyCountryForUi(a.country);
+    if (a.type == 'HOME' || a.type == 'OFFICE' || a.type == 'OTHER') {
+      _type = a.type;
+    } else {
+      _type = 'HOME';
+    }
     _isDefault = a.isDefault;
   }
 
@@ -101,13 +131,139 @@ class _AddressFormPageState extends State<AddressFormPage> {
     _stateController.dispose();
     _pincodeController.dispose();
     _mobileController.dispose();
-    _countryController.dispose();
     super.dispose();
+  }
+
+  List<TextInputFormatter> get _phoneInputFormatters {
+    if (isIndiaCountry(_country) || isUnitedStatesCountry(_country)) {
+      return kPhoneLocal10DigitFormatters;
+    }
+    return [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(15)];
+  }
+
+  List<TextInputFormatter> get _pinInputFormatters {
+    if (isIndiaCountry(_country)) {
+      return [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)];
+    }
+    if (isUnitedStatesCountry(_country)) {
+      return [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(9)];
+    }
+    return [LengthLimitingTextInputFormatter(12)];
+  }
+
+  String? _nameValidator(String? v) => validateFullName(v);
+
+  String? _phoneValidator(String? v) => validateMobileForCountry(v, _country);
+
+  String? _pinValidator(String? v) => validatePincodeForCountry(v, _country);
+
+  void _applyCountryForUi(String? raw) {
+    final n = normalizeAddressCountry(raw);
+    if (n == 'India' || n == 'United States') {
+      _country = n;
+    } else {
+      _country = 'United States';
+    }
+  }
+
+  String? get _iso2 => GooglePlacesService.iso2ForAddressCountry(_country);
+
+  Future<void> _onPlaceSelected(PlacePrediction p) async {
+    final details = await _places.placeDetails(p.placeId);
+    if (!mounted || details == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("We couldn't complete that address. Please fill the fields below or try another line."),
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _addressLineController.text = details.addressLine;
+      _cityController.text = details.city;
+      _stateController.text = details.state;
+      _pincodeController.text = details.pincode;
+      _applyCountryForUi(details.country);
+    });
+  }
+
+  Widget _countryDropdown() {
+    return DropdownButtonFormField<String>(
+      // ignore: deprecated_member_use — parent-controlled [value] for load/edit; initialValue is one-shot only
+      value: _country == 'India' || _country == 'United States' ? _country : 'United States',
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: AppTheme.backgroundColor(context),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      borderRadius: BorderRadius.circular(12),
+      isExpanded: true,
+      items: const [
+        DropdownMenuItem(value: 'India', child: Text('India')),
+        DropdownMenuItem(value: 'United States', child: Text('United States')),
+      ],
+      onChanged: (v) {
+        if (v == null) return;
+        setState(() {
+          _country = v;
+          final m = _mobileController.text.replaceAll(RegExp(r'\D'), '');
+          if (m.length > 10) {
+            _mobileController.text = m.substring(0, 10);
+          } else {
+            _mobileController.text = m;
+          }
+        });
+      },
+      validator: (v) => (v == null || v.isEmpty) ? 'Select a country' : null,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.paddingOf(context).top;
+    final authState = context.watch<AuthBloc>().state;
+    final authBusy = authState is AuthInitial || authState is AuthLoading;
+    final authed = authState is AuthAuthenticated;
+
+    if (authBusy) {
+      return _addFormLoadingScaffold(context, 'Checking your account…');
+    }
+
+    if (!authed) {
+      return Scaffold(
+        backgroundColor: AppTheme.backgroundColor(context),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(isEdit ? 'Edit Address' : 'Add New Address'),
+        ),
+        body: SignInToContinuePanel(
+          title: isEdit ? 'Sign in to edit this address' : 'Sign in to add an address',
+          subtitle:
+              'Saved addresses are tied to your account. Sign in to continue, same as the Account tab.',
+          returnPath: GoRouterState.of(context).uri.path,
+          icon: Icons.person_outline,
+        ),
+      );
+    }
+
+    if (authed && _editLoadPending && isEdit && widget.addressId != null) {
+      if (!_editFetchScheduled) {
+        _editFetchScheduled = true;
+        _editLoadPending = false;
+        _loadingAddress = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _loadAddress();
+        });
+      }
+    }
 
     if (_loadingAddress) {
       return Scaffold(
@@ -164,6 +320,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
               child: Form(
                 key: _formKey,
                 child: ListView(
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                   children: [
                     // Delivery Details section – match React
@@ -183,8 +340,12 @@ class _AddressFormPageState extends State<AddressFormPage> {
                       style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
                     ),
                     const SizedBox(height: 24),
-                    // Address type – Home / Work cards
-                    const Text('Address Type', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    const Text('Address type', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Choose where we should deliver',
+                      style: TextStyle(fontSize: 12, color: AppTheme.foregroundColor(context).withValues(alpha: 0.6)),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -196,7 +357,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                             onTap: () => setState(() => _type = 'HOME'),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: _TypeCard(
                             label: 'Work',
@@ -205,37 +366,101 @@ class _AddressFormPageState extends State<AddressFormPage> {
                             onTap: () => setState(() => _type = 'OFFICE'),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _TypeCard(
+                            label: 'Other',
+                            icon: Icons.place_outlined,
+                            selected: _type == 'OTHER',
+                            onTap: () => setState(() => _type = 'OTHER'),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     // Full Name
-                    _label('Full Name *'),
+                    _label('Full name *'),
                     const SizedBox(height: 8),
                     _input(
                       controller: _nameController,
+                      textCapitalization: TextCapitalization.words,
                       hint: FormHints.fullName,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      validator: _nameValidator,
                     ),
                     const SizedBox(height: 16),
                     // Phone
-                    _label('Phone Number *'),
+                    _label('Phone *'),
                     const SizedBox(height: 8),
                     _input(
                       controller: _mobileController,
-                      hint: FormHints.phone,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: kPhoneLocal10DigitFormatters,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      hint: isIndiaCountry(_country) || isUnitedStatesCountry(_country)
+                          ? '10-digit mobile number'
+                          : FormHints.phone,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: _phoneInputFormatters,
+                      validator: _phoneValidator,
                     ),
                     const SizedBox(height: 24),
-                    // Street
-                    _label('Street Address *'),
+                    _label('House no., building, street *'),
+                    const SizedBox(height: 8),
+                    TypeAheadField<PlacePrediction>(
+                      debounceDuration: const Duration(milliseconds: 300),
+                      controller: _addressLineController,
+                      hideOnEmpty: true,
+                      hideOnError: true,
+                      suggestionsCallback: (pattern) => _places.autocomplete(
+                        pattern,
+                        countryIso2: _iso2,
+                      ),
+                      builder: (context, c, focusNode) {
+                        return TextFormField(
+                          controller: c,
+                          focusNode: focusNode,
+                          maxLines: 2,
+                          textCapitalization: TextCapitalization.sentences,
+                          keyboardType: TextInputType.streetAddress,
+                          decoration: InputDecoration(
+                            hintText: FormHints.streetAddress,
+                            filled: true,
+                            fillColor: AppTheme.backgroundColor(context),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            errorMaxLines: 2,
+                          ),
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Address line is required' : null,
+                        );
+                      },
+                      itemBuilder: (context, p) {
+                        return ListTile(
+                          dense: true,
+                          title: Text(
+                            p.mainText != null && p.mainText!.isNotEmpty
+                                ? p.mainText!
+                                : p.description.split(',')[0].trim(),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: p.secondaryText != null && p.secondaryText!.isNotEmpty
+                              ? Text(p.secondaryText!, maxLines: 2, overflow: TextOverflow.ellipsis)
+                              : (p.description.contains(',')
+                                  ? Text(
+                                      p.description.split(',').skip(1).join(',').trim(),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  : null),
+                        );
+                      },
+                      onSelected: _onPlaceSelected,
+                    ),
+                    const SizedBox(height: 16),
+                    _label('Apartment, suite, landmark (optional)'),
                     const SizedBox(height: 8),
                     _input(
-                      controller: _addressLineController,
-                      hint: FormHints.streetAddress,
-                      maxLines: 2,
-                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      controller: _addressLine2Controller,
+                      hint: 'Flat, floor, tower (optional)',
+                      textCapitalization: TextCapitalization.sentences,
                     ),
                     const SizedBox(height: 16),
                     // City, State
@@ -273,40 +498,19 @@ class _AddressFormPageState extends State<AddressFormPage> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // ZIP, Country
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _label('ZIP Code *'),
-                              const SizedBox(height: 8),
-                              _input(
-                                controller: _pincodeController,
-                                hint: FormHints.zipCode,
-                                keyboardType: TextInputType.number,
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _label('Country'),
-                              const SizedBox(height: 8),
-                              _input(
-                                controller: _countryController,
-                                hint: FormHints.country,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    _label('${isIndiaCountry(_country) ? 'PIN code' : isUnitedStatesCountry(_country) ? 'ZIP code' : 'Postal code'} *'),
+                    const SizedBox(height: 8),
+                    _input(
+                      controller: _pincodeController,
+                      hint: isIndiaCountry(_country) ? '6-digit PIN' : (isUnitedStatesCountry(_country) ? '5 or 9 digits' : FormHints.zipCode),
+                      keyboardType: TextInputType.number,
+                      inputFormatters: _pinInputFormatters,
+                      validator: _pinValidator,
                     ),
+                    const SizedBox(height: 16),
+                    _label('Country *'),
+                    const SizedBox(height: 8),
+                    _countryDropdown(),
                     const SizedBox(height: 24),
                     // Set as default – match React toggle row
                     Container(
@@ -334,22 +538,34 @@ class _AddressFormPageState extends State<AddressFormPage> {
                           Switch(
                             value: _isDefault,
                             onChanged: (v) => setState(() => _isDefault = v),
-                            activeColor: AppTheme.primaryColor(context),
+                            activeTrackColor: AppTheme.primaryColor(context).withValues(alpha: 0.45),
+                            activeThumbColor: AppTheme.primaryForegroundColor(context),
+                            inactiveTrackColor: AppTheme.mutedColor(context),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Tip box – match React
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF), // blue-50
+                        color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
                       ),
-                      child: Text(
-                        '💡 Tip: Make sure your address is complete and accurate to avoid delivery delays.',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF1E3A8A)),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline, size: 20, color: AppTheme.primaryColor(context)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Use a complete, accurate address so your order is delivered on time. '
+                              'Couriers and customs use this for shipping quotes.',
+                              style: TextStyle(fontSize: 12, height: 1.4, color: AppTheme.foregroundColor(context).withValues(alpha: 0.85)),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     if (_error != null) ...[
@@ -390,7 +606,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
                           children: [
                             const Icon(Icons.save_outlined, size: 20),
                             const SizedBox(width: 8),
-                            Text(isEdit ? 'Save Address' : 'Save Address'),
+                            Text(isEdit ? 'Update address' : 'Save address'),
                           ],
                         ),
                 ),
@@ -413,15 +629,18 @@ class _AddressFormPageState extends State<AddressFormPage> {
     int maxLines = 1,
     List<TextInputFormatter>? inputFormatters,
     String? Function(String?)? validator,
+    TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
     return TextFormField(
       controller: controller,
+      textCapitalization: textCapitalization,
       decoration: InputDecoration(
         hintText: hint,
         filled: true,
         fillColor: AppTheme.backgroundColor(context),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        errorMaxLines: 2,
       ),
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
@@ -450,7 +669,7 @@ class _AddressFormPageState extends State<AddressFormPage> {
       state: _stateController.text.trim(),
       pincode: _pincodeController.text.trim(),
       mobile: _mobileController.text.trim(),
-      country: _countryController.text.trim(),
+      country: _country,
       isDefault: _isDefault,
       createdAt: widget.initialAddress?.createdAt ?? '',
       updatedAt: widget.initialAddress?.updatedAt ?? '',
@@ -483,6 +702,39 @@ class _AddressFormPageState extends State<AddressFormPage> {
       }
     }
   }
+
+  Widget _addFormLoadingScaffold(BuildContext context, String message) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor(context),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () => context.pop(),
+        ),
+        title: Text(isEdit ? 'Edit Address' : 'Add New Address'),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(strokeWidth: 2),
+              const SizedBox(height: 20),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _TypeCard extends StatelessWidget {
@@ -506,7 +758,7 @@ class _TypeCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
             color: selected ? AppTheme.primaryColor(context).withValues(alpha: 0.05) : AppTheme.backgroundColor(context),
             borderRadius: BorderRadius.circular(16),

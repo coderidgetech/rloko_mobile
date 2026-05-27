@@ -10,6 +10,7 @@ class UserDto {
     this.avatar,
     this.phone,
     this.birthday,
+    this.city,
     this.active,
     required this.createdAt,
     required this.updatedAt,
@@ -27,6 +28,7 @@ class UserDto {
       birthday: json['birthday'] != null
           ? DateTime.tryParse(json['birthday'].toString())?.toIso8601String()
           : null,
+      city: json['city'] as String?,
       active: json['active'] as bool?,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString())?.toIso8601String() ?? ''
@@ -45,6 +47,7 @@ class UserDto {
   final String? avatar;
   final String? phone;
   final String? birthday;
+  final String? city;
   final bool? active;
   final String createdAt;
   final String updatedAt;
@@ -63,6 +66,7 @@ class UserDto {
         avatar: avatar,
         phone: phone,
         birthday: birthday,
+        city: city,
         active: active,
         createdAt: createdAt,
         updatedAt: updatedAt,

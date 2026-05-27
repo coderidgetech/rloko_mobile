@@ -114,4 +114,48 @@ class OrderRepositoryImpl implements OrderRepository {
       throw getApiException(e) ?? e;
     }
   }
+
+  @override
+  Future<OrderEntity> createGuest({
+    required String guestEmail,
+    required String guestName,
+    required List<OrderItemEntity> items,
+    required ShippingInfoEntity shippingInfo,
+    String? promotionCode,
+  }) async {
+    try {
+      final itemsJson = items
+          .map((e) => {
+                'product_id': e.productId,
+                'product_name': e.productName,
+                'image': e.image,
+                'price': e.price,
+                'size': e.size,
+                'quantity': e.quantity,
+              })
+          .toList();
+      final shippingJson = {
+        'first_name': shippingInfo.firstName,
+        'last_name': shippingInfo.lastName,
+        'email': shippingInfo.email,
+        'phone': shippingInfo.phone,
+        'address': shippingInfo.address,
+        'city': shippingInfo.city,
+        'state': shippingInfo.state,
+        'zip_code': shippingInfo.zipCode,
+        'country': shippingInfo.country,
+      };
+      final request = CreateGuestOrderRequestDto(
+        guestEmail: guestEmail,
+        guestName: guestName,
+        items: itemsJson,
+        shippingInfo: shippingJson,
+        promotionCode: promotionCode,
+      );
+      final dto = await _dataSource.createGuest(request);
+      return dto.toEntity();
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
 }

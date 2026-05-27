@@ -1,9 +1,19 @@
+import '../region/app_region.dart';
+
 /// Delivery and shipping policy copy. Can be overridden by site config API when available.
 class DeliveryConstants {
   DeliveryConstants._();
 
   /// Free delivery threshold (e.g. "Free delivery on orders over \$50")
   static const String freeDeliveryThreshold = r'Free delivery on orders over $50';
+
+  /// Free-shipping line aligned with [CurrencyScope] / storefront (India vs US).
+  static String freeShippingPromoLine(AppRegion region) {
+    if (region == AppRegion.india) {
+      return 'Free shipping on orders over ₹2,000';
+    }
+    return r'Free shipping on orders over $50';
+  }
 
   /// Standard delivery timeframe
   static const String standardDeliveryDays = 'Standard delivery: 3-5 business days';
@@ -18,8 +28,10 @@ class DeliveryConstants {
   static const String calculatedAtCheckout = 'Calculated at checkout';
 
   /// Delivery info bullet list for checkout/address pages
-  static String get deliveryInfoBullets =>
-      '• $freeDeliveryThreshold\n• $standardDeliveryDays\n• $expressDeliveryNote';
+  static String deliveryInfoBulletsFor(AppRegion region) =>
+      '• ${freeShippingPromoLine(region)}\n'
+      '• $standardDeliveryDays\n'
+      '• $expressDeliveryNote';
 
   /// Returns/refunds
   static const String returnInspectionDays = 'Inspection within 3-5 business days';

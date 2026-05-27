@@ -85,25 +85,32 @@ class DioClient {
           return handler.reject(
             DioException(
               requestOptions: request,
+              type: error.type,
               error: ApiException(
                 message: 'The request took too long. Please try again.',
                 statusCode: status,
               ),
+              message: kDebugMode ? (error.error?.toString() ?? error.message) : null,
             ),
           );
         }
 
         if (error.response == null) {
-          final base = request.baseUrl;
+          if (kDebugMode) {
+            debugPrint(
+              '[DioClient] ${request.uri} failed: type=${error.type} '
+              'underlying=${error.error ?? error.message}',
+            );
+          }
           return handler.reject(
             DioException(
               requestOptions: request,
+              type: error.type,
               error: ApiException(
-                message:
-                    'Unable to connect to $base. Ensure the backend is running and on the same Wi‑Fi. '
-                    'On a physical device, run: flutter run --dart-define=API_BASE_URL=http://YOUR_IP:8081/api',
+                message: "We couldn't reach the server. Check your internet connection and try again.",
                 statusCode: status,
               ),
+              message: kDebugMode ? (error.error?.toString() ?? error.message) : null,
             ),
           );
         }
@@ -122,6 +129,8 @@ class DioClient {
         return handler.reject(
           DioException(
             requestOptions: request,
+            response: error.response,
+            type: error.type,
             error: ApiException(
               message: message,
               code: data is Map ? data['code']?.toString() : null,
