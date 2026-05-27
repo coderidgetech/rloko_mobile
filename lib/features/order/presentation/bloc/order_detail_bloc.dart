@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -40,7 +41,9 @@ class OrderDetailBloc extends Bloc<OrderDetailEvent, OrderDetailState> {
       List<OrderTrackingUpdateEntity> tracking = [];
       try {
         tracking = await _getOrderTrackingUseCase(event.orderId);
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) debugPrint('[OrderDetailBloc] tracking fetch skipped: $e');
+      }
       emit(OrderDetailLoaded(order: order, trackingUpdates: tracking));
     } catch (e) {
       emit(OrderDetailError(e.toString()));

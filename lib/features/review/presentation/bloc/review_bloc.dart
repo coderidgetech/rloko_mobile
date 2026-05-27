@@ -1,8 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../data/datasources/review_remote_datasource.dart';
-import '../../data/dto/my_review_dto.dart';
+import '../../domain/entities/review_entity.dart';
+import '../../domain/repositories/review_repository.dart';
+import '../../domain/usecases/get_my_reviews_usecase.dart';
 
 // Events
 abstract class ReviewEvent extends Equatable {
@@ -47,7 +48,7 @@ class ReviewLoading extends ReviewState {
 
 class MyReviewsLoaded extends ReviewState {
   const MyReviewsLoaded({required this.reviews, required this.total});
-  final List<MyReviewDto> reviews;
+  final List<MyReviewEntity> reviews;
   final int total;
   @override
   List<Object?> get props => [reviews, total];
@@ -66,12 +67,13 @@ class ReviewError extends ReviewState {
 
 // BLoC
 class ReviewBloc extends Bloc<ReviewEvent, ReviewState> {
-  ReviewBloc(this._dataSource) : super(const ReviewInitial()) {
+  ReviewBloc(this._getMyReviews, this._repository) : super(const ReviewInitial()) {
     on<MyReviewsLoadRequested>(_onLoadMyReviews);
     on<ReviewSubmitRequested>(_onSubmit);
   }
 
-  final ReviewRemoteDataSource _dataSource;
+  final GetMyReviewsUseCase _getMyReviews;
+  final ReviewRepository _repository;
 
   Future<void> _onLoadMyReviews(
     MyReviewsLoadRequested event,
@@ -79,7 +81,7 @@ class ReviewBloc extends Bloc<ReviewEvent, ReviewState> {
   ) async {
     emit(const ReviewLoading());
     try {
-      final result = await _dataSource.getMyReviews();
+      final result = await _getMyReviews();
       emit(MyReviewsLoaded(reviews: result.reviews, total: result.total));
     } catch (e) {
       emit(ReviewError(e.toString()));
@@ -92,7 +94,7 @@ class ReviewBloc extends Bloc<ReviewEvent, ReviewState> {
   ) async {
     emit(const ReviewLoading());
     try {
-      await _dataSource.submitReview(
+      await _repository.submitReview(
         productId: event.productId,
         rating: event.rating,
         title: event.title,

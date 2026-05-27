@@ -76,6 +76,8 @@ import '../../features/payment/domain/usecases/create_payment_intent_usecase.dar
 import '../../features/rewards/data/datasources/rewards_remote_datasource.dart';
 import '../../features/rewards/domain/usecases/get_rewards_summary_usecase.dart';
 import '../../features/review/data/datasources/review_remote_datasource.dart';
+import '../../features/review/data/repositories/review_repository_impl.dart';
+import '../../features/review/domain/repositories/review_repository.dart';
 import '../../features/review/domain/usecases/get_my_reviews_usecase.dart';
 import '../../features/review/domain/usecases/get_product_reviews_usecase.dart';
 import '../../features/product/data/datasources/product_local_datasource.dart';
@@ -342,15 +344,18 @@ Future<void> initInjection() async {
     () => GetRewardsSummaryUseCase(sl<RewardsRemoteDataSource>()),
   );
 
-  // Reviews (my reviews)
+  // Reviews
   sl.registerLazySingleton<ReviewRemoteDataSource>(
     () => ReviewRemoteDataSource(sl<DioClient>()),
   );
+  sl.registerLazySingleton<ReviewRepository>(
+    () => ReviewRepositoryImpl(sl<ReviewRemoteDataSource>()),
+  );
   sl.registerLazySingleton<GetMyReviewsUseCase>(
-    () => GetMyReviewsUseCase(sl<ReviewRemoteDataSource>()),
+    () => GetMyReviewsUseCase(sl<ReviewRepository>()),
   );
   sl.registerLazySingleton<GetProductReviewsUseCase>(
-    () => GetProductReviewsUseCase(sl<ReviewRemoteDataSource>()),
+    () => GetProductReviewsUseCase(sl<ReviewRepository>()),
   );
 
   // Product local cache (offline / SharedPreferences)

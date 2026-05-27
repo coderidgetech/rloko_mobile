@@ -1,11 +1,11 @@
-import '../../data/datasources/review_remote_datasource.dart';
-import '../../data/dto/my_review_dto.dart';
+import '../entities/review_entity.dart';
+import '../repositories/review_repository.dart';
 
 class GetMyReviewsUseCase {
-  GetMyReviewsUseCase(this._dataSource);
+  GetMyReviewsUseCase(this._repository);
 
-  final ReviewRemoteDataSource _dataSource;
+  final ReviewRepository _repository;
 
-  Future<({List<MyReviewDto> reviews, int total})> call({int limit = 50, int skip = 0}) =>
-      _dataSource.getMyReviews(limit: limit, skip: skip);
+  Future<({List<MyReviewEntity> reviews, int total})> call({int limit = 50, int skip = 0}) =>
+      _repository.getMyReviews(limit: limit, skip: skip);
 }

@@ -8,7 +8,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/safe_network_image.dart' show SafeCachedNetworkImage;
 import '../../../auth/presentation/bloc/auth_bloc.dart';
-import '../../../review/data/dto/my_review_dto.dart';
+import '../../../review/domain/entities/review_entity.dart';
 import '../../../review/domain/usecases/get_my_reviews_usecase.dart';
 
 /// Lists reviews written by the current user (GET /api/reviews/me).
@@ -20,7 +20,7 @@ class ReviewsPage extends StatefulWidget {
 }
 
 class _ReviewsPageState extends State<ReviewsPage> {
-  List<MyReviewDto> _reviews = [];
+  List<MyReviewEntity> _reviews = [];
   bool _loading = true;
   String? _error;
 

@@ -19,7 +19,7 @@ import '../bloc/product_list_bloc.dart';
 import '../widgets/empty_state.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
-import '../../../review/data/dto/product_review_dto.dart';
+import '../../../review/domain/entities/review_entity.dart';
 import '../../../review/domain/usecases/get_product_reviews_usecase.dart';
 import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
 
@@ -56,7 +56,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   bool _hasRequestedRecommendations = false;
   List<ProductEntity> _apiRecommendations = [];
   bool _productReviewsRequestStarted = false;
-  List<ProductReviewDto> _productReviews = [];
+  List<ProductReviewEntity> _productReviews = [];
   int _productReviewsTotal = 0;
   bool _productReviewsLoading = false;
   String? _productReviewsError;
@@ -222,7 +222,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     return DateFormat.yMMMd().format(t.toLocal());
   }
 
-  Widget _reviewBlockFromDto(ProductReviewDto r, {bool showBorder = true}) {
+  Widget _reviewBlockFromDto(ProductReviewEntity r, {bool showBorder = true}) {
     final text = [
       if (r.title.trim().isNotEmpty) r.title.trim(),
       r.comment.trim(),

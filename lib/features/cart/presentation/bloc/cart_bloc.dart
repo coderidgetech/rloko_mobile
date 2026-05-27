@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -231,7 +232,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     for (final item in items) {
       try {
         await _addItem(item);
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) debugPrint('[CartBloc] guest item migration skipped: $e');
+      }
     }
     await _localCart.clearCart();
     final cart = await _getCart();

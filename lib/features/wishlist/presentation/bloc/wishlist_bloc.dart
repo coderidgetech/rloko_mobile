@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -122,7 +123,9 @@ class WishlistBloc extends Bloc<WishlistEvent, WishlistState> {
     for (final item in List<WishlistEntity>.from(_guestItems)) {
       try {
         await _addItem(item.productId);
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) debugPrint('[WishlistBloc] guest item migration skipped: $e');
+      }
     }
     _guestItems.clear();
     add(const WishlistLoadRequested());

@@ -35,25 +35,25 @@ const List<_OnboardingSlide> _slides = [
   _OnboardingSlide(
     title: 'Discover Luxury Fashion',
     description: 'Explore curated collections of premium clothing, accessories, and jewelry from top designers',
-    image: '',
+    image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80',
     icon: Icons.auto_awesome,
   ),
   _OnboardingSlide(
     title: 'Personalized Shopping',
     description: 'Get tailored recommendations, exclusive deals, and early access to new arrivals just for you',
-    image: '',
+    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80',
     icon: Icons.shopping_bag_outlined,
   ),
   _OnboardingSlide(
     title: 'Secure & Easy Checkout',
     description: 'Shop with confidence using secure payments, multiple payment options, and buyer protection',
-    image: '',
+    image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=600&q=80',
     icon: Icons.lock_outline,
   ),
   _OnboardingSlide(
-    title: 'Delivery & returns',
-    description: 'Shipping and return options are shown at checkout and in your order details.',
-    image: '',
+    title: 'Delivery & Returns',
+    description: 'Fast shipping to India and USA with easy 30-day returns — hassle-free from start to finish',
+    image: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=600&q=80',
     icon: Icons.local_shipping_outlined,
   ),
 ];

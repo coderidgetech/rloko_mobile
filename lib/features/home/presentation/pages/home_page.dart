@@ -103,9 +103,9 @@ class _HeroSlide {
 }
 
 List<_HeroSlide> _defaultHeroSlides() => [
-  const _HeroSlide(title: 'New Season', subtitle: 'Spring Collection 2026', image: '', cta: 'Shop Now', link: '/new-arrivals'),
-  const _HeroSlide(title: 'Designer Bags', subtitle: 'Luxury Accessories', image: '', cta: 'Explore', link: '/categories'),
-  const _HeroSlide(title: 'Summer Sale', subtitle: 'Up to 50% Off', image: '', cta: 'Shop Sale', link: '/sale'),
+  const _HeroSlide(title: 'New Season', subtitle: 'Spring Collection 2026', image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&q=80', cta: 'Shop Now', link: '/new-arrivals'),
+  const _HeroSlide(title: 'Designer Bags', subtitle: 'Luxury Accessories', image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=1200&q=80', cta: 'Explore', link: '/categories'),
+  const _HeroSlide(title: 'Summer Sale', subtitle: 'Up to 50% Off', image: 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=1200&q=80', cta: 'Shop Sale', link: '/sale'),
 ];
 
 List<_HeroSlide> _heroSlidesFromConfig(SiteConfig config) {
@@ -176,7 +176,7 @@ class _StoryCirclesSection extends StatelessWidget {
 
   static List<_StoryItem> _itemsFromCategories(List<CategoryEntity> categories) {
     final items = <_StoryItem>[
-      _StoryItem(id: 'new', title: 'New', image: '', isNew: true, link: '/new-arrivals'),
+      _StoryItem(id: 'new', title: 'New', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200&q=80', isNew: true, link: '/new-arrivals'),
     ];
     for (final c in categories.take(5)) {
       items.add(_StoryItem(
@@ -186,7 +186,7 @@ class _StoryCirclesSection extends StatelessWidget {
         link: '/category/${c.gender}/${c.slug}',
       ));
     }
-    items.add(_StoryItem(id: 'sale', title: 'Sale', image: '', link: '/sale'));
+    items.add(_StoryItem(id: 'sale', title: 'Sale', image: 'https://images.unsplash.com/photo-1607082349566-187342175e2f?w=200&q=80', link: '/sale'));
     return items;
   }
 
@@ -203,8 +203,8 @@ class _StoryCirclesSection extends StatelessWidget {
         final items = categories.isNotEmpty
             ? _itemsFromCategories(categories)
             : [
-                _StoryItem(id: 'new', title: 'New', image: '', isNew: true, link: '/new-arrivals'),
-                _StoryItem(id: 'sale', title: 'Sale', image: '', link: '/sale'),
+                _StoryItem(id: 'new', title: 'New', image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=200&q=80', isNew: true, link: '/new-arrivals'),
+                _StoryItem(id: 'sale', title: 'Sale', image: 'https://images.unsplash.com/photo-1607082349566-187342175e2f?w=200&q=80', link: '/sale'),
               ];
         return _StoryCirclesStrip(items: items);
       },
