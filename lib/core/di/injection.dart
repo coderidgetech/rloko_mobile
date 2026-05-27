@@ -135,7 +135,7 @@ Future<void> initInjection() async {
 
   // Product
   sl.registerLazySingleton<ProductRemoteDataSource>(
-    () => ProductRemoteDataSource(sl<DioClient>()),
+    () => ProductRemoteDataSource(sl<DioClient>(), sl<RegionRepository>()),
   );
   sl.registerLazySingleton<ProductRepository>(
     () => ProductRepositoryImpl(sl<ProductRemoteDataSource>(), sl<ProductLocalDataSource>()),

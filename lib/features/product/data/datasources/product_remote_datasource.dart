@@ -1,14 +1,19 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/region/app_region.dart';
+import '../../../../core/region/region_repository.dart';
 import '../dto/product_dto.dart';
 import '../dto/product_list_response_dto.dart';
 
 class ProductRemoteDataSource {
-  ProductRemoteDataSource(this._client);
+  ProductRemoteDataSource(this._client, this._regionRepository);
 
   final DioClient _client;
+  final RegionRepository _regionRepository;
   Dio get _dio => _client.dio;
+
+  String get _marketCode => _regionRepository.getRegionSync().marketCode;
 
   Future<ProductListResponseDto> list({
     int? limit,
@@ -28,6 +33,7 @@ class ProductRemoteDataSource {
     if (skip != null) query['skip'] = skip;
     if (category != null && category.isNotEmpty) query['category'] = category;
     if (gender != null && gender.isNotEmpty) query['gender'] = gender;
+    query['market'] = _marketCode;
     if (onSale == true) query['on_sale'] = 'true';
     if (featured == true) query['featured'] = 'true';
     if (newArrival == true) query['new_arrival'] = 'true';
@@ -54,7 +60,7 @@ class ProductRemoteDataSource {
   Future<List<ProductDto>> getFeatured({int limit = 10}) async {
     final response = await _dio.get<List<dynamic>>(
       '/products/featured',
-      queryParameters: {'limit': limit},
+      queryParameters: {'limit': limit, 'market': _marketCode},
     );
     final data = response.data;
     if (data == null) return [];
@@ -66,7 +72,7 @@ class ProductRemoteDataSource {
   Future<List<ProductDto>> getNewArrivals({int limit = 10}) async {
     final response = await _dio.get<List<dynamic>>(
       '/products/new-arrivals',
-      queryParameters: {'limit': limit},
+      queryParameters: {'limit': limit, 'market': _marketCode},
     );
     final data = response.data;
     if (data == null) return [];
@@ -78,7 +84,7 @@ class ProductRemoteDataSource {
   Future<List<ProductDto>> getOnSale({int limit = 10}) async {
     final response = await _dio.get<List<dynamic>>(
       '/products/on-sale',
-      queryParameters: {'limit': limit},
+      queryParameters: {'limit': limit, 'market': _marketCode},
     );
     final data = response.data;
     if (data == null) return [];

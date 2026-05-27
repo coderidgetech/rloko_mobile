@@ -16,4 +16,5 @@ extension AppRegionX on AppRegion {
 
   String get currencyCode => this == AppRegion.india ? 'INR' : 'USD';
   String get currencySymbol => this == AppRegion.india ? '₹' : '\$';
+  String get marketCode => this == AppRegion.india ? 'IN' : 'US';
 }
