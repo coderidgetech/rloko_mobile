@@ -124,6 +124,33 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       emit(CartLoaded(cart));
       return;
     }
+    final prevState = state;
+    // Optimistic update — reflect change immediately so UI feels instant.
+    if (prevState is CartLoaded) {
+      final optimistic = CartEntity(
+        id: prevState.cart.id,
+        userId: prevState.cart.userId,
+        items: prevState.cart.items.map((i) {
+          if (i.productId == event.productId && i.size == event.size) {
+            return CartItemEntity(
+              productId: i.productId,
+              productName: i.productName,
+              image: i.image,
+              price: i.price,
+              priceInr: i.priceInr,
+              size: i.size,
+              quantity: event.quantity,
+              isGift: i.isGift,
+              giftWrapColor: i.giftWrapColor,
+              giftMessage: i.giftMessage,
+            );
+          }
+          return i;
+        }).toList(),
+        updatedAt: prevState.cart.updatedAt,
+      );
+      emit(CartLoaded(optimistic));
+    }
     try {
       await _updateItem(event.productId, event.size, event.quantity);
       final cart = await _getCart();
@@ -135,7 +162,12 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         final cart = _localCart.getCart();
         emit(CartLoaded(cart));
       } else {
-        emit(CartError(api?.message ?? e.toString()));
+        // Revert optimistic update and surface error without killing the cart view.
+        if (prevState is CartLoaded) {
+          emit(CartItemUpdateFailed(api?.message ?? e.toString(), prevState.cart));
+        } else {
+          emit(CartError(api?.message ?? e.toString()));
+        }
       }
     }
   }

@@ -27,3 +27,12 @@ final class CartError extends CartState {
   @override
   List<Object?> get props => [message];
 }
+
+/// Qty update failed but cart remains visible; UI shows a snackbar.
+final class CartItemUpdateFailed extends CartState {
+  const CartItemUpdateFailed(this.message, this.cart);
+  final String message;
+  final CartEntity cart;
+  @override
+  List<Object?> get props => [message, cart];
+}

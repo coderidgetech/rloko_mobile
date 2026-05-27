@@ -32,10 +32,16 @@ import '../../domain/usecases/order_usecases.dart';
 import '../stripe_checkout.dart';
 
 class CheckoutPage extends StatefulWidget {
-  const CheckoutPage({super.key, this.initialPaymentMethod});
+  const CheckoutPage({
+    super.key,
+    this.initialPaymentMethod,
+    this.initialCouponCode,
+    this.initialCouponDiscount,
+  });
 
-  /// From cart when user chose card / UPI / COD before opening checkout.
   final String? initialPaymentMethod;
+  final String? initialCouponCode;
+  final double? initialCouponDiscount;
 
   @override
   State<CheckoutPage> createState() => _CheckoutPageState();
@@ -76,6 +82,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
     } else {
       _selectedPaymentMethod =
           kStripePublishableKey.isNotEmpty ? 'card' : 'cod';
+    }
+    if (widget.initialCouponCode != null && widget.initialCouponDiscount != null) {
+      _appliedCouponCode = widget.initialCouponCode;
+      _promoCode = widget.initialCouponCode!;
+      _appliedDiscount = widget.initialCouponDiscount;
     }
     _loadAddresses();
   }
@@ -836,16 +847,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   Container(
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.destructive.withValues(
-                                        alpha: 0.1,
-                                      ),
+                                      color: AppTheme.destructive.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Text(
-                                      _error!,
-                                      style: const TextStyle(
-                                        color: AppTheme.destructive,
-                                      ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _error!,
+                                            style: const TextStyle(color: AppTheme.destructive, fontSize: 13),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: _loadAddresses,
+                                          child: const Text('Retry'),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 16),
@@ -1616,36 +1633,49 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               ),
                               child: SafeArea(
                                 top: false,
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton(
-                                    onPressed:
-                                        _placing ||
-                                            _addresses.isEmpty ||
-                                            _selectedAddressId == null
-                                        ? null
-                                        : _placeOrder,
-                                    style: FilledButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          999,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (!_addressesLoading && _addresses.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.info_outline, size: 14, color: AppTheme.mutedForegroundColor(context)),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Add a delivery address to place your order',
+                                              style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
+                                            ),
+                                          ],
                                         ),
                                       ),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: FilledButton(
+                                        onPressed:
+                                            _placing ||
+                                                _addresses.isEmpty ||
+                                                _selectedAddressId == null
+                                            ? null
+                                            : _placeOrder,
+                                        style: FilledButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(999),
+                                          ),
+                                        ),
+                                        child: _placing
+                                            ? const SizedBox(
+                                                height: 24,
+                                                width: 24,
+                                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                              )
+                                            : const Text('Place order'),
+                                      ),
                                     ),
-                                    child: _placing
-                                        ? const SizedBox(
-                                            height: 24,
-                                            width: 24,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Text('Place order'),
-                                  ),
+                                  ],
                                 ),
                               ),
                             ),

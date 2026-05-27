@@ -314,10 +314,22 @@ GoRouter createAppRouter() {
         path: '/checkout',
         builder: (context, state) {
           final e = state.extra;
-          final pm = e is String && (e == 'card' || e == 'upi' || e == 'cod')
-              ? e
-              : null;
-          return CheckoutPage(initialPaymentMethod: pm);
+          String? pm;
+          String? couponCode;
+          double? couponDiscount;
+          if (e is Map<String, dynamic>) {
+            pm = e['pm'] as String?;
+            couponCode = e['couponCode'] as String?;
+            final raw = e['couponDiscount'];
+            couponDiscount = raw != null ? (raw as num).toDouble() : null;
+          } else if (e is String && (e == 'card' || e == 'upi' || e == 'cod')) {
+            pm = e;
+          }
+          return CheckoutPage(
+            initialPaymentMethod: pm,
+            initialCouponCode: couponCode,
+            initialCouponDiscount: couponDiscount,
+          );
         },
       ),
       GoRoute(

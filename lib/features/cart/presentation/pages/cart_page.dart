@@ -32,6 +32,7 @@ import '../../../address/presentation/pages/address_form_page.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../order/domain/entities/order_entity.dart';
 import '../../../shipping/domain/entities/calculate_shipping_params.dart';
+import '../../../shipping/domain/entities/shipping_method_entity.dart';
 import '../../../shipping/domain/usecases/calculate_shipping_usecase.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
 import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
@@ -61,6 +62,8 @@ class _CartPageState extends State<CartPage> {
   double? _quotedShipping;
   String _quotedShippingCurrency = 'USD';
   bool _shippingQuoteLoading = false;
+  List<ShippingMethodEntity> _shippingMethods = [];
+  String? _selectedShippingMethodId;
 
   @override
   void initState() {
@@ -377,6 +380,8 @@ class _CartPageState extends State<CartPage> {
       if (mounted) {
         setState(() {
           _quotedShipping = null;
+          _shippingMethods = [];
+          _selectedShippingMethodId = null;
           _shippingQuoteLoading = false;
         });
       }
@@ -387,6 +392,8 @@ class _CartPageState extends State<CartPage> {
       if (mounted) {
         setState(() {
           _quotedShipping = null;
+          _shippingMethods = [];
+          _selectedShippingMethodId = null;
           _shippingQuoteLoading = false;
         });
       }
@@ -396,6 +403,8 @@ class _CartPageState extends State<CartPage> {
       if (mounted) {
         setState(() {
           _quotedShipping = null;
+          _shippingMethods = [];
+          _selectedShippingMethodId = null;
           _shippingQuoteLoading = false;
         });
       }
@@ -410,6 +419,8 @@ class _CartPageState extends State<CartPage> {
       if (mounted) {
         setState(() {
           _quotedShipping = null;
+          _shippingMethods = [];
+          _selectedShippingMethodId = null;
           _shippingQuoteLoading = false;
         });
       }
@@ -435,14 +446,23 @@ class _CartPageState extends State<CartPage> {
       );
       if (!mounted) return;
       if (methods.isNotEmpty) {
-        final m = methods.first;
+        // Keep existing selection if still valid; default to first method.
+        final keepId = _selectedShippingMethodId != null &&
+                methods.any((m) => m.id == _selectedShippingMethodId)
+            ? _selectedShippingMethodId!
+            : methods.first.id;
+        final selected = methods.firstWhere((m) => m.id == keepId);
         setState(() {
-          _quotedShipping = m.baseCost;
-          _quotedShippingCurrency = m.currency;
+          _shippingMethods = methods;
+          _selectedShippingMethodId = keepId;
+          _quotedShipping = selected.baseCost;
+          _quotedShippingCurrency = selected.currency;
           _shippingQuoteLoading = false;
         });
       } else {
         setState(() {
+          _shippingMethods = [];
+          _selectedShippingMethodId = null;
           _quotedShipping = null;
           _shippingQuoteLoading = false;
         });
@@ -451,11 +471,21 @@ class _CartPageState extends State<CartPage> {
       if (kDebugMode) debugPrint('[CartPage] shipping quote: $e');
       if (mounted) {
         setState(() {
+          _shippingMethods = [];
+          _selectedShippingMethodId = null;
           _quotedShipping = null;
           _shippingQuoteLoading = false;
         });
       }
     }
+  }
+
+  void _selectShippingMethod(ShippingMethodEntity m) {
+    setState(() {
+      _selectedShippingMethodId = m.id;
+      _quotedShipping = m.baseCost;
+      _quotedShippingCurrency = m.currency;
+    });
   }
 
   ShippingInfoEntity _addressToShipping(AddressEntity a, String userEmail) {
@@ -494,21 +524,24 @@ class _CartPageState extends State<CartPage> {
     return _addresses.first;
   }
 
-  /// Same as web cart [handleCheckout]: go to checkout to choose address + payment (no order from cart).
   void _continueToCheckout() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is! AuthAuthenticated) {
-      context.push('/login', extra: '/checkout');
-      return;
-    }
     final cartState = context.read<CartBloc>().state;
-    if (cartState is! CartLoaded || cartState.cart.items.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Your cart is empty')));
+    final cart = cartState is CartLoaded
+        ? cartState.cart
+        : cartState is CartItemUpdateFailed
+            ? cartState.cart
+            : null;
+    if (cart == null || cart.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your cart is empty')),
+      );
       return;
     }
-    context.push('/checkout', extra: _selectedPaymentMethod);
+    context.push('/checkout', extra: <String, dynamic>{
+      'pm': _selectedPaymentMethod,
+      'couponCode': _appliedCouponCode,
+      'couponDiscount': _appliedCouponDiscount,
+    });
   }
 
   Future<void> _applyCoupon() async {
@@ -589,12 +622,17 @@ class _CartPageState extends State<CartPage> {
               const DeliveryLocationStrip(),
               Expanded(
                 child: BlocListener<CartBloc, CartState>(
-                  listenWhen: (p, c) => c is CartLoaded,
+                  listenWhen: (p, c) => c is CartLoaded || c is CartItemUpdateFailed,
                   listener: (context, state) {
                     if (state is CartLoaded && state.cart.items.isNotEmpty) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted) _refreshShippingQuote();
                       });
+                    }
+                    if (state is CartItemUpdateFailed) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(state.message)),
+                      );
                     }
                   },
                   child: BlocBuilder<CartBloc, CartState>(
@@ -624,8 +662,11 @@ class _CartPageState extends State<CartPage> {
                           },
                         );
                       }
-                      if (state is CartLoaded) {
-                        if (state.cart.items.isEmpty) {
+                      if (state is CartLoaded || state is CartItemUpdateFailed) {
+                        final cart = state is CartItemUpdateFailed
+                            ? state.cart
+                            : (state as CartLoaded).cart;
+                        if (cart.items.isEmpty) {
                           return EmptyState(
                             title: 'Your cart is empty',
                             subtitle:
@@ -636,7 +677,7 @@ class _CartPageState extends State<CartPage> {
                           );
                         }
                         return _CartContent(
-                          items: state.cart.items,
+                          items: cart.items,
                           appliedCouponCode: _appliedCouponCode,
                           appliedCouponDiscount: _appliedCouponDiscount,
                           appliedCouponLabel: _appliedCouponLabel,
@@ -672,6 +713,9 @@ class _CartPageState extends State<CartPage> {
                           quotedShipping: _quotedShipping,
                           quotedShippingCurrency: _quotedShippingCurrency,
                           shippingQuoteLoading: _shippingQuoteLoading,
+                          shippingMethods: _shippingMethods,
+                          selectedShippingMethodId: _selectedShippingMethodId,
+                          onShippingMethodChanged: _selectShippingMethod,
                         );
                       }
                       return EmptyState(
@@ -719,6 +763,9 @@ class _CartContent extends StatelessWidget {
     this.quotedShipping,
     this.quotedShippingCurrency = 'USD',
     this.shippingQuoteLoading = false,
+    this.shippingMethods = const [],
+    this.selectedShippingMethodId,
+    required this.onShippingMethodChanged,
   });
 
   final List<CartItemEntity> items;
@@ -746,6 +793,9 @@ class _CartContent extends StatelessWidget {
   final double? quotedShipping;
   final String quotedShippingCurrency;
   final bool shippingQuoteLoading;
+  final List<ShippingMethodEntity> shippingMethods;
+  final String? selectedShippingMethodId;
+  final void Function(ShippingMethodEntity) onShippingMethodChanged;
 
   /// Line subtotal in display currency (INR when region India with priceInr, else USD).
   double _lineSubtotal(BuildContext context) {
@@ -824,8 +874,6 @@ class _CartContent extends StatelessWidget {
         : '\$${d.toStringAsFixed(2)}';
     return '-$off';
   }
-
-  bool get _canContinueCheckout => isAuthenticated;
 
   @override
   Widget build(BuildContext context) {
@@ -1197,16 +1245,114 @@ class _CartContent extends StatelessWidget {
                           ),
                         ),
                       ),
-                    const SizedBox(height: 8),
-                    Text(
-                      DeliveryConstants.standardDeliveryDays,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.foregroundColor(
-                          context,
-                        ).withValues(alpha: 0.6),
+                    if (shippingMethods.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Delivery option',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.backgroundColor(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.12),
+                          ),
+                        ),
+                        child: RadioGroup<String>(
+                          groupValue: selectedShippingMethodId ?? '',
+                          onChanged: (v) {
+                            final method = shippingMethods.firstWhere(
+                              (m) => m.id == v,
+                              orElse: () => shippingMethods.first,
+                            );
+                            onShippingMethodChanged(method);
+                          },
+                          child: Column(
+                          children: List.generate(shippingMethods.length, (i) {
+                            final m = shippingMethods[i];
+                            final selected = m.id == selectedShippingMethodId;
+                            final region = CurrencyScope.of(context).region;
+                            final costDisplay = m.currency == 'USD' && region == AppRegion.india
+                                ? '₹${(m.baseCost * kUsdToInrDisplay).round()}'
+                                : m.currency == 'USD'
+                                    ? '\$${m.baseCost.toStringAsFixed(2)}'
+                                    : '₹${m.baseCost.round()}';
+                            final showDivider = i < shippingMethods.length - 1;
+                            return Column(
+                              children: [
+                                InkWell(
+                                  onTap: () => onShippingMethodChanged(m),
+                                  borderRadius: BorderRadius.circular(i == 0 ? 12 : 0),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    child: Row(
+                                      children: [
+                                        Radio<String>(
+                                          value: m.id,
+                                          activeColor: AppTheme.primaryColor(context),
+                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                m.name,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                                                ),
+                                              ),
+                                              if (m.carrier.isNotEmpty)
+                                                Text(
+                                                  '${m.carrier} · ${m.estimatedDays} days',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        Text(
+                                          costDisplay,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: m.baseCost == 0
+                                                ? Colors.green.shade600
+                                                : AppTheme.foregroundColor(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (showDivider)
+                                  Divider(
+                                    height: 1,
+                                    indent: 16,
+                                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.08),
+                                  ),
+                              ],
+                            );
+                          }),
+                        ),
+                        ),
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        DeliveryConstants.standardDeliveryDays,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1443,40 +1589,18 @@ class _CartContent extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: isAuthenticated
-                        ? FilledButton(
-                            onPressed: _canContinueCheckout
-                                ? onContinueCheckout
-                                : null,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor(context),
-                              foregroundColor: AppTheme.primaryForegroundColor(
-                                context,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              elevation: 2,
-                            ),
-                            child: Text(
-                              'Continue to checkout • ${_totalLabel(context)}',
-                            ),
-                          )
-                        : FilledButton(
-                            onPressed: () =>
-                                context.push('/login', extra: '/checkout'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor(context),
-                              foregroundColor: AppTheme.primaryForegroundColor(
-                                context,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              elevation: 2,
-                            ),
-                            child: const Text('Sign in to checkout'),
-                          ),
+                    child: FilledButton(
+                      onPressed: onContinueCheckout,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor(context),
+                        foregroundColor: AppTheme.primaryForegroundColor(context),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text('Continue to checkout • ${_totalLabel(context)}'),
+                    ),
                   ),
                 ],
               ),
