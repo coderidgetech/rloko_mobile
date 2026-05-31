@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/order_entity.dart';
+import '../../domain/entities/order_filter.dart';
 import '../../domain/usecases/order_usecases.dart';
 
 part 'order_list_event.dart';

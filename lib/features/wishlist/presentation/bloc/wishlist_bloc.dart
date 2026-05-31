@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
 import '../../../../core/network/dio_client.dart';
+import '../../data/datasources/wishlist_local_datasource.dart';
 import '../../domain/entities/wishlist_entity.dart';
 import '../../domain/usecases/wishlist_usecases.dart';
 
@@ -15,10 +16,12 @@ class WishlistBloc extends Bloc<WishlistEvent, WishlistState> {
     required AddWishlistItemUseCase addWishlistItemUseCase,
     required RemoveWishlistItemUseCase removeWishlistItemUseCase,
     required DioClient dioClient,
+    required WishlistLocalDataSource localWishlist,
   })  : _getWishlist = getWishlistUseCase,
         _addItem = addWishlistItemUseCase,
         _removeItem = removeWishlistItemUseCase,
         _dioClient = dioClient,
+        _localWishlist = localWishlist,
         super(const WishlistInitial()) {
     on<WishlistLoadRequested>(_onLoad);
     on<WishlistAddItemRequested>(_onAddItem);
@@ -30,11 +33,13 @@ class WishlistBloc extends Bloc<WishlistEvent, WishlistState> {
   final AddWishlistItemUseCase _addItem;
   final RemoveWishlistItemUseCase _removeItem;
   final DioClient _dioClient;
+  final WishlistLocalDataSource _localWishlist;
 
-  /// In-memory guest wishlist (like web app). Merged to API on login.
-  final List<WishlistEntity> _guestItems = [];
+  List<WishlistEntity> get _guestItems => _localWishlist.getItems();
 
-  Future<void> _onLoad(WishlistLoadRequested event, Emitter<WishlistState> emit) async {
+  void _saveGuest(List<WishlistEntity> items) => _localWishlist.saveItems(items);
+
+  Future<void> _fetchAndEmit(Emitter<WishlistState> emit) async {
     final token = await _dioClient.getToken();
     if (token == null || token.isEmpty) {
       emit(WishlistLoaded(List.from(_guestItems)));
@@ -54,40 +59,54 @@ class WishlistBloc extends Bloc<WishlistEvent, WishlistState> {
     }
   }
 
+  Future<void> _onLoad(WishlistLoadRequested event, Emitter<WishlistState> emit) async {
+    await _fetchAndEmit(emit);
+  }
+
   Future<void> _onAddItem(WishlistAddItemRequested event, Emitter<WishlistState> emit) async {
     final token = await _dioClient.getToken();
     if (token == null || token.isEmpty) {
-      if (_guestItems.any((i) => i.productId == event.productId)) return;
-      _guestItems.add(WishlistEntity(
-        id: 'guest-${event.productId}',
-        userId: '',
-        productId: event.productId,
-        createdAt: DateTime.now().toUtc().toIso8601String(),
-        productName: event.productName,
-        productImage: event.productImage,
-        productPrice: event.productPrice,
-      ));
-      emit(WishlistLoaded(List.from(_guestItems)));
+      final current = _guestItems;
+      if (current.any((i) => i.productId == event.productId)) return;
+      final updated = [
+        ...current,
+        WishlistEntity(
+          id: 'guest-${event.productId}',
+          userId: '',
+          productId: event.productId,
+          createdAt: DateTime.now().toUtc().toIso8601String(),
+          productName: event.productName,
+          productImage: event.productImage,
+          productPrice: event.productPrice,
+        ),
+      ];
+      _saveGuest(updated);
+      emit(WishlistLoaded(updated));
       return;
     }
     try {
       await _addItem(event.productId);
-      add(const WishlistLoadRequested());
+      await _fetchAndEmit(emit);
     } catch (e) {
       final api = getApiException(e);
       if (api?.statusCode == 401) {
-        if (!_guestItems.any((i) => i.productId == event.productId)) {
-          _guestItems.add(WishlistEntity(
-            id: 'guest-${event.productId}',
-            userId: '',
-            productId: event.productId,
-            createdAt: DateTime.now().toUtc().toIso8601String(),
-            productName: event.productName,
-            productImage: event.productImage,
-            productPrice: event.productPrice,
-          ));
+        final current = _guestItems;
+        if (!current.any((i) => i.productId == event.productId)) {
+          final updated = [
+            ...current,
+            WishlistEntity(
+              id: 'guest-${event.productId}',
+              userId: '',
+              productId: event.productId,
+              createdAt: DateTime.now().toUtc().toIso8601String(),
+              productName: event.productName,
+              productImage: event.productImage,
+              productPrice: event.productPrice,
+            ),
+          ];
+          _saveGuest(updated);
+          emit(WishlistLoaded(updated));
         }
-        emit(WishlistLoaded(List.from(_guestItems)));
       } else {
         emit(WishlistError(api?.message ?? e.toString()));
       }
@@ -97,18 +116,20 @@ class WishlistBloc extends Bloc<WishlistEvent, WishlistState> {
   Future<void> _onRemoveItem(WishlistRemoveItemRequested event, Emitter<WishlistState> emit) async {
     final token = await _dioClient.getToken();
     if (token == null || token.isEmpty) {
-      _guestItems.removeWhere((i) => i.productId == event.productId);
-      emit(WishlistLoaded(List.from(_guestItems)));
+      final updated = _guestItems.where((i) => i.productId != event.productId).toList();
+      _saveGuest(updated);
+      emit(WishlistLoaded(updated));
       return;
     }
     try {
       await _removeItem(event.productId);
-      add(const WishlistLoadRequested());
+      await _fetchAndEmit(emit);
     } catch (e) {
       final api = getApiException(e);
       if (api?.statusCode == 401) {
-        _guestItems.removeWhere((i) => i.productId == event.productId);
-        emit(WishlistLoaded(List.from(_guestItems)));
+        final updated = _guestItems.where((i) => i.productId != event.productId).toList();
+        _saveGuest(updated);
+        emit(WishlistLoaded(updated));
       } else {
         emit(WishlistError(api?.message ?? e.toString()));
       }
@@ -116,18 +137,27 @@ class WishlistBloc extends Bloc<WishlistEvent, WishlistState> {
   }
 
   Future<void> _onMergeGuest(WishlistMergeGuestRequested event, Emitter<WishlistState> emit) async {
-    if (_guestItems.isEmpty) {
-      add(const WishlistLoadRequested());
+    final items = _guestItems;
+    if (items.isEmpty) {
+      await _fetchAndEmit(emit);
       return;
     }
-    for (final item in List<WishlistEntity>.from(_guestItems)) {
+    final synced = <String>[];
+    for (final item in items) {
       try {
         await _addItem(item.productId);
+        synced.add(item.productId);
       } catch (e) {
         if (kDebugMode) debugPrint('[WishlistBloc] guest item migration skipped: $e');
       }
     }
-    _guestItems.clear();
-    add(const WishlistLoadRequested());
+    // Clear only successfully synced items
+    final remaining = items.where((i) => !synced.contains(i.productId)).toList();
+    if (remaining.isEmpty) {
+      _localWishlist.clearItems();
+    } else {
+      _saveGuest(remaining);
+    }
+    await _fetchAndEmit(emit);
   }
 }

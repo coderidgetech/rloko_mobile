@@ -81,7 +81,19 @@ class _AddressesPageState extends State<AddressesPage> {
                 icon: Icons.location_on_outlined,
               );
             }
-            return BlocBuilder<AddressListBloc, AddressListState>(
+            return BlocConsumer<AddressListBloc, AddressListState>(
+              listenWhen: (prev, curr) =>
+                  curr is AddressListError && prev is AddressListLoaded,
+              listener: (context, state) {
+                if (state is AddressListError) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                  );
+                }
+              },
               builder: (context, state) {
                 if (state is AddressListLoading) {
                   return const Center(

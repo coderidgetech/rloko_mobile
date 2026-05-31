@@ -27,13 +27,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _registerUseCase = registerUseCase,
         _logoutUseCase = logoutUseCase,
         _getMeUseCase = getMeUseCase,
-        super(const AuthInitial()) {
+        super(const AuthLoading()) {
     on<AuthLoginRequested>(_onLoginRequested);
     on<AuthCompleteLoginOtpRequested>(_onCompleteLoginOtpRequested);
     on<AuthLoginWithGoogleRequested>(_onLoginWithGoogleRequested);
     on<AuthRegisterRequested>(_onRegisterRequested);
     on<AuthLogoutRequested>(_onLogoutRequested);
     on<AuthCheckRequested>(_onCheckRequested);
+    add(const AuthCheckRequested());
   }
 
   final LoginUseCase _loginUseCase;
@@ -42,9 +43,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final RegisterUseCase _registerUseCase;
   final LogoutUseCase _logoutUseCase;
   final GetMeUseCase _getMeUseCase;
-
-  /// True when we should try restoring session from stored token (e.g. on app resume).
-  bool get shouldTryRestoreFromToken => state is AuthUnauthenticated;
 
   Future<void> _onLoginRequested(
     AuthLoginRequested event,
@@ -106,7 +104,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         event.name,
       );
       emit(AuthAuthenticated(result.user));
-    } catch (e) {
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('[AuthBloc] register failed: $e\n$st');
       emit(AuthError(e.toString()));
     }
   }

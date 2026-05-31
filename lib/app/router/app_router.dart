@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/di/injection.dart';
+import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/models/login_otp_route_extra.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_otp_verification_page.dart';
@@ -62,6 +63,27 @@ GoRouter createAppRouter() {
     navigatorKey: _rootNavKey,
     initialLocation: '/splash',
     errorBuilder: (context, state) => const NotFoundPage(),
+    redirect: (context, state) {
+      final protected = [
+        '/checkout',
+        '/orders',
+        '/addresses',
+        '/profile/edit',
+        '/change-password',
+        '/payment-methods',
+        '/add-payment-method',
+        '/notifications',
+        '/reviews/write',
+        '/rewards',
+        '/return',
+      ];
+      final path = state.matchedLocation;
+      final isProtected = protected.any((r) => path.startsWith(r));
+      if (!isProtected) return null;
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! AuthAuthenticated) return '/login';
+      return null;
+    },
     routes: [
       // Redirects for web/shared-link path parity (avoid "page not found")
       GoRoute(
@@ -209,6 +231,7 @@ GoRouter createAppRouter() {
         path: '/product/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const CategoriesPage();
           return ProductDetailPage(productId: id);
         },
       ),
@@ -264,6 +287,7 @@ GoRouter createAppRouter() {
         path: '/reviews/write/:productId',
         builder: (context, state) {
           final productId = state.pathParameters['productId'] ?? '';
+          if (productId.isEmpty) return const ReviewsPage();
           final productName = state.uri.queryParameters['name'];
           return WriteReviewPage(productId: productId, productName: productName);
         },
@@ -284,6 +308,7 @@ GoRouter createAppRouter() {
         path: '/orders/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const OrdersPage();
           return BlocProvider(
             create: (context) => OrderDetailBloc(
               getOrderByIdUseCase: sl<GetOrderByIdUseCase>(),
@@ -307,6 +332,7 @@ GoRouter createAppRouter() {
         path: '/addresses/edit/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const AddressesPage();
           return AddressFormPage(addressId: id);
         },
       ),
@@ -340,6 +366,7 @@ GoRouter createAppRouter() {
         path: '/order-confirmation/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
+          if (id.isEmpty) return const OrdersPage();
           return OrderConfirmationPage(orderId: id);
         },
       ),
@@ -371,6 +398,7 @@ GoRouter createAppRouter() {
         path: '/tracking/:orderId',
         builder: (context, state) {
           final orderId = state.pathParameters['orderId'] ?? '';
+          if (orderId.isEmpty) return const OrdersPage();
           return OrderTrackingPage(orderId: orderId);
         },
       ),

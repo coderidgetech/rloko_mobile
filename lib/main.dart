@@ -41,6 +41,7 @@ import 'features/product/presentation/bloc/product_list_bloc.dart';
 import 'features/cart/data/datasources/cart_local_datasource.dart';
 import 'features/cart/domain/usecases/cart_usecases.dart';
 import 'features/cart/presentation/bloc/cart_bloc.dart';
+import 'features/wishlist/data/datasources/wishlist_local_datasource.dart';
 import 'features/wishlist/domain/usecases/wishlist_usecases.dart';
 import 'features/wishlist/presentation/bloc/wishlist_bloc.dart';
 import 'features/order/domain/usecases/order_usecases.dart';
@@ -122,7 +123,7 @@ class RlocoApp extends StatelessWidget {
             registerUseCase: sl<RegisterUseCase>(),
             logoutUseCase: sl<LogoutUseCase>(),
             getMeUseCase: sl<GetMeUseCase>(),
-          )..add(const AuthCheckRequested()),
+          ),
         ),
         BlocProvider(
           create: (context) => ProductListBloc(
@@ -154,6 +155,7 @@ class RlocoApp extends StatelessWidget {
             addWishlistItemUseCase: sl<AddWishlistItemUseCase>(),
             removeWishlistItemUseCase: sl<RemoveWishlistItemUseCase>(),
             dioClient: sl<DioClient>(),
+            localWishlist: sl<WishlistLocalDataSource>(),
           ),
         ),
         BlocProvider(
@@ -201,7 +203,7 @@ class RlocoApp extends StatelessWidget {
                   context.read<AddressListBloc>().add(const AddressListLoadRequested());
                   sl<FCMService>().init();
                 } else if (state is AuthUnauthenticated) {
-                  context.read<AddressListBloc>().add(const AddressListReset());
+                  context.read<AddressListBloc>().add(const AddressListResetRequested());
                 }
               },
               child: BlocBuilder<ConfigBloc, ConfigState>(
@@ -277,9 +279,7 @@ class _AppLifecycleHandlerState extends State<_AppLifecycleHandler>
     if (state != AppLifecycleState.resumed) return;
     if (!mounted) return;
     final authBloc = context.read<AuthBloc>();
-    if (authBloc.shouldTryRestoreFromToken) {
-      authBloc.add(const AuthCheckRequested());
-    }
+    authBloc.add(const AuthCheckRequested());
     context.read<ConfigBloc>().add(const ConfigLoadRequested());
   }
 

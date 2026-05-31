@@ -2,7 +2,7 @@ import '../../domain/entities/cart_entity.dart';
 import '../../domain/entities/cart_item_entity.dart';
 
 class CartItemDto {
-  CartItemDto({
+  const CartItemDto({
     required this.productId,
     required this.productName,
     required this.image,

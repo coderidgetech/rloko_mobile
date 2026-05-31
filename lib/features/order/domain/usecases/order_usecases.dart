@@ -1,67 +1,7 @@
-import '../entities/order_entity.dart';
-import '../repositories/order_repository.dart';
-
-class GetOrdersUseCase {
-  GetOrdersUseCase(this._repo);
-  final OrderRepository _repo;
-  Future<OrderListResult> call({int? limit, int? skip, String? status}) =>
-      _repo.list(limit: limit, skip: skip, status: status);
-}
-
-class GetOrderByIdUseCase {
-  GetOrderByIdUseCase(this._repo);
-  final OrderRepository _repo;
-  Future<OrderEntity> call(String id) => _repo.getById(id);
-}
-
-class GetOrderTrackingUseCase {
-  GetOrderTrackingUseCase(this._repo);
-  final OrderRepository _repo;
-  Future<List<OrderTrackingUpdateEntity>> call(String orderId) =>
-      _repo.getTracking(orderId);
-}
-
-class CancelOrderUseCase {
-  CancelOrderUseCase(this._repo);
-  final OrderRepository _repo;
-  Future<void> call(String orderId, {String? reason}) =>
-      _repo.cancel(orderId, reason: reason);
-}
-
-class CreateOrderUseCase {
-  CreateOrderUseCase(this._repo);
-  final OrderRepository _repo;
-  Future<OrderEntity> call({
-    required List<OrderItemEntity> items,
-    required ShippingInfoEntity shippingInfo,
-    required String paymentMethod,
-    Map<String, dynamic>? paymentInfo,
-    String? promotionCode,
-  }) =>
-      _repo.create(
-        items: items,
-        shippingInfo: shippingInfo,
-        paymentMethod: paymentMethod,
-        paymentInfo: paymentInfo,
-        promotionCode: promotionCode,
-      );
-}
-
-class CreateGuestOrderUseCase {
-  CreateGuestOrderUseCase(this._repo);
-  final OrderRepository _repo;
-  Future<OrderEntity> call({
-    required String guestEmail,
-    required String guestName,
-    required List<OrderItemEntity> items,
-    required ShippingInfoEntity shippingInfo,
-    String? promotionCode,
-  }) =>
-      _repo.createGuest(
-        guestEmail: guestEmail,
-        guestName: guestName,
-        items: items,
-        shippingInfo: shippingInfo,
-        promotionCode: promotionCode,
-      );
-}
+// order_usecases.dart - kept as re-export barrel for backwards compatibility
+export 'get_orders_usecase.dart';
+export 'get_order_by_id_usecase.dart';
+export 'get_order_tracking_usecase.dart';
+export 'cancel_order_usecase.dart';
+export 'create_order_usecase.dart';
+export 'create_guest_order_usecase.dart';

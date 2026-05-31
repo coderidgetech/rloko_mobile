@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
-import '../../data/datasources/rewards_remote_datasource.dart';
+import '../../domain/usecases/get_rewards_summary_usecase.dart';
+import '../../domain/usecases/get_rewards_transactions_usecase.dart';
+import '../../domain/usecases/redeem_rewards_usecase.dart';
 import '../bloc/rewards_bloc.dart';
 
 class RewardsPage extends StatelessWidget {
@@ -13,8 +15,11 @@ class RewardsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => RewardsBloc(sl<RewardsRemoteDataSource>())
-        ..add(const RewardsLoadRequested()),
+      create: (_) => RewardsBloc(
+        getSummary: sl<GetRewardsSummaryUseCase>(),
+        getTransactions: sl<GetRewardsTransactionsUseCase>(),
+        redeem: sl<RedeemRewardsUseCase>(),
+      )..add(const RewardsLoadRequested()),
       child: const _RewardsView(),
     );
   }
@@ -354,7 +359,8 @@ class _TransactionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final isEarned = tx.type == 'earned';
     final color = isEarned ? Colors.green.shade600 : Colors.red.shade600;
-    final date = (tx.createdAt as String).length >= 10 ? (tx.createdAt as String).substring(0, 10) : tx.createdAt as String;
+    final dt = tx.createdAt as DateTime;
+    final date = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

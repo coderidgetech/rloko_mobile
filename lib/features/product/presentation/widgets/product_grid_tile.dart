@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -17,13 +16,21 @@ class ProductGridTile extends StatelessWidget {
 
   final ProductEntity product;
 
+  // Design-system amber (Tailwind amber-700). Kept as a constant to avoid
+  // runtime Color.shade allocations and to make it easy to update centrally.
+  static const Color _giftBadgeColor = Color(0xFFB45309);
+
   @override
   Widget build(BuildContext context) {
     final imageUrl = product.firstImage;
-    final wishlistState = context.watch<WishlistBloc>().state;
-    final isInWishlist =
-        wishlistState is WishlistLoaded &&
-        wishlistState.items.any((i) => i.productId == product.id);
+
+    // context.select rebuilds this widget only when THIS product's wishlist
+    // membership changes, not on every WishlistBloc emission.
+    final isInWishlist = context.select<WishlistBloc, bool>((bloc) {
+      final state = bloc.state;
+      if (state is! WishlistLoaded) return false;
+      return state.items.any((i) => i.productId == product.id);
+    });
 
     return InkWell(
       onTap: () => context.push('/product/${product.id}'),
@@ -50,29 +57,20 @@ class ProductGridTile extends StatelessWidget {
                         top: Radius.circular(AppTheme.radius2xl),
                       ),
                       child: imageUrl != null && imageUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: safeImageUrl(imageUrl),
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              placeholder: (_, __) => Container(
-                                color: AppTheme.mutedColor(context),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                              errorWidget: (_, __, ___) => Container(
-                                color: AppTheme.mutedColor(context),
-                                child: const Icon(
-                                  Icons.image_not_supported,
-                                  size: 40,
-                                ),
+                          ? Semantics(
+                              label: product.name,
+                              child: SafeCachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
                               ),
                             )
-                          : Container(
-                              color: AppTheme.mutedColor(context),
-                              child: const Icon(Icons.image, size: 40),
+                          : Semantics(
+                              label: '${product.name} - image unavailable',
+                              child: Container(
+                                color: AppTheme.mutedColor(context),
+                                child: const Icon(Icons.image, size: 40),
+                              ),
                             ),
                     ),
                     // Wishlist: top-2 right-2, w-8 h-8, bg-white/90
@@ -89,11 +87,13 @@ class ProductGridTile extends StatelessWidget {
                               context.read<WishlistBloc>().add(
                                 WishlistRemoveItemRequested(product.id),
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Removed from wishlist'),
-                                ),
-                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Removed from wishlist'),
+                                  ),
+                                );
+                              }
                             } else {
                               context.read<WishlistBloc>().add(
                                 WishlistAddItemRequested(
@@ -103,11 +103,13 @@ class ProductGridTile extends StatelessWidget {
                                   productPrice: product.price,
                                 ),
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Added to wishlist'),
-                                ),
-                              );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Added to wishlist'),
+                                  ),
+                                );
+                              }
                             }
                           },
                           borderRadius: BorderRadius.circular(20),
@@ -128,7 +130,7 @@ class ProductGridTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // SALE badge: top-2 left-2, text-[10px] px-2 py-1 rounded-full
+                    // SALE badge: top-2 left-2, text-xs px-2 py-1 rounded-full
                     if (product.onSale)
                       Positioned(
                         top: 8,
@@ -147,7 +149,7 @@ class ProductGridTile extends StatelessWidget {
                           child: const Text(
                             'SALE',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: AppTheme.fontSizeXs,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
@@ -173,7 +175,7 @@ class ProductGridTile extends StatelessWidget {
                           child: const Text(
                             'NEW',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: AppTheme.fontSizeXs,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
@@ -191,7 +193,7 @@ class ProductGridTile extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.amber.shade700,
+                            color: _giftBadgeColor,
                             borderRadius: BorderRadius.circular(
                               AppTheme.radiusFull,
                             ),
@@ -199,7 +201,7 @@ class ProductGridTile extends StatelessWidget {
                           child: const Text(
                             'GIFT',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: AppTheme.fontSizeXs,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
@@ -236,7 +238,7 @@ class ProductGridTile extends StatelessWidget {
                             child: const Text(
                               'Out of stock',
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: AppTheme.fontSizeXs,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black87,
                               ),
@@ -269,7 +271,7 @@ class ProductGridTile extends StatelessWidget {
                         Text(
                           product.rating.toStringAsFixed(1),
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: AppTheme.fontSizeXs,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.foregroundColor(
                               context,
@@ -296,7 +298,7 @@ class ProductGridTile extends StatelessWidget {
                     Text(
                       product.category.toUpperCase(),
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: AppTheme.fontSizeXs,
                         color: AppTheme.foregroundColor(
                           context,
                         ).withValues(alpha: 0.5),
@@ -314,7 +316,7 @@ class ProductGridTile extends StatelessWidget {
                             context,
                           ).formatPrice(product.price, product.priceInr),
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: AppTheme.fontSizeSm,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.primaryColor(context),
                           ),

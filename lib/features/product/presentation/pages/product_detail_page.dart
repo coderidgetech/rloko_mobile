@@ -201,7 +201,11 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     }
   }
 
-  static String _emDash() => '—';
+  static const String _emDash = '—';
+  static const double _bundleDiscountRate = 0.10;
+  static const String _oneSizeFallback = 'One Size';
+  static const Color _successGreen = Color(0xFF16A34A);
+  static const Color _successGreenBg = Color(0xFFF0FDF4);
 
   /// Mean of loaded approved reviews; count uses API total.
   double _averageReviewRating() {
@@ -244,7 +248,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     if (p.details.isNotEmpty) {
       return p.details.first;
     }
-    return _emDash();
+    return _emDash;
   }
 
   static String _formatReviewDate(DateTime? t) {
@@ -376,12 +380,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     String? price,
     bool isGreen = false,
   }) {
-    const greenBg = Color(0xFFF0FDF4);
-    const greenColor = Color(0xFF16A34A);
     return Container(
       padding: EdgeInsets.all(isGreen ? 12 : 16),
       decoration: BoxDecoration(
-        color: isGreen ? greenBg : null,
+        color: isGreen ? _successGreenBg : null,
         border: isGreen
             ? null
             : Border.all(color: AppTheme.borderColor(context)),
@@ -394,7 +396,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             icon,
             size: 20,
             color: isGreen
-                ? greenColor
+                ? _successGreen
                 : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
           ),
           const SizedBox(width: 12),
@@ -445,7 +447,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: greenColor,
+                              color: _successGreen,
                             ),
                           ),
                         ],
@@ -1282,7 +1284,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                               _selectedSize ??
                                               (product.sizes.isNotEmpty
                                                   ? product.sizes.first
-                                                  : 'One Size');
+                                                  : _oneSizeFallback);
                                           context.read<CartBloc>().add(
                                             CartAddItemRequested(
                                               CartItemEntity(
@@ -1356,7 +1358,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                               _selectedSize ??
                                               (product.sizes.isNotEmpty
                                                   ? product.sizes.first
-                                                  : 'One Size');
+                                                  : _oneSizeFallback);
                                           context.read<CartBloc>().add(
                                             CartAddItemRequested(
                                               CartItemEntity(
@@ -1522,7 +1524,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                     _productDetailRow(
                                       'Material',
                                       product.material.isEmpty
-                                          ? _emDash()
+                                          ? _emDash
                                           : product.material,
                                     ),
                                     const SizedBox(height: 12),
@@ -1533,7 +1535,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                     const SizedBox(height: 12),
                                     _productDetailRow(
                                       'Country of origin',
-                                      _emDash(),
+                                      _emDash,
                                     ),
                                     const SizedBox(height: 12),
                                     _productDetailRow(
@@ -2137,15 +2139,15 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF16A34A),
+                          color: _successGreen,
                         ),
                       ),
                       Text(
-                        '-${CurrencyScope.of(context).formatPrice((allProducts.fold<double>(0, (s, p) => s + p.price) * 0.1), null)}',
+                        '-${CurrencyScope.of(context).formatPrice((allProducts.fold<double>(0, (s, p) => s + p.price) * _bundleDiscountRate), null)}',
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF16A34A),
+                          color: _successGreen,
                         ),
                       ),
                     ],
@@ -2172,7 +2174,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                     0,
                                     (s, p) => s + p.price,
                                   ) *
-                                  0.9),
+                                  (1 - _bundleDiscountRate)),
                               null,
                             ),
                             style: TextStyle(
@@ -2182,11 +2184,11 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             ),
                           ),
                           Text(
-                            'You save ${CurrencyScope.of(context).formatPrice((allProducts.fold<double>(0, (s, p) => s + p.price) * 0.1), null)}',
+                            'You save ${CurrencyScope.of(context).formatPrice((allProducts.fold<double>(0, (s, p) => s + p.price) * _bundleDiscountRate), null)}',
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: Color(0xFF16A34A),
+                              color: _successGreen,
                             ),
                           ),
                         ],
@@ -2208,7 +2210,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 productName: p.name,
                                 image: p.firstImage ?? '',
                                 price: p.price,
-                                size: 'One Size',
+                                size: _oneSizeFallback,
                                 quantity: 1,
                               ),
                             ),
@@ -2245,200 +2247,22 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
+                color: _successGreenBg,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text(
-                  '✨ Free shipping on orders over ${CurrencyScope.of(context).formatPrice(50, null)}',
+                  '✨ ${DeliveryConstants.freeShippingPromoLine(CurrencyScope.of(context).region)}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF166534),
+                    color: _successGreen,
                   ),
                 ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _highlight(IconData icon, String title, String subtitle) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: AppTheme.foregroundColor(context).withValues(alpha: 0.1),
-            ),
-          ),
-          child: Icon(
-            icon,
-            size: 18,
-            color: AppTheme.mutedForegroundColor(context),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 12,
-                  letterSpacing: 1,
-                  color: AppTheme.mutedForegroundColor(context),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.mutedForegroundColor(
-                    context,
-                  ).withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _deliveryRow(IconData icon, String title, String subtitle) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: const TextStyle(fontSize: 14)),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.mutedForegroundColor(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _accordion(
-    String id,
-    IconData icon,
-    String title, {
-    required Widget child,
-  }) {
-    final isExpanded = _expandedSection == id;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: AppTheme.foregroundColor(context).withValues(alpha: 0.1),
-        ),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            onTap: () => _toggleSection(id),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Row(
-                children: [
-                  Icon(
-                    icon,
-                    size: 18,
-                    color: AppTheme.mutedForegroundColor(context),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  AnimatedRotation(
-                    turns: isExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      Icons.expand_more,
-                      size: 18,
-                      color: AppTheme.mutedForegroundColor(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: AppTheme.foregroundColor(
-                      context,
-                    ).withValues(alpha: 0.1),
-                  ),
-                ),
-              ),
-              child: child,
-            ),
-            crossFadeState: isExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: RichText(
-        text: TextSpan(
-          style: TextStyle(
-            fontSize: 14,
-            color: AppTheme.mutedForegroundColor(context),
-          ),
-          children: [
-            TextSpan(
-              text: '${label.toUpperCase()}: ',
-              style: TextStyle(
-                color: AppTheme.foregroundColor(context),
-                fontWeight: FontWeight.w500,
-                letterSpacing: 1,
-              ),
-            ),
-            TextSpan(text: value),
-          ],
-        ),
       ),
     );
   }
@@ -2463,62 +2287,4 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     );
   }
 
-  Widget _sustainRow(IconData icon, String title, String body) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 16, color: AppTheme.mutedForegroundColor(context)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                body,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.mutedForegroundColor(context),
-                  height: 1.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _faqItem(String q, String a) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          q,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          a,
-          style: TextStyle(
-            fontSize: 14,
-            color: AppTheme.mutedForegroundColor(context),
-            height: 1.5,
-          ),
-        ),
-      ],
-    );
-  }
 }

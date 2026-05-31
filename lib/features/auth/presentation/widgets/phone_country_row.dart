@@ -12,12 +12,14 @@ class PhoneCountryRow extends StatefulWidget {
     required this.onLocalPhoneChanged,
     required this.selectedCountry,
     required this.onSelectCountry,
+    this.errorText,
   });
 
   final String localPhone;
   final ValueChanged<String> onLocalPhoneChanged;
   final DialCountry selectedCountry;
   final ValueChanged<DialCountry> onSelectCountry;
+  final String? errorText;
 
   @override
   State<PhoneCountryRow> createState() => _PhoneCountryRowState();
@@ -130,7 +132,10 @@ class _PhoneCountryRowState extends State<PhoneCountryRow> {
     final grey = fg.withValues(alpha: 0.06);
     final focused = _phoneFocus.hasFocus;
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Material(
@@ -208,6 +213,15 @@ class _PhoneCountryRowState extends State<PhoneCountryRow> {
             ),
           ),
         ),
+      ],
+    ),
+        if (widget.errorText != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            widget.errorText!,
+            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.error),
+          ),
+        ],
       ],
     );
   }

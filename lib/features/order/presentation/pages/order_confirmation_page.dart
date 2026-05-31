@@ -49,14 +49,19 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor(context),
-      appBar: AppBar(
-        title: const Text('Order confirmed'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go('/');
+      },
+      child: Scaffold(
         backgroundColor: AppTheme.backgroundColor(context),
-        foregroundColor: AppTheme.foregroundColor(context),
-        automaticallyImplyLeading: false,
-      ),
+        appBar: AppBar(
+          title: const Text('Order confirmed'),
+          backgroundColor: AppTheme.backgroundColor(context),
+          foregroundColor: AppTheme.foregroundColor(context),
+          automaticallyImplyLeading: false,
+        ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : _error != null
@@ -218,6 +223,7 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
                     ],
                   ),
                 ),
+      ),
     );
   }
 }

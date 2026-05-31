@@ -2,8 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../domain/entities/review_entity.dart';
-import '../../domain/repositories/review_repository.dart';
 import '../../domain/usecases/get_my_reviews_usecase.dart';
+import '../../domain/usecases/submit_review_usecase.dart';
 
 // Events
 abstract class ReviewEvent extends Equatable {
@@ -67,13 +67,13 @@ class ReviewError extends ReviewState {
 
 // BLoC
 class ReviewBloc extends Bloc<ReviewEvent, ReviewState> {
-  ReviewBloc(this._getMyReviews, this._repository) : super(const ReviewInitial()) {
+  ReviewBloc(this._getMyReviews, this._submitReview) : super(const ReviewInitial()) {
     on<MyReviewsLoadRequested>(_onLoadMyReviews);
     on<ReviewSubmitRequested>(_onSubmit);
   }
 
   final GetMyReviewsUseCase _getMyReviews;
-  final ReviewRepository _repository;
+  final SubmitReviewUseCase _submitReview;
 
   Future<void> _onLoadMyReviews(
     MyReviewsLoadRequested event,
@@ -94,7 +94,7 @@ class ReviewBloc extends Bloc<ReviewEvent, ReviewState> {
   ) async {
     emit(const ReviewLoading());
     try {
-      await _repository.submitReview(
+      await _submitReview(
         productId: event.productId,
         rating: event.rating,
         title: event.title,

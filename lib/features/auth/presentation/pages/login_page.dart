@@ -28,6 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   String _phoneLocal = '';
   DialCountry _country = kDialCountries[1];
   bool _otpSendLoading = false;
+  String? _phoneError;
   /// True while the native Google account picker is open (before we hit the API).
   bool _googleFlowActive = false;
 
@@ -44,12 +45,13 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _sendPhoneOtp() async {
     final digits = buildPhoneDigitsForApi(_country.dialCode, _phoneLocal);
     if (digits.length < 11) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose country and enter your full mobile number')),
-      );
+      setState(() => _phoneError = 'Enter a valid phone number');
       return;
     }
-    setState(() => _otpSendLoading = true);
+    setState(() {
+      _phoneError = null;
+      _otpSendLoading = true;
+    });
     try {
       await sl<SendLoginOtpUseCase>()(digits);
       if (!mounted) return;
@@ -216,9 +218,13 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 8),
                         PhoneCountryRow(
                           localPhone: _phoneLocal,
-                          onLocalPhoneChanged: (v) => setState(() => _phoneLocal = v),
+                          onLocalPhoneChanged: (v) => setState(() {
+                            _phoneLocal = v;
+                            _phoneError = null;
+                          }),
                           selectedCountry: _country,
                           onSelectCountry: (c) => setState(() => _country = c),
+                          errorText: _phoneError,
                         ),
                         const SizedBox(height: 24),
                         FilledButton(

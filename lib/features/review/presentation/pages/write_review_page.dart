@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/injection.dart';
-import '../../domain/repositories/review_repository.dart';
 import '../../domain/usecases/get_my_reviews_usecase.dart';
+import '../../domain/usecases/submit_review_usecase.dart';
 import '../bloc/review_bloc.dart';
 
 class WriteReviewPage extends StatefulWidget {
@@ -32,7 +32,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => ReviewBloc(sl<GetMyReviewsUseCase>(), sl<ReviewRepository>()),
+      create: (_) => ReviewBloc(sl<GetMyReviewsUseCase>(), sl<SubmitReviewUseCase>()),
       child: BlocConsumer<ReviewBloc, ReviewState>(
         listener: (context, state) {
           if (state is ReviewSubmitSuccess) {

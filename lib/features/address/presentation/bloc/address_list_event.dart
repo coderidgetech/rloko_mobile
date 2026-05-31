@@ -11,8 +11,8 @@ final class AddressListLoadRequested extends AddressListEvent {
 }
 
 /// Emitted on sign-out so the home "deliver to" bar does not show a stale address.
-final class AddressListReset extends AddressListEvent {
-  const AddressListReset();
+final class AddressListResetRequested extends AddressListEvent {
+  const AddressListResetRequested();
 }
 
 final class AddressListDeleteRequested extends AddressListEvent {

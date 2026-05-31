@@ -114,6 +114,8 @@ class _ProductListPageState extends State<ProductListPage> {
               title: 'Something went wrong',
               subtitle: state.message,
               icon: Icons.error_outline,
+              actionLabel: 'Try Again',
+              onAction: () => context.read<ProductListBloc>().add(widget.loadEvent),
             );
           }
           if (state is ProductListLoaded) {
@@ -144,7 +146,7 @@ class _ProductListPageState extends State<ProductListPage> {
               ],
             );
           }
-          return const SizedBox.shrink();
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
         },
       ),
     );

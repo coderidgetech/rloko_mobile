@@ -18,5 +18,3 @@ final class OrderListLoadRequested extends OrderListEvent {
   @override
   List<Object?> get props => [limit, skip, filter];
 }
-
-enum OrderListFilter { all, active, completed }

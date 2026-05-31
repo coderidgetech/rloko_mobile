@@ -24,7 +24,7 @@ final class OrderListLoaded extends OrderListState {
   final int total;
   final OrderListFilter filter;
   @override
-  List<Object?> get props => [orders.length, total, filter];
+  List<Object?> get props => [orders, total, filter];
 }
 
 final class OrderListError extends OrderListState {

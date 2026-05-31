@@ -648,13 +648,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             appBar: AppBar(
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new),
-                onPressed: () {
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/cart');
-                  }
-                },
+                onPressed: () => context.pop(),
               ),
               title: const Text('Checkout'),
             ),
@@ -1727,13 +1721,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             color: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(999),
             child: InkWell(
-              onTap: () {
-                if (context.canPop()) {
-                  context.pop();
-                } else {
-                  context.go('/cart');
-                }
-              },
+              onTap: () => context.pop(),
               borderRadius: BorderRadius.circular(999),
               child: const SizedBox(
                 width: 36,

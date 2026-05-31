@@ -9,6 +9,7 @@ import '../../../../core/widgets/safe_network_image.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../domain/entities/order_entity.dart';
+import '../../domain/entities/order_filter.dart';
 import '../bloc/order_list_bloc.dart';
 
 class OrdersPage extends StatefulWidget {
@@ -135,7 +136,7 @@ class _OrdersPageState extends State<OrdersPage> {
                     },
                   );
                 }
-                return const SizedBox.shrink();
+                return const Center(child: CircularProgressIndicator(strokeWidth: 2));
                   },
                 ),
               ),

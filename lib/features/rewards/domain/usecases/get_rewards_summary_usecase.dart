@@ -1,10 +1,10 @@
 import '../entities/rewards_summary.dart';
-import '../../data/datasources/rewards_remote_datasource.dart';
+import '../repositories/rewards_repository.dart';
 
 class GetRewardsSummaryUseCase {
-  GetRewardsSummaryUseCase(this._ds);
+  GetRewardsSummaryUseCase(this._repository);
 
-  final RewardsRemoteDataSource _ds;
+  final RewardsRepository _repository;
 
-  Future<RewardsSummary> call() => _ds.getSummary();
+  Future<RewardsSummary> call() => _repository.getSummary();
 }

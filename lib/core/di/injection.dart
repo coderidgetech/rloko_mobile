@@ -36,6 +36,7 @@ import '../../features/cart/data/datasources/cart_remote_datasource.dart';
 import '../../features/cart/data/repositories/cart_repository_impl.dart';
 import '../../features/cart/domain/repositories/cart_repository.dart';
 import '../../features/cart/domain/usecases/cart_usecases.dart';
+import '../../features/wishlist/data/datasources/wishlist_local_datasource.dart';
 import '../../features/wishlist/data/datasources/wishlist_remote_datasource.dart';
 import '../../features/wishlist/data/repositories/wishlist_repository_impl.dart';
 import '../../features/wishlist/domain/repositories/wishlist_repository.dart';
@@ -90,6 +91,7 @@ import '../../features/review/domain/usecases/submit_review_usecase.dart';
 import '../../features/product/data/datasources/product_local_datasource.dart';
 import '../../features/product/domain/usecases/get_recommendations_usecase.dart';
 import '../notifications/fcm_service.dart';
+import '../../features/order/presentation/bloc/checkout_bloc.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -216,6 +218,9 @@ Future<void> initInjection() async {
   );
 
   // Wishlist
+  sl.registerLazySingleton<WishlistLocalDataSource>(
+    () => WishlistLocalDataSource(sl<SharedPreferences>()),
+  );
   sl.registerLazySingleton<WishlistRemoteDataSource>(
     () => WishlistRemoteDataSource(sl<DioClient>()),
   );
@@ -395,6 +400,16 @@ Future<void> initInjection() async {
   // FCM push notifications
   sl.registerLazySingleton<FCMService>(
     () => FCMService(sl<DioClient>()),
+  );
+
+  // Checkout
+  sl.registerFactory<CheckoutBloc>(
+    () => CheckoutBloc(
+      listAddressesUseCase: sl<ListAddressesUseCase>(),
+      calculateShippingUseCase: sl<CalculateShippingUseCase>(),
+      validatePromotionUseCase: sl<ValidatePromotionUseCase>(),
+      createOrderUseCase: sl<CreateOrderUseCase>(),
+    ),
   );
 }
 

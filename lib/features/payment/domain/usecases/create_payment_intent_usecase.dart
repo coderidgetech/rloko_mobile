@@ -1,10 +1,10 @@
-import '../../../payment/data/datasources/payment_remote_datasource.dart';
 import '../entities/payment_intent_entity.dart';
+import '../repositories/payment_repository.dart';
 
 class CreatePaymentIntentUseCase {
-  CreatePaymentIntentUseCase(this._dataSource);
+  CreatePaymentIntentUseCase(this._repository);
 
-  final PaymentRemoteDataSource _dataSource;
+  final PaymentRepository _repository;
 
   Future<PaymentIntentEntity> call({
     required String orderId,
@@ -12,7 +12,7 @@ class CreatePaymentIntentUseCase {
     required String currency,
     String paymentMethod = 'card',
   }) =>
-      _dataSource.createPaymentIntent(
+      _repository.createPaymentIntent(
         orderId: orderId,
         amount: amount,
         currency: currency,

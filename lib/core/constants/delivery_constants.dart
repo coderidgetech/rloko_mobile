@@ -2,10 +2,7 @@ import '../region/app_region.dart';
 
 /// Delivery and shipping policy copy. Can be overridden by site config API when available.
 class DeliveryConstants {
-  DeliveryConstants._();
-
-  /// Free delivery threshold (e.g. "Free delivery on orders over \$50")
-  static const String freeDeliveryThreshold = r'Free delivery on orders over $50';
+  const DeliveryConstants._();
 
   /// Free-shipping line aligned with [CurrencyScope] / storefront (India vs US).
   static String freeShippingPromoLine(AppRegion region) {

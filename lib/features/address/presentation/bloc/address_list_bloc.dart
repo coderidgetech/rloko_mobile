@@ -20,14 +20,14 @@ class AddressListBloc extends Bloc<AddressListEvent, AddressListState> {
     on<AddressListLoadRequested>(_onLoad);
     on<AddressListDeleteRequested>(_onDelete);
     on<AddressListSetDefaultRequested>(_onSetDefault);
-    on<AddressListReset>(_onReset);
+    on<AddressListResetRequested>(_onReset);
   }
 
   final ListAddressesUseCase _listAddressesUseCase;
   final DeleteAddressUseCase _deleteAddressUseCase;
   final SetDefaultAddressUseCase _setDefaultAddressUseCase;
 
-  void _onReset(AddressListReset event, Emitter<AddressListState> emit) {
+  void _onReset(AddressListResetRequested event, Emitter<AddressListState> emit) {
     emit(const AddressListInitial());
   }
 

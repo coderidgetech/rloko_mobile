@@ -62,9 +62,11 @@ class _SplashPageState extends State<SplashPage>
       ),
     );
     _controller.forward();
-    Future.delayed(const Duration(milliseconds: 2500), () async {
-      if (!mounted) return;
-      await _waitForAuthResolved();
+    Future(() async {
+      await Future.wait([
+        Future.delayed(const Duration(milliseconds: 2500)),
+        _waitForAuthResolved(),
+      ]);
       if (!mounted) return;
       final seen = await hasSeenOnboarding();
       if (!mounted) return;

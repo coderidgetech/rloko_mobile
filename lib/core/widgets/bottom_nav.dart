@@ -26,7 +26,7 @@ class BottomNav extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor(context),
         border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12))),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
+        boxShadow: [BoxShadow(color: AppTheme.foregroundColor(context).withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -2))],
       ),
       child: SafeArea(
         top: false,
@@ -113,63 +113,47 @@ class _NavItem extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isActive)
-                  Container(
-                    width: BottomNav._activeIndicatorWidth,
-                    height: BottomNav._activeIndicatorHeight,
-                    margin: const EdgeInsets.only(bottom: 6),
-                    decoration: BoxDecoration(
-                      color: primary,
-                      borderRadius: BorderRadius.circular(1),
-                    ),
+        customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        child: Semantics(
+          label: '$label, tab',
+          button: true,
+          selected: isActive,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (isActive)
+                Container(
+                  width: BottomNav._activeIndicatorWidth,
+                  height: BottomNav._activeIndicatorHeight,
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color: primary,
+                    borderRadius: BorderRadius.circular(1),
                   ),
-                Icon(
+                ),
+              Badge(
+                label: Text(
+                  badgeCount > 9 ? '9+' : '$badgeCount',
+                  style: const TextStyle(fontSize: 10),
+                ),
+                isLabelVisible: badgeCount > 0,
+                child: Icon(
                   icon,
                   size: BottomNav._iconSize,
                   color: isActive ? primary : unselected,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: BottomNav._labelFontSize,
-                    fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
-                    color: isActive ? primary : unselected,
-                  ),
-                ),
-              ],
-            ),
-            if (badgeCount > 0)
-              Positioned(
-                top: 10,
-                right: 20,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  decoration: BoxDecoration(
-                    color: primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      badgeCount > 9 ? '9+' : '$badgeCount',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: BottomNav._labelFontSize,
+                  fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+                  color: isActive ? primary : unselected,
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../domain/entities/redeem_result.dart';
 import '../../domain/entities/rewards_summary.dart';
 import '../../domain/entities/rewards_transaction.dart';
 import '../../domain/usecases/get_rewards_summary_usecase.dart';
@@ -115,15 +116,11 @@ class RewardsBloc extends Bloc<RewardsEvent, RewardsState> {
   ) async {
     emit(const RewardsLoading());
     try {
-      final result = await _redeem(event.points);
-      final redeemedPoints =
-          (result['redeemed_points'] as num?)?.toInt() ?? event.points;
-      final discountUsd = (result['discount_usd'] as num?)?.toDouble() ?? 0;
-      final newBalance = (result['new_balance'] as num?)?.toInt() ?? 0;
+      final RedeemResult result = await _redeem(event.points);
       emit(RewardsRedeemSuccess(
-        redeemedPoints: redeemedPoints,
-        discountUsd: discountUsd,
-        newBalance: newBalance,
+        redeemedPoints: result.redeemedPoints,
+        discountUsd: result.discountUsd,
+        newBalance: result.newBalance,
       ));
       // Reload after successful redeem
       add(const RewardsLoadRequested());

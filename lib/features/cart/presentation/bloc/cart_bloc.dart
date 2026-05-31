@@ -1,3 +1,4 @@
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -30,10 +31,10 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         super(const CartInitial()) {
     on<CartLoadRequested>(_onLoad);
     on<CartAddItemRequested>(_onAddItem);
-    on<CartUpdateItemRequested>(_onUpdateItem);
+    on<CartUpdateItemRequested>(_onUpdateItem, transformer: restartable());
     on<CartRemoveItemRequested>(_onRemoveItem);
     on<CartClearRequested>(_onClear);
-    on<CartMergeGuestCartRequested>(_onMergeGuestCart);
+    on<CartMergeGuestCartRequested>(_onMergeGuestCart, transformer: droppable());
   }
 
   final GetCartUseCase _getCart;
