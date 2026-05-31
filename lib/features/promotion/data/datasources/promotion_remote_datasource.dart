@@ -14,7 +14,7 @@ class PromotionRemoteDataSource {
     );
     final data = response.data;
     if (data is! List) return [];
-    return (data as List)
+    return (data)
         .map((e) => PromotionDto.fromJson(e as Map<String, dynamic>))
         .toList();
   }

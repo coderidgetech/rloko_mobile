@@ -455,13 +455,11 @@ class _MenuButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    this.badge,
     this.highlight = false,
   });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final String? badge;
   final bool highlight;
 
   @override
@@ -500,24 +498,6 @@ class _MenuButton extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: highlight
-                          ? AppTheme.primaryColor(context).withValues(alpha: 0.2)
-                          : AppTheme.foregroundColor(context).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(9999),
-                    ),
-                    child: Text(
-                      badge!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: highlight ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ),
                 const SizedBox(width: 8),
                 Icon(Icons.chevron_right, size: 18, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
               ],

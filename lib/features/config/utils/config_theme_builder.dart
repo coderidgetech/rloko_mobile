@@ -66,7 +66,6 @@ class ConfigThemeBuilder {
 
     final primary = _parseColor(colors.primary);
     final primaryLight = _parseColor(colors.primaryLight);
-    final primaryDark = _parseColor(colors.primaryDark);
     final secondary = _parseColor(colors.secondary);
     final dominant = _parseColor(colors.dominant);
     final dominantOffWhite = _parseColor(colors.dominantOffWhite);

@@ -2,7 +2,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 
 import '../../domain/entities/product_entity.dart';
-import '../../domain/entities/product_list_result.dart';
 import '../../domain/usecases/get_featured_products_usecase.dart';
 import '../../domain/usecases/get_new_arrivals_usecase.dart';
 import '../../domain/usecases/get_on_sale_products_usecase.dart';

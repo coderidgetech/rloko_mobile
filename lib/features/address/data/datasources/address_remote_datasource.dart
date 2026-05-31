@@ -16,7 +16,7 @@ class AddressRemoteDataSource {
       final data = response.data;
       if (kDebugMode) debugPrint('[AddressRemoteDataSource] list response: $data');
       if (data is! List) return [];
-      return (data as List)
+      return (data)
           .map((e) => AddressDto.fromJson(e as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {

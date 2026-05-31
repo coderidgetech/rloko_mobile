@@ -42,7 +42,7 @@ class OrderRemoteDataSource {
     if (data == null) return [];
     final updatesRaw = data['updates'];
     if (updatesRaw is! List) return [];
-    return (updatesRaw as List)
+    return (updatesRaw)
         .map((e) => OrderTrackingUpdateDto.fromJson(e as Map<String, dynamic>))
         .toList();
   }

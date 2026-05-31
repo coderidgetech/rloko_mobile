@@ -175,7 +175,7 @@ class DioClient {
     } catch (e) {
       if (kDebugMode) debugPrint('[DioClient] Secure storage write failed: $e');
     }
-    if (_prefs != null) await _prefs!.setString(_authTokenPrefsKey, token);
+    await _prefs?.setString(_authTokenPrefsKey, token);
     if (kDebugMode) debugPrint('[DioClient] Token saved');
   }
 
@@ -183,7 +183,7 @@ class DioClient {
     try {
       await _storage.delete(key: _authTokenKey);
     } catch (_) {}
-    if (_prefs != null) await _prefs!.remove(_authTokenPrefsKey);
+    await _prefs?.remove(_authTokenPrefsKey);
   }
 
   /// Reads token: tries SecureStorage (Keystore/Keychain) first; falls back to

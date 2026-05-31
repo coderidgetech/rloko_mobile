@@ -419,7 +419,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                             if (subtitle != null) ...[
                               const SizedBox(height: 2),
                               Text(
-                                subtitle!,
+                                subtitle,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
@@ -467,7 +467,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                       if (subtitle != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          subtitle!,
+                          subtitle,
                           style: TextStyle(
                             fontSize: 12,
                             color: AppTheme.foregroundColor(
@@ -522,7 +522,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                   ),
                   if (headerTrailing != null) ...[
                     const SizedBox(width: 8),
-                    headerTrailing!,
+                    headerTrailing,
                   ],
                   AnimatedRotation(
                     turns: isExpanded ? 0.5 : 0,

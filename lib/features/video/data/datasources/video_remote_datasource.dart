@@ -26,7 +26,7 @@ class VideoRemoteDataSource {
     if (data == null) throw Exception('Invalid response');
     final videosRaw = data['videos'];
     if (videosRaw is! List) return [];
-    return (videosRaw as List)
+    return (videosRaw)
         .map((e) => InspirationVideoDto.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
   }
@@ -45,7 +45,7 @@ class VideoRemoteDataSource {
     );
     final data = response.data;
     if (data is! List) return [];
-    return (data as List)
+    return (data)
         .map((e) => InspirationVideoDto.fromJson(Map<String, dynamic>.from(e as Map)))
         .toList();
   }

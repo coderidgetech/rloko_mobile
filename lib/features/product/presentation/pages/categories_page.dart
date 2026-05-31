@@ -38,12 +38,10 @@ class _SubcategoryItem {
   const _SubcategoryItem({
     required this.name,
     required this.link,
-    this.badge,
   });
 
   final String name;
   final String link;
-  final String? badge;
 }
 
 String _slugifySubName(String s) {
@@ -627,24 +625,6 @@ class _SubcategoryGridTile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (sub.badge != null) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor(context).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    sub.badge!,
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor(context),
-                    ),
-                  ),
-                ),
-              ],
               const SizedBox(width: 4),
               Icon(
                 Icons.chevron_right_rounded,

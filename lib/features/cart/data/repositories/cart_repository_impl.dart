@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 
-import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/cart_entity.dart';
 import '../../domain/entities/cart_item_entity.dart';
