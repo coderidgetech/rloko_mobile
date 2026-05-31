@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -62,6 +64,29 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   String? _productReviewsError;
   double _dragStartX = 0;
   double _dragEndX = 0;
+  Timer? _imageTimer;
+  int _timerImageCount = 0;
+
+  @override
+  void dispose() {
+    _imageTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startImageTimer(int count) {
+    if (count <= 1) { _imageTimer?.cancel(); return; }
+    if (count == _timerImageCount && _imageTimer != null && _imageTimer!.isActive) return;
+    _timerImageCount = count;
+    _imageTimer?.cancel();
+    _imageTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (!mounted) return;
+      setState(() => _imageIndex = (_imageIndex + 1) % _timerImageCount);
+    });
+  }
+
+  void _resetImageTimer() {
+    if (_timerImageCount > 1) _startImageTimer(_timerImageCount);
+  }
 
   void _showSizeChartDialog(BuildContext context) {
     showDialog<void>(
@@ -640,9 +665,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 }
                 final productImages = product.images;
                 final hasProductImages = productImages.isNotEmpty;
-                final images = hasProductImages
-                    ? productImages
-                    : <String>[];
+                final images = hasProductImages ? productImages : <String>[];
+                if (images.length > 1 && images.length != _timerImageCount) {
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) { if (mounted) _startImageTimer(images.length); },
+                  );
+                }
                 final isWishlisted =
                     context.read<WishlistBloc>().state is WishlistLoaded &&
                     (context.read<WishlistBloc>().state as WishlistLoaded).items
@@ -667,8 +695,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                               if (distance > 50 &&
                                   _imageIndex < images.length - 1) {
                                 setState(() => _imageIndex++);
+                                _resetImageTimer();
                               } else if (distance < -50 && _imageIndex > 0) {
                                 setState(() => _imageIndex--);
+                                _resetImageTimer();
                               }
                               _dragStartX = 0;
                               _dragEndX = 0;
@@ -796,8 +826,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                     children: List.generate(
                                       images.length,
                                       (i) => GestureDetector(
-                                        onTap: () =>
-                                            setState(() => _imageIndex = i),
+                                        onTap: () {
+                                          setState(() => _imageIndex = i);
+                                          _resetImageTimer();
+                                        },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(
                                             horizontal: 3,
