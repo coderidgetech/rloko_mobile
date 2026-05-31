@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -11,13 +12,18 @@ const _kNotifLogKey = 'fcm_notification_log';
 const _kNotifMaxEntries = 50;
 
 /// Handles FCM token registration, foreground message display, and local notification log.
-/// Call [init] once after Firebase.initializeApp() completes.
+/// Call [init] once after the user authenticates. Safe to call multiple times — subsequent
+/// calls are no-ops guarded by [_initialized].
 class FCMService {
   FCMService(this._client);
 
   final DioClient _client;
+  bool _initialized = false;
+  StreamSubscription<String>? _tokenRefreshSub;
+  StreamSubscription<RemoteMessage>? _messageSub;
 
   Future<void> init() async {
+    if (_initialized) return;
     try {
       final settings = await FirebaseMessaging.instance.requestPermission(
         alert: true,
@@ -31,10 +37,11 @@ class FCMService {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) await _registerToken(token);
 
-      FirebaseMessaging.instance.onTokenRefresh.listen((t) => _registerToken(t));
+      _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((t) => _registerToken(t));
 
       // Log foreground messages locally so the notifications page can show history
-      FirebaseMessaging.onMessage.listen(_logMessage);
+      _messageSub = FirebaseMessaging.onMessage.listen(_logMessage);
+      _initialized = true;
     } catch (e) {
       if (kDebugMode) debugPrint('[FCM] init error: $e');
     }
@@ -53,6 +60,11 @@ class FCMService {
   }
 
   Future<void> deleteToken() async {
+    _tokenRefreshSub?.cancel();
+    _messageSub?.cancel();
+    _tokenRefreshSub = null;
+    _messageSub = null;
+    _initialized = false;
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) return;

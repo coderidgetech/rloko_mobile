@@ -499,9 +499,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
       return;
     }
-    final selectedAddress = _addresses.firstWhere(
-      (a) => a.id == _selectedAddressId,
-    );
+    // Use orElse so a stale _selectedAddressId (address deleted since selection)
+    // falls back gracefully instead of throwing StateError.
+    AddressEntity? selectedAddress;
+    try {
+      selectedAddress = _addresses.firstWhere((a) => a.id == _selectedAddressId);
+    } catch (_) {}
+    if (selectedAddress == null) {
+      if (mounted) setState(() => _selectedAddressId = _addresses.first.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please re-select a delivery address')),
+      );
+      return;
+    }
     final promo = _promoCode.trim().isEmpty ? null : _promoCode.trim();
 
     if (_selectedPaymentMethod == 'card' || _selectedPaymentMethod == 'upi') {

@@ -1,9 +1,11 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../data/datasources/rewards_remote_datasource.dart';
 import '../../domain/entities/rewards_summary.dart';
 import '../../domain/entities/rewards_transaction.dart';
+import '../../domain/usecases/get_rewards_summary_usecase.dart';
+import '../../domain/usecases/get_rewards_transactions_usecase.dart';
+import '../../domain/usecases/redeem_rewards_usecase.dart';
 
 // Events
 abstract class RewardsEvent extends Equatable {
@@ -73,18 +75,30 @@ class RewardsRedeemSuccess extends RewardsState {
 
 // BLoC
 class RewardsBloc extends Bloc<RewardsEvent, RewardsState> {
-  RewardsBloc(this._dataSource) : super(const RewardsInitial()) {
+  RewardsBloc({
+    required GetRewardsSummaryUseCase getSummary,
+    required GetRewardsTransactionsUseCase getTransactions,
+    required RedeemRewardsUseCase redeem,
+  })  : _getSummary = getSummary,
+        _getTransactions = getTransactions,
+        _redeem = redeem,
+        super(const RewardsInitial()) {
     on<RewardsLoadRequested>(_onLoad);
     on<RewardsRedeemRequested>(_onRedeem);
   }
 
-  final RewardsRemoteDataSource _dataSource;
+  final GetRewardsSummaryUseCase _getSummary;
+  final GetRewardsTransactionsUseCase _getTransactions;
+  final RedeemRewardsUseCase _redeem;
 
-  Future<void> _onLoad(RewardsLoadRequested event, Emitter<RewardsState> emit) async {
+  Future<void> _onLoad(
+    RewardsLoadRequested event,
+    Emitter<RewardsState> emit,
+  ) async {
     emit(const RewardsLoading());
     try {
-      final summary = await _dataSource.getSummary();
-      final result = await _dataSource.getTransactions();
+      final summary = await _getSummary();
+      final result = await _getTransactions();
       emit(RewardsLoaded(
         summary: summary,
         transactions: result.transactions,
@@ -95,10 +109,15 @@ class RewardsBloc extends Bloc<RewardsEvent, RewardsState> {
     }
   }
 
-  Future<void> _onRedeem(RewardsRedeemRequested event, Emitter<RewardsState> emit) async {
+  Future<void> _onRedeem(
+    RewardsRedeemRequested event,
+    Emitter<RewardsState> emit,
+  ) async {
+    emit(const RewardsLoading());
     try {
-      final result = await _dataSource.redeemPoints(event.points);
-      final redeemedPoints = (result['redeemed_points'] as num?)?.toInt() ?? event.points;
+      final result = await _redeem(event.points);
+      final redeemedPoints =
+          (result['redeemed_points'] as num?)?.toInt() ?? event.points;
       final discountUsd = (result['discount_usd'] as num?)?.toDouble() ?? 0;
       final newBalance = (result['new_balance'] as num?)?.toInt() ?? 0;
       emit(RewardsRedeemSuccess(
@@ -106,7 +125,7 @@ class RewardsBloc extends Bloc<RewardsEvent, RewardsState> {
         discountUsd: discountUsd,
         newBalance: newBalance,
       ));
-      // Reload after redeem
+      // Reload after successful redeem
       add(const RewardsLoadRequested());
     } catch (e) {
       emit(RewardsError(e.toString()));

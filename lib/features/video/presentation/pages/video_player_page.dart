@@ -26,6 +26,9 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   bool _initialized = false;
   bool _error = false;
   bool _showControls = true;
+  // Throttle: only rebuild when position advances ≥250 ms or play state changes.
+  Duration _lastPosition = Duration.zero;
+  bool _lastIsPlaying = false;
 
   @override
   void initState() {
@@ -55,7 +58,15 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   }
 
   void _onControllerUpdate() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final v = _controller.value;
+    final posChanged = (v.position - _lastPosition).abs() >= const Duration(milliseconds: 250);
+    final playChanged = v.isPlaying != _lastIsPlaying;
+    if (posChanged || playChanged) {
+      _lastPosition = v.position;
+      _lastIsPlaying = v.isPlaying;
+      setState(() {});
+    }
   }
 
   void _scheduleHideControls() {

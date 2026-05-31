@@ -42,6 +42,12 @@ Future<void> runStripeCheckout({
     return;
   }
 
+  // Capture before async gaps so cart clear + navigation always fire even if
+  // the calling widget unmounts while the payment sheet is open.
+  final cartBloc = context.read<CartBloc>();
+  final router = GoRouter.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+
   final shipping = _addressToShipping(selectedAddress, authState.user.email);
   final orderItems = _cartToOrderItems(cartItems);
 
@@ -108,14 +114,13 @@ Future<void> runStripeCheckout({
 
     await Stripe.instance.presentPaymentSheet();
 
-    if (!context.mounted) return;
-    context.read<CartBloc>().add(const CartClearRequested());
-    context.go('/order-confirmation/${order.id}');
+    // Use pre-captured references — safe regardless of widget mount state.
+    cartBloc.add(const CartClearRequested());
+    router.go('/order-confirmation/${order.id}');
   } on StripeException catch (e) {
-    if (!context.mounted) return;
     if (e.error.code == FailureCode.Canceled) return;
     final msg = e.error.localizedMessage ?? e.error.message ?? 'Payment failed';
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: AppTheme.destructive),
     );
   } catch (e, st) {
@@ -125,11 +130,9 @@ Future<void> runStripeCheckout({
     if (kDebugMode) {
       debugPrint('[StripeCheckout] $message\n$st');
     }
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
-      );
-    }
+    messenger.showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
+    );
   }
 }
 

@@ -261,15 +261,33 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       return;
     }
     emit(const CartLoading());
+    final failed = <CartItemEntity>[];
     for (final item in items) {
       try {
         await _addItem(item);
       } catch (e) {
-        if (kDebugMode) debugPrint('[CartBloc] guest item migration skipped: $e');
+        if (kDebugMode) debugPrint('[CartBloc] guest item merge failed: $e');
+        failed.add(item);
       }
     }
-    await _localCart.clearCart();
-    final cart = await _getCart();
-    emit(CartLoaded(cart));
+    // Only wipe local storage for items that were successfully synced.
+    // Items that failed (e.g. out-of-stock) are preserved so they aren't silently lost.
+    if (failed.isEmpty) {
+      await _localCart.clearCart();
+    } else {
+      _localCart.saveCart(CartEntity(
+        id: 'guest',
+        userId: '',
+        items: failed,
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      ));
+    }
+    try {
+      final cart = await _getCart();
+      emit(CartLoaded(cart));
+    } catch (e) {
+      final api = getApiException(e);
+      emit(CartError(api?.message ?? e.toString()));
+    }
   }
 }

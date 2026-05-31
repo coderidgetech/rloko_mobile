@@ -72,14 +72,21 @@ import '../../features/config/domain/usecases/get_site_config_usecase.dart';
 import '../../features/shipping/domain/usecases/calculate_shipping_usecase.dart';
 import '../../features/shipping/domain/usecases/get_shipping_methods_usecase.dart';
 import '../../features/payment/data/datasources/payment_remote_datasource.dart';
+import '../../features/payment/data/repositories/payment_repository_impl.dart';
+import '../../features/payment/domain/repositories/payment_repository.dart';
 import '../../features/payment/domain/usecases/create_payment_intent_usecase.dart';
 import '../../features/rewards/data/datasources/rewards_remote_datasource.dart';
+import '../../features/rewards/data/repositories/rewards_repository_impl.dart';
+import '../../features/rewards/domain/repositories/rewards_repository.dart';
 import '../../features/rewards/domain/usecases/get_rewards_summary_usecase.dart';
+import '../../features/rewards/domain/usecases/get_rewards_transactions_usecase.dart';
+import '../../features/rewards/domain/usecases/redeem_rewards_usecase.dart';
 import '../../features/review/data/datasources/review_remote_datasource.dart';
 import '../../features/review/data/repositories/review_repository_impl.dart';
 import '../../features/review/domain/repositories/review_repository.dart';
 import '../../features/review/domain/usecases/get_my_reviews_usecase.dart';
 import '../../features/review/domain/usecases/get_product_reviews_usecase.dart';
+import '../../features/review/domain/usecases/submit_review_usecase.dart';
 import '../../features/product/data/datasources/product_local_datasource.dart';
 import '../../features/product/domain/usecases/get_recommendations_usecase.dart';
 import '../notifications/fcm_service.dart';
@@ -181,6 +188,8 @@ Future<void> initInjection() async {
   );
 
   // Cart
+  // CartLocalDataSource is intentionally wired to CartBloc directly (not via CartRepositoryImpl).
+  // It handles guest-cart storage at the BLoC layer; CartRepositoryImpl is remote-only.
   sl.registerLazySingleton<CartLocalDataSource>(
     () => CartLocalDataSource(sl<SharedPreferences>()),
   );
@@ -332,16 +341,28 @@ Future<void> initInjection() async {
   sl.registerLazySingleton<PaymentRemoteDataSource>(
     () => PaymentRemoteDataSource(sl<DioClient>()),
   );
+  sl.registerLazySingleton<PaymentRepository>(
+    () => PaymentRepositoryImpl(sl<PaymentRemoteDataSource>()),
+  );
   sl.registerLazySingleton<CreatePaymentIntentUseCase>(
-    () => CreatePaymentIntentUseCase(sl<PaymentRemoteDataSource>()),
+    () => CreatePaymentIntentUseCase(sl<PaymentRepository>()),
   );
 
-  // Rewards (order-derived summary from API)
+  // Rewards
   sl.registerLazySingleton<RewardsRemoteDataSource>(
     () => RewardsRemoteDataSource(sl<DioClient>()),
   );
+  sl.registerLazySingleton<RewardsRepository>(
+    () => RewardsRepositoryImpl(sl<RewardsRemoteDataSource>()),
+  );
   sl.registerLazySingleton<GetRewardsSummaryUseCase>(
-    () => GetRewardsSummaryUseCase(sl<RewardsRemoteDataSource>()),
+    () => GetRewardsSummaryUseCase(sl<RewardsRepository>()),
+  );
+  sl.registerLazySingleton<GetRewardsTransactionsUseCase>(
+    () => GetRewardsTransactionsUseCase(sl<RewardsRepository>()),
+  );
+  sl.registerLazySingleton<RedeemRewardsUseCase>(
+    () => RedeemRewardsUseCase(sl<RewardsRepository>()),
   );
 
   // Reviews
@@ -356,6 +377,9 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<GetProductReviewsUseCase>(
     () => GetProductReviewsUseCase(sl<ReviewRepository>()),
+  );
+  sl.registerLazySingleton<SubmitReviewUseCase>(
+    () => SubmitReviewUseCase(sl<ReviewRepository>()),
   );
 
   // Product local cache (offline / SharedPreferences)

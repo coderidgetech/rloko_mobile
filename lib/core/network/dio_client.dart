@@ -10,8 +10,8 @@ const _authTokenKey = 'auth_token';
 const _authTokenPrefsKey = 'auth_token_prefs';
 
 /// Provides configured Dio instance and token persistence for mobile.
-/// Persists token in both secure storage and SharedPreferences so session
-/// survives even when FlutterSecureStorage fails (e.g. some Android emulators).
+/// Tokens are stored in FlutterSecureStorage (Keystore/Keychain) with a
+/// SharedPreferences fallback for Android emulators where secure storage fails.
 class DioClient {
   DioClient({
     FlutterSecureStorage? secureStorage,
@@ -29,11 +29,20 @@ class DioClient {
       _errorInterceptor(dio),
     ]);
     _dio = dio;
+    // Separate Dio for token refresh — no auth interceptor so the expired
+    // Bearer token is not re-attached to the refresh request itself.
+    _refreshDio = Dio(BaseOptions(
+      baseUrl: kBaseUrl,
+      connectTimeout: Duration(seconds: kTimeoutSeconds),
+      receiveTimeout: Duration(seconds: kTimeoutSeconds),
+      headers: {'Content-Type': 'application/json'},
+    ));
   }
 
   final FlutterSecureStorage _storage;
   final SharedPreferences? _prefs;
   late final Dio _dio;
+  late final Dio _refreshDio;
 
   Dio get dio => _dio;
 
@@ -144,7 +153,7 @@ class DioClient {
 
   Future<bool> _refreshToken() async {
     try {
-      final response = await _dio.post<Map<String, dynamic>>('/auth/refresh');
+      final response = await _refreshDio.post<Map<String, dynamic>>('/auth/refresh');
       final data = response.data;
       if (data != null && data['token'] != null) {
         await saveToken(data['token'] as String);
@@ -160,47 +169,47 @@ class DioClient {
   }
 
   Future<void> saveToken(String token) async {
-    if (_prefs != null) await _prefs!.setString(_authTokenPrefsKey, token);
+    // Write to secure storage first; SharedPreferences is a backup for emulators.
     try {
       await _storage.write(key: _authTokenKey, value: token);
     } catch (e) {
-      if (kDebugMode) debugPrint('[DioClient] Secure storage write failed: $e (token saved to prefs)');
+      if (kDebugMode) debugPrint('[DioClient] Secure storage write failed: $e');
     }
-    if (kDebugMode) debugPrint('[DioClient] Token saved (session will persist across app restarts)');
+    if (_prefs != null) await _prefs!.setString(_authTokenPrefsKey, token);
+    if (kDebugMode) debugPrint('[DioClient] Token saved');
   }
 
   Future<void> clearToken() async {
-    if (_prefs != null) await _prefs!.remove(_authTokenPrefsKey);
     try {
       await _storage.delete(key: _authTokenKey);
     } catch (_) {}
+    if (_prefs != null) await _prefs!.remove(_authTokenPrefsKey);
   }
 
-  /// Reads token: tries SharedPreferences first (reliable on emulators), then secure storage.
-  /// FlutterSecureStorage can fail on some Android emulators, so prefs is preferred for reads.
+  /// Reads token: tries SecureStorage (Keystore/Keychain) first; falls back to
+  /// SharedPreferences only on devices where secure storage is unavailable (e.g. some emulators).
   Future<String?> getToken() async {
-    // 1. Try SharedPreferences first - most reliable on Android emulator
-    var token = _prefs?.getString(_authTokenPrefsKey);
-    if (token != null && token.isNotEmpty) {
-      if (kDebugMode && !_tokenLogged) {
-        _tokenLogged = true;
-        debugPrint('[DioClient] Token found in SharedPreferences (session restored)');
-      }
-      return token;
-    }
-    // 2. Fall back to secure storage (wrap in try-catch - can throw on some emulators)
+    // 1. Prefer secure storage on real devices.
     try {
-      token = await _storage.read(key: _authTokenKey);
+      final token = await _storage.read(key: _authTokenKey);
       if (token != null && token.isNotEmpty) {
-        if (_prefs != null) await _prefs!.setString(_authTokenPrefsKey, token);
         if (kDebugMode && !_tokenLogged) {
           _tokenLogged = true;
-          debugPrint('[DioClient] Token found in secure storage (session restored)');
+          debugPrint('[DioClient] Token found in secure storage');
         }
         return token;
       }
     } catch (e) {
-      if (kDebugMode) debugPrint('[DioClient] Secure storage read failed: $e');
+      if (kDebugMode) debugPrint('[DioClient] Secure storage read failed: $e — trying prefs');
+    }
+    // 2. Fall back to SharedPreferences (Android emulator / secure storage unavailable).
+    final token = _prefs?.getString(_authTokenPrefsKey);
+    if (token != null && token.isNotEmpty) {
+      if (kDebugMode && !_tokenLogged) {
+        _tokenLogged = true;
+        debugPrint('[DioClient] Token found in SharedPreferences (emulator fallback)');
+      }
+      return token;
     }
     if (kDebugMode && !_tokenLogged) {
       _tokenLogged = true;

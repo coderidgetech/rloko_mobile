@@ -132,6 +132,7 @@ class _HeroSection extends StatefulWidget {
 class _HeroSectionState extends State<_HeroSection> {
   late final PageController _pageController;
   Timer? _timer;
+  int _lastSlideCount = 0;
 
   @override
   void initState() {
@@ -147,6 +148,10 @@ class _HeroSectionState extends State<_HeroSection> {
   }
 
   void _startTimer(int slideCount) {
+    // No-op if already running with the same count — avoids resetting the 5 s
+    // countdown on every config poll while slides haven't changed.
+    if (slideCount == _lastSlideCount && _timer != null && _timer!.isActive) return;
+    _lastSlideCount = slideCount;
     _timer?.cancel();
     if (slideCount <= 1) return;
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -159,12 +164,17 @@ class _HeroSectionState extends State<_HeroSection> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ConfigBloc, ConfigState>(
-      buildWhen: (a, b) => b is ConfigLoaded,
+    // BlocConsumer: listener starts the timer (side-effect); builder only builds UI.
+    return BlocConsumer<ConfigBloc, ConfigState>(
+      listenWhen: (_, b) => b is ConfigLoaded,
+      listener: (context, state) {
+        final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
+        _startTimer(_heroSlidesFromConfig(config).length);
+      },
+      buildWhen: (_, b) => b is ConfigLoaded,
       builder: (context, state) {
         final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
         final slides = _heroSlidesFromConfig(config);
-        _startTimer(slides.length);
         return _HeroCarousel(slides: slides, pageController: _pageController);
       },
     );
