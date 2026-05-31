@@ -62,14 +62,20 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   int _productReviewsTotal = 0;
   bool _productReviewsLoading = false;
   String? _productReviewsError;
-  double _dragStartX = 0;
-  double _dragEndX = 0;
+  late final PageController _pageController;
   Timer? _imageTimer;
   int _timerImageCount = 0;
 
   @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
   void dispose() {
     _imageTimer?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -79,13 +85,14 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     _timerImageCount = count;
     _imageTimer?.cancel();
     _imageTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted) return;
-      setState(() => _imageIndex = (_imageIndex + 1) % _timerImageCount);
+      if (!mounted || !_pageController.hasClients) return;
+      final next = (_imageIndex + 1) % _timerImageCount;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
     });
-  }
-
-  void _resetImageTimer() {
-    if (_timerImageCount > 1) _startImageTimer(_timerImageCount);
   }
 
   void _showSizeChartDialog(BuildContext context) {
@@ -685,74 +692,45 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           // Main image container: relative aspect-[3/4] bg-muted overflow-hidden
-                          GestureDetector(
-                            onHorizontalDragStart: (d) =>
-                                _dragStartX = d.globalPosition.dx,
-                            onHorizontalDragUpdate: (d) =>
-                                _dragEndX = d.globalPosition.dx,
-                            onHorizontalDragEnd: (DragEndDetails _) {
-                              final distance = _dragStartX - _dragEndX;
-                              if (distance > 50 &&
-                                  _imageIndex < images.length - 1) {
-                                setState(() => _imageIndex++);
-                                _resetImageTimer();
-                              } else if (distance < -50 && _imageIndex > 0) {
-                                setState(() => _imageIndex--);
-                                _resetImageTimer();
-                              }
-                              _dragStartX = 0;
-                              _dragEndX = 0;
-                            },
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  color: AppTheme.mutedColor(context),
-                                  child: AspectRatio(
-                                    aspectRatio: 3 / 4,
-                                    child: hasProductImages
-                                        ? CachedNetworkImage(
-                                            imageUrl: safeImageUrl(
-                                              images[_imageIndex.clamp(
-                                                0,
-                                                images.length - 1,
-                                              )],
-                                            ),
-                                            fit: BoxFit.cover,
-                                            placeholder: (_, __) => Container(
-                                              color: AppTheme.mutedColor(
-                                                context,
-                                              ),
-                                              child: const Center(
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
+                          Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                color: AppTheme.mutedColor(context),
+                                child: AspectRatio(
+                                  aspectRatio: 3 / 4,
+                                  child: hasProductImages
+                                      ? PageView.builder(
+                                          controller: _pageController,
+                                          itemCount: images.length,
+                                          onPageChanged: (i) =>
+                                              setState(() => _imageIndex = i),
+                                          itemBuilder: (context, i) =>
+                                              CachedNetworkImage(
+                                                imageUrl: safeImageUrl(images[i]),
+                                                fit: BoxFit.cover,
+                                                placeholder: (_, __) => Container(
+                                                  color: AppTheme.mutedColor(context),
+                                                  child: const Center(
+                                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                                  ),
+                                                ),
+                                                errorWidget: (_, __, ___) => Container(
+                                                  color: AppTheme.mutedColor(context),
+                                                  child: const Icon(Icons.image_not_supported, size: 64),
                                                 ),
                                               ),
-                                            ),
-                                            errorWidget: (_, __, ___) =>
-                                                Container(
-                                              color: AppTheme.mutedColor(
-                                                context,
-                                              ),
-                                              child: const Icon(
-                                                Icons.image_not_supported,
-                                                size: 64,
-                                              ),
-                                            ),
-                                          )
-                                        : Center(
-                                            child: Icon(
-                                              Icons.image_outlined,
-                                              size: 64,
-                                              color: AppTheme.foregroundColor(
-                                                context,
-                                              ).withValues(alpha: 0.35),
-                                            ),
+                                        )
+                                      : Center(
+                                          child: Icon(
+                                            Icons.image_outlined,
+                                            size: 64,
+                                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.35),
                                           ),
-                                  ),
+                                        ),
                                 ),
+                              ),
                                 // Wishlist button (match React: heart on image so user can add to wishlist from any page)
                                 Positioned(
                                   top: 12,
@@ -828,7 +806,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                       (i) => GestureDetector(
                                         onTap: () {
                                           setState(() => _imageIndex = i);
-                                          _resetImageTimer();
+                                          _pageController.animateToPage(i,
+                                            duration: const Duration(milliseconds: 350),
+                                            curve: Curves.easeInOut,
+                                          );
                                         },
                                         child: Container(
                                           margin: const EdgeInsets.symmetric(
@@ -920,7 +901,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                   ),
                               ],
                             ),
-                          ),
                           if (hasProductImages)
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -938,8 +918,13 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                         right: i < images.length - 1 ? 8 : 0,
                                       ),
                                       child: GestureDetector(
-                                        onTap: () =>
-                                            setState(() => _imageIndex = i),
+                                        onTap: () {
+                                          setState(() => _imageIndex = i);
+                                          _pageController.animateToPage(i,
+                                            duration: const Duration(milliseconds: 350),
+                                            curve: Curves.easeInOut,
+                                          );
+                                        },
                                         child: Container(
                                           width: 64,
                                           height: 64,
