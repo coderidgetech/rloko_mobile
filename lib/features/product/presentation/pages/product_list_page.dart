@@ -102,6 +102,7 @@ class _ProductListPageState extends State<ProductListPage> {
       backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
       body: BlocBuilder<ProductListBloc, ProductListState>(
+        buildWhen: (prev, next) => next is ProductListLoaded || next is ProductListLoading || next is ProductListError || next is ProductListInitial,
         builder: (context, state) {
           if (state is ProductListLoading) {
             return const Padding(
@@ -140,7 +141,7 @@ class _ProductListPageState extends State<ProductListPage> {
                     ),
                     itemCount: products.length,
                     itemBuilder: (context, index) =>
-                        ProductGridTile(product: products[index]),
+                        ProductGridTile(key: ValueKey(products[index].id), product: products[index]),
                   ),
                 ),
               ],

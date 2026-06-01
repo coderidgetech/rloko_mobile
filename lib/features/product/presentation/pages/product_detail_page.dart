@@ -716,6 +716,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             const DeliveryLocationStrip(),
             Expanded(
               child: BlocBuilder<ProductDetailBloc, ProductDetailState>(
+                buildWhen: (prev, next) => next is ProductDetailLoaded || next is ProductDetailLoading || next is ProductDetailError,
                 builder: (context, state) {
                 if (state is ProductDetailLoading) {
                   return const Center(
@@ -765,10 +766,11 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                     (_) { if (mounted) _startImageTimer(images.length); },
                   );
                 }
-                final isWishlisted =
-                    context.read<WishlistBloc>().state is WishlistLoaded &&
-                    (context.read<WishlistBloc>().state as WishlistLoaded).items
-                        .any((i) => i.productId == product.id);
+                final isWishlisted = context.select<WishlistBloc, bool>((bloc) {
+                  final s = bloc.state;
+                  if (s is! WishlistLoaded) return false;
+                  return s.items.any((i) => i.productId == product.id);
+                });
 
                 return SingleChildScrollView(
                   child: Column(

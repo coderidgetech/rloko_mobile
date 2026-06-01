@@ -207,6 +207,7 @@ class _StoryCirclesSection extends StatelessWidget {
       builder: (context, state) {
         var categories = state is CategoryListLoaded ? state.categories : <CategoryEntity>[];
         if (categories.isEmpty) {
+          // TODO: context.select — only subscribe to config.categories to reduce rebuilds
           final configState = context.watch<ConfigBloc>().state;
           final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
           categories = categoriesFromConfig(config.categories);
@@ -404,6 +405,7 @@ class _StoryCirclesStrip extends StatelessWidget {
               );
             }
             return Padding(
+              key: ValueKey(item.id),
               padding: const EdgeInsets.only(right: 16),
               child: InkWell(
                 onTap: () => context.push(item.link),
@@ -802,6 +804,7 @@ class _ShopByCategorySection extends StatelessWidget {
         }
         var categories = state is CategoryListLoaded ? state.categories : <CategoryEntity>[];
         if (categories.isEmpty) {
+          // TODO: context.select — only subscribe to config.categories to reduce rebuilds
           final configState = context.watch<ConfigBloc>().state;
           final config = configState is ConfigLoaded ? configState.config : SiteConfig.defaultConfig;
           categories = categoriesFromConfig(config.categories);
@@ -834,7 +837,7 @@ class _ShopByCategorySection extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
-                  return _ShopCategoryCard(category: categories[index], index: index);
+                  return _ShopCategoryCard(key: ValueKey(categories[index].id), category: categories[index], index: index);
                 },
               ),
             ],
@@ -1217,6 +1220,7 @@ class _HomeProductSectionsState extends State<_HomeProductSections> {
   Widget build(BuildContext context) {
     final s = widget.config.homepage.sections;
     return BlocBuilder<ProductListBloc, ProductListState>(
+      buildWhen: (prev, next) => next is ProductListLoaded || next is ProductListLoading || next is ProductListHomeLoaded || next is ProductListHomeLoading || next is ProductListError || next is ProductListInitial,
       builder: (context, state) {
         // State was overwritten by ProductListLoadRequested (e.g. from product detail or search).
         // Re-request home sections only when Home is the visible route (not when user is on category/search).
@@ -1336,7 +1340,7 @@ class _ProductGrid extends StatelessWidget {
           mainAxisSpacing: 12,
         ),
         itemCount: products.length,
-        itemBuilder: (context, index) => ProductGridTile(product: products[index]),
+        itemBuilder: (context, index) => ProductGridTile(key: ValueKey(products[index].id), product: products[index]),
       ),
     );
   }
