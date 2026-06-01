@@ -19,12 +19,18 @@ final class OrderListLoaded extends OrderListState {
     required this.orders,
     required this.total,
     required this.filter,
+    this.hasMore = false,
+    this.page = 1,
+    this.isLoadingMore = false,
   });
   final List<OrderEntity> orders;
   final int total;
   final OrderListFilter filter;
+  final bool hasMore;
+  final int page;
+  final bool isLoadingMore;
   @override
-  List<Object?> get props => [orders, total, filter];
+  List<Object?> get props => [orders, total, filter, hasMore, page, isLoadingMore];
 }
 
 final class OrderListError extends OrderListState {

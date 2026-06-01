@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
-import '../../../../core/widgets/bottom_nav.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../../config/domain/entities/site_config.dart';
 import '../../../config/presentation/bloc/config_bloc.dart';
@@ -255,7 +254,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
           ],
         ],
       ),
-      bottomNavigationBar: const BottomNav(currentIndex: 1),
     );
           },
         );

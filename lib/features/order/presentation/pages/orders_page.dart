@@ -22,11 +22,28 @@ class OrdersPage extends StatefulWidget {
 class _OrdersPageState extends State<OrdersPage> {
   OrderListFilter _filter = OrderListFilter.active;
   bool _hasLoadedWhileAuthenticated = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     // Do not load here — wait until we know auth state so we never call GET /orders without a token
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      context.read<OrderListBloc>().add(const OrderListLoadMore());
+    }
   }
 
   void _ensureOrdersLoadedIfAuthenticated() {
@@ -39,6 +56,7 @@ class _OrdersPageState extends State<OrdersPage> {
 
   void _onFilterChanged(OrderListFilter f) {
     setState(() => _filter = f);
+    _hasLoadedWhileAuthenticated = true;
     context.read<OrderListBloc>().add(OrderListLoadRequested(filter: f));
   }
 
@@ -99,7 +117,9 @@ class _OrdersPageState extends State<OrdersPage> {
                     if (state is OrderListError) {
                       final isUnauth = state.message.contains('Sign in');
                       return EmptyState(
-                        title: isUnauth ? 'Sign in to view orders' : 'Could not load orders',
+                        title: isUnauth
+                            ? 'Sign in to view orders'
+                            : 'Could not load orders',
                         subtitle: state.message,
                         icon: Icons.receipt_long_outlined,
                         actionLabel: isUnauth ? 'Sign in' : 'Retry',
@@ -115,28 +135,40 @@ class _OrdersPageState extends State<OrdersPage> {
                       );
                     }
                     if (state is OrderListLoaded) {
-                  if (state.orders.isEmpty) {
-                    return EmptyState(
-                      title: 'No orders yet',
-                      subtitle: 'Start shopping to see your orders here',
-                      icon: Icons.receipt_long_outlined,
-                      actionLabel: 'Continue shopping',
-                      onAction: () => context.go('/'),
-                    );
-                  }
-                  return ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: state.orders.length,
-                    itemBuilder: (context, index) {
-                      final order = state.orders[index];
-                      return _OrderCard(
-                        order: order,
-                        onTap: () => context.push('/orders/${order.id}'),
+                      if (state.orders.isEmpty) {
+                        return EmptyState(
+                          title: 'No orders yet',
+                          subtitle: 'Start shopping to see your orders here',
+                          icon: Icons.receipt_long_outlined,
+                          actionLabel: 'Continue shopping',
+                          onAction: () => context.go('/'),
+                        );
+                      }
+                      return ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount:
+                            state.orders.length + (state.isLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == state.orders.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            );
+                          }
+                          final order = state.orders[index];
+                          return _OrderCard(
+                            order: order,
+                            onTap: () => context.push('/orders/${order.id}'),
+                          );
+                        },
                       );
-                    },
-                  );
-                }
-                return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                    }
+                    return const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    );
                   },
                 ),
               ),
@@ -152,7 +184,11 @@ class _OrdersPageState extends State<OrdersPage> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor(context),
-        border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.08))),
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.08),
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -193,7 +229,9 @@ class _TabChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Material(
-        color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.05),
+        color: selected
+            ? AppTheme.primaryColor(context)
+            : AppTheme.foregroundColor(context).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
           onTap: onTap,
@@ -206,7 +244,9 @@ class _TabChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: selected ? AppTheme.primaryForegroundColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                color: selected
+                    ? AppTheme.primaryForegroundColor(context)
+                    : AppTheme.foregroundColor(context).withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -226,7 +266,8 @@ class _OrderCard extends StatelessWidget {
     final imageUrl = order.items.isNotEmpty ? order.items.first.image : null;
     final itemCount = order.items.fold<int>(0, (s, i) => s + i.quantity);
     final statusDisplay = _statusDisplay(context, order.status);
-    final isInTransit = order.status == 'shipped' || order.status == 'in-transit';
+    final isInTransit =
+        order.status == 'shipped' || order.status == 'in-transit';
     final isDelivered = order.status == 'delivered';
     final deliveryDate = _formatDateShort(order.createdAt);
 
@@ -234,7 +275,9 @@ class _OrderCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+        side: BorderSide(
+          color: AppTheme.foregroundColor(context).withValues(alpha: 0.12),
+        ),
       ),
       elevation: 0,
       shadowColor: Colors.transparent,
@@ -266,13 +309,17 @@ class _OrderCard extends StatelessWidget {
                         _formatDate(order.createdAt),
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
+                          color: AppTheme.foregroundColor(context)
+                              .withValues(alpha: 0.5),
                         ),
                       ),
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: statusDisplay.color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(999),
@@ -280,7 +327,11 @@ class _OrderCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(statusDisplay.icon, size: 16, color: statusDisplay.color),
+                        Icon(
+                          statusDisplay.icon,
+                          size: 16,
+                          color: statusDisplay.color,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           statusDisplay.label,
@@ -312,7 +363,10 @@ class _OrderCard extends StatelessWidget {
                             width: 64,
                             height: 64,
                             color: AppTheme.mutedColor(context),
-                            child: const Icon(Icons.image_not_supported, size: 24),
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 24,
+                            ),
                           ),
                   ),
                   const SizedBox(width: 12),
@@ -321,15 +375,19 @@ class _OrderCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '$itemCount item${itemCount == 1 ? '' : 'items'}',
+                          '$itemCount item${itemCount == 1 ? '' : 's'}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
+                            color: AppTheme.foregroundColor(context)
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          CurrencyScope.of(context).formatPrice(order.total, null),
+                          CurrencyScope.of(context).formatPrice(
+                            order.total,
+                            null,
+                          ),
                           style: const TextStyle(
                             fontWeight: FontWeight.w500,
                             fontSize: 18,
@@ -338,28 +396,41 @@ class _OrderCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: AppTheme.foregroundColor(context)
+                        .withValues(alpha: 0.4),
+                  ),
                 ],
               ),
               // Delivery strip (in-transit / delivered)
               if (isInTransit) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryColor(context).withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.local_shipping, size: 16, color: AppTheme.primaryColor(context)),
+                      Icon(
+                        Icons.local_shipping,
+                        size: 16,
+                        color: AppTheme.primaryColor(context),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Expected delivery: $deliveryDate',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
+                            color: AppTheme.foregroundColor(context)
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -370,21 +441,29 @@ class _OrderCard extends StatelessWidget {
               if (isDelivered) ...[
                 const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.check_circle, size: 16, color: Colors.green.shade700),
+                      Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: Colors.green.shade700,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Delivered on $deliveryDate',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppTheme.foregroundColor(context).withValues(alpha: 0.7),
+                            color: AppTheme.foregroundColor(context)
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -402,25 +481,61 @@ class _OrderCard extends StatelessWidget {
   String _formatDateShort(String iso) {
     try {
       final d = DateTime.parse(iso);
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[d.month - 1]} ${d.day}, ${d.year}';
     } catch (_) {
       return iso;
     }
   }
 
-  ({String label, Color color, IconData icon}) _statusDisplay(BuildContext context, String status) {
+  ({String label, Color color, IconData icon}) _statusDisplay(
+    BuildContext context,
+    String status,
+  ) {
     switch (status) {
       case 'delivered':
-        return (label: 'Delivered', color: Colors.green, icon: Icons.check_circle);
+        return (
+          label: 'Delivered',
+          color: Colors.green,
+          icon: Icons.check_circle,
+        );
       case 'shipped':
-        return (label: 'Shipped', color: Colors.blue, icon: Icons.local_shipping);
+        return (
+          label: 'Shipped',
+          color: Colors.blue,
+          icon: Icons.local_shipping,
+        );
       case 'processing':
-        return (label: 'Processing', color: Colors.orange, icon: Icons.schedule);
+        return (
+          label: 'Processing',
+          color: Colors.orange,
+          icon: Icons.schedule,
+        );
       case 'cancelled':
-        return (label: 'Cancelled', color: AppTheme.destructive, icon: Icons.cancel);
+        return (
+          label: 'Cancelled',
+          color: AppTheme.destructive,
+          icon: Icons.cancel,
+        );
       default:
-        return (label: status, color: AppTheme.mutedForegroundColor(context), icon: Icons.receipt);
+        return (
+          label: status,
+          color: AppTheme.mutedForegroundColor(context),
+          icon: Icons.receipt,
+        );
     }
   }
 

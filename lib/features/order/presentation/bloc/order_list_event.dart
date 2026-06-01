@@ -8,7 +8,7 @@ sealed class OrderListEvent extends Equatable {
 
 final class OrderListLoadRequested extends OrderListEvent {
   const OrderListLoadRequested({
-    this.limit = 50,
+    this.limit = 20,
     this.skip = 0,
     this.filter = OrderListFilter.all,
   });
@@ -17,4 +17,8 @@ final class OrderListLoadRequested extends OrderListEvent {
   final OrderListFilter filter;
   @override
   List<Object?> get props => [limit, skip, filter];
+}
+
+final class OrderListLoadMore extends OrderListEvent {
+  const OrderListLoadMore();
 }

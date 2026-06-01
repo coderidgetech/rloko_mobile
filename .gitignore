@@ -50,3 +50,6 @@ tool/node_modules/
 
 # Active env file (secrets); commit only app.*.env templates, not the active one
 assets/env/app.env
+# Environment files with real API keys (use CI secrets)
+assets/env/app.prod.env.real
+assets/env/app.local.env.real

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../core/di/injection.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../../../core/notifications/fcm_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 
-/// Notifications: preference toggles (persisted) and notification history log.
+/// Notifications: preference toggles (persisted + best-effort API sync) and notification history log.
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
 
@@ -33,11 +35,47 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     final log = await FCMService.readLog();
+
+    // Local prefs as baseline
+    bool orderUpdates = prefs.getBool(_keyOrderUpdates) ?? true;
+    bool promotions = prefs.getBool(_keyPromotions) ?? true;
+    bool newArrivals = prefs.getBool(_keyNewArrivals) ?? false;
+
+    // Best-effort: fetch preferences from API and override local values
+    try {
+      final response =
+          await sl<DioClient>().dio.get<dynamic>('/notifications/preferences');
+      final data = response.data;
+      if (data is List) {
+        for (final item in data) {
+          if (item is Map) {
+            final type = item['type']?.toString();
+            final enabled = item['enabled'] as bool? ?? true;
+            if (type == _keyOrderUpdates) orderUpdates = enabled;
+            if (type == _keyPromotions) promotions = enabled;
+            if (type == _keyNewArrivals) newArrivals = enabled;
+          }
+        }
+      } else if (data is Map) {
+        if (data.containsKey(_keyOrderUpdates)) {
+          orderUpdates = (data[_keyOrderUpdates] as bool?) ?? orderUpdates;
+        }
+        if (data.containsKey(_keyPromotions)) {
+          promotions = (data[_keyPromotions] as bool?) ?? promotions;
+        }
+        if (data.containsKey(_keyNewArrivals)) {
+          newArrivals = (data[_keyNewArrivals] as bool?) ?? newArrivals;
+        }
+      }
+    } catch (_) {
+      // Fall back to local prefs — best-effort sync only
+    }
+
     if (!mounted) return;
     setState(() {
-      _orderUpdates = prefs.getBool(_keyOrderUpdates) ?? true;
-      _promotions = prefs.getBool(_keyPromotions) ?? true;
-      _newArrivals = prefs.getBool(_keyNewArrivals) ?? false;
+      _orderUpdates = orderUpdates;
+      _promotions = promotions;
+      _newArrivals = newArrivals;
       _log = log;
       _loading = false;
     });
@@ -46,16 +84,34 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Future<void> _setOrderUpdates(bool v) async {
     setState(() => _orderUpdates = v);
     (await SharedPreferences.getInstance()).setBool(_keyOrderUpdates, v);
+    try {
+      await sl<DioClient>().dio.put<dynamic>(
+        '/notifications/preferences',
+        data: {'type': _keyOrderUpdates, 'enabled': v},
+      );
+    } catch (_) {} // best-effort
   }
 
   Future<void> _setPromotions(bool v) async {
     setState(() => _promotions = v);
     (await SharedPreferences.getInstance()).setBool(_keyPromotions, v);
+    try {
+      await sl<DioClient>().dio.put<dynamic>(
+        '/notifications/preferences',
+        data: {'type': _keyPromotions, 'enabled': v},
+      );
+    } catch (_) {} // best-effort
   }
 
   Future<void> _setNewArrivals(bool v) async {
     setState(() => _newArrivals = v);
     (await SharedPreferences.getInstance()).setBool(_keyNewArrivals, v);
+    try {
+      await sl<DioClient>().dio.put<dynamic>(
+        '/notifications/preferences',
+        data: {'type': _keyNewArrivals, 'enabled': v},
+      );
+    } catch (_) {} // best-effort
   }
 
   Future<void> _clearLog() async {
@@ -83,7 +139,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   const SizedBox(height: 8),
                   Text(
                     'Manage what you receive',
-                    style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppTheme.mutedForegroundColor(context),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
@@ -115,7 +174,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     children: [
                       const Text(
                         'Recent',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       if (_log.isNotEmpty)
                         TextButton(
@@ -163,12 +225,18 @@ class _EmptyNotifications extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'No notifications yet',
-            style: TextStyle(fontSize: 16, color: AppTheme.mutedForegroundColor(context)),
+            style: TextStyle(
+              fontSize: 16,
+              color: AppTheme.mutedForegroundColor(context),
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'Order and promo updates will appear here.',
-            style: TextStyle(fontSize: 13, color: AppTheme.mutedForegroundColor(context)),
+            style: TextStyle(
+              fontSize: 13,
+              color: AppTheme.mutedForegroundColor(context),
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -187,63 +255,85 @@ class _NotificationCard extends StatelessWidget {
     if (diff.inHours < 1) return '${diff.inMinutes}m ago';
     if (diff.inDays < 1) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[ts.month - 1]} ${ts.day}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.backgroundColor(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.borderColor(context)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor(context).withValues(alpha: 0.08),
-              shape: BoxShape.circle,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppTheme.backgroundColor(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.borderColor(context)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor(context).withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.notifications_outlined,
+                size: 18,
+                color: AppTheme.primaryColor(context),
+              ),
             ),
-            child: Icon(
-              Icons.notifications_outlined,
-              size: 18,
-              color: AppTheme.primaryColor(context),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (entry.title.isNotEmpty)
-                  Text(
-                    entry.title,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                if (entry.body.isNotEmpty) ...[
-                  if (entry.title.isNotEmpty) const SizedBox(height: 2),
-                  Text(
-                    entry.body,
-                    style: TextStyle(fontSize: 13, color: AppTheme.mutedForegroundColor(context)),
-                  ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (entry.title.isNotEmpty)
+                    Text(
+                      entry.title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (entry.body.isNotEmpty) ...[
+                    if (entry.title.isNotEmpty) const SizedBox(height: 2),
+                    Text(
+                      entry.body,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.mutedForegroundColor(context),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            _relativeTime(entry.ts),
-            style: TextStyle(fontSize: 11, color: AppTheme.mutedForegroundColor(context)),
-          ),
-        ],
-      ),
+            const SizedBox(width: 8),
+            Text(
+              _relativeTime(entry.ts),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.mutedForegroundColor(context),
+              ),
+            ),
+          ],
+        ),
     );
   }
 }
@@ -285,7 +375,10 @@ class _SwitchTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
-import '../../../../core/widgets/bottom_nav.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../order/presentation/bloc/order_list_bloc.dart';
@@ -51,7 +50,6 @@ class _AccountPageState extends State<AccountPage> {
           return _GuestContent();
         },
       ),
-      bottomNavigationBar: const BottomNav(currentIndex: 3),
     );
   }
 }

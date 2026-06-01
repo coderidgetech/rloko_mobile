@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
-import '../../../../core/widgets/bottom_nav.dart';
 import '../bloc/product_list_bloc.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/filter_bottom_sheet.dart';
@@ -129,7 +128,6 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor(context),
       appBar: const AppHeader(showBackButton: true),
-      bottomNavigationBar: const BottomNav(currentIndex: 1), // Categories tab active
       body: BlocBuilder<ProductListBloc, ProductListState>(
         builder: (context, state) {
           // Show loading when: explicitly loading, or still initial/home state (load was just dispatched)

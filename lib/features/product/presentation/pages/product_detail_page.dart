@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/constants/delivery_constants.dart';
 import '../../../../core/di/injection.dart';
@@ -13,6 +14,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../../../../core/widgets/delivery_location_strip.dart';
 import '../../../../core/widgets/safe_network_image.dart';
+import '../../data/datasources/product_local_datasource.dart';
 import '../../domain/entities/product_entity.dart';
 import '../../domain/usecases/get_product_by_id_usecase.dart';
 import '../../domain/usecases/get_recommendations_usecase.dart';
@@ -62,6 +64,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   int _productReviewsTotal = 0;
   bool _productReviewsLoading = false;
   String? _productReviewsError;
+  int _reviewPage = 0;
+  bool _reviewsHasMore = true;
+  bool _reviewsLoadingMore = false;
+  ProductEntity? _loadedProduct;
   late final PageController _pageController;
   Timer? _imageTimer;
   int _timerImageCount = 0;
@@ -181,13 +187,15 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     setState(() {
       _productReviewsLoading = true;
       _productReviewsError = null;
+      _reviewPage = 0;
     });
     try {
-      final r = await sl<GetProductReviewsUseCase>()(id, limit: 100, skip: 0);
+      final r = await sl<GetProductReviewsUseCase>()(id, limit: 10, skip: 0);
       if (!mounted) return;
       setState(() {
         _productReviews = r.reviews;
         _productReviewsTotal = r.total;
+        _reviewsHasMore = r.total > r.reviews.length;
         _productReviewsLoading = false;
       });
     } catch (e) {
@@ -197,7 +205,31 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
         _productReviewsLoading = false;
         _productReviews = [];
         _productReviewsTotal = 0;
+        _reviewsHasMore = false;
       });
+    }
+  }
+
+  Future<void> _loadMoreReviews(String id) async {
+    if (!_reviewsHasMore || _reviewsLoadingMore) return;
+    setState(() => _reviewsLoadingMore = true);
+    _reviewPage++;
+    try {
+      final r = await sl<GetProductReviewsUseCase>()(
+        id,
+        limit: 10,
+        skip: _reviewPage * 10,
+      );
+      if (!mounted) return;
+      setState(() {
+        _productReviews = [..._productReviews, ...r.reviews];
+        _reviewsHasMore = _productReviews.length < _productReviewsTotal;
+        _reviewsLoadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      _reviewPage--;
+      setState(() => _reviewsLoadingMore = false);
     }
   }
 
@@ -272,49 +304,76 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     );
   }
 
-  void _openAllProductReviewsSheet(BuildContext context) {
+  void _openAllProductReviewsSheet(BuildContext context, String productId) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        expand: false,
-        builder: (_, scrollController) {
-          return ListView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(24),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.foregroundColor(ctx).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(2),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          minChildSize: 0.3,
+          expand: false,
+          builder: (_, scrollController) {
+            return NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollEndNotification &&
+                    notification.metrics.extentAfter < 200) {
+                  _loadMoreReviews(productId).then((_) => setSheetState(() {}));
+                }
+                return false;
+              },
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(24),
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.foregroundColor(ctx).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'All reviews ($_productReviewsTotal)',
+                    style: Theme.of(ctx).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  for (var i = 0; i < _productReviews.length; i++)
+                    _reviewBlockFromDto(
+                      _productReviews[i],
+                      showBorder: i < _productReviews.length - 1,
+                    ),
+                  if (_reviewsHasMore) ...[
+                    const SizedBox(height: 16),
+                    Center(
+                      child: _reviewsLoadingMore
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : TextButton(
+                              onPressed: () => _loadMoreReviews(productId)
+                                  .then((_) => setSheetState(() {})),
+                              child: const Text('Load more'),
+                            ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 16),
-              Text(
-                'All reviews (${_productReviews.length})',
-                style: Theme.of(ctx).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              for (var i = 0; i < _productReviews.length; i++)
-                _reviewBlockFromDto(
-                  _productReviews[i],
-                  showBorder: i < _productReviews.length - 1,
-                ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildProductReviewsBody(BuildContext context) {
+  Widget _buildProductReviewsBody(BuildContext context, String productId) {
     if (_productReviewsLoading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
@@ -354,16 +413,16 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             preview[i],
             showBorder: i < preview.length - 1,
           ),
-        if (_productReviews.length > 3) ...[
+        if (_productReviewsTotal > 3) ...[
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: TextButton(
-              onPressed: () => _openAllProductReviewsSheet(context),
+              onPressed: () => _openAllProductReviewsSheet(context, productId),
               style: TextButton.styleFrom(
                 foregroundColor: AppTheme.primaryColor(context),
               ),
-              child: Text('View all (${_productReviews.length})'),
+              child: Text('View all ($_productReviewsTotal)'),
             ),
           ),
         ],
@@ -626,15 +685,38 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundColor(context),
-      appBar: const AppHeader(showBackButton: true),
-      body: Column(
-        children: [
-          const DeliveryLocationStrip(),
-          Expanded(
-            child: BlocBuilder<ProductDetailBloc, ProductDetailState>(
-              builder: (context, state) {
+    return BlocListener<ProductDetailBloc, ProductDetailState>(
+      listenWhen: (_, next) => next is ProductDetailLoaded,
+      listener: (context, state) {
+        if (state is ProductDetailLoaded) {
+          setState(() => _loadedProduct = state.product);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundColor(context),
+        appBar: AppHeader(
+          showBackButton: true,
+          extraActions: _loadedProduct != null
+              ? [
+                  IconButton(
+                    icon: const Icon(Icons.share_outlined),
+                    tooltip: 'Share',
+                    onPressed: () {
+                      Share.share(
+                        'https://rloko.com/products/${_loadedProduct!.id}',
+                        subject: _loadedProduct!.name,
+                      );
+                    },
+                  ),
+                ]
+              : null,
+        ),
+        body: Column(
+          children: [
+            const DeliveryLocationStrip(),
+            Expanded(
+              child: BlocBuilder<ProductDetailBloc, ProductDetailState>(
+                builder: (context, state) {
                 if (state is ProductDetailLoading) {
                   return const Center(
                     child: CircularProgressIndicator(strokeWidth: 2),
@@ -672,6 +754,9 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                     _loadProductReviews(product.id);
                   });
                 }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  sl<ProductLocalDataSource>().recordView(product.id);
+                });
                 final productImages = product.images;
                 final hasProductImages = productImages.isNotEmpty;
                 final images = hasProductImages ? productImages : <String>[];
@@ -1571,7 +1656,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                       ],
                                     )
                                   : null,
-                              child: _buildProductReviewsBody(context),
+                              child: _buildProductReviewsBody(context, product.id),
                             ),
                             // API-driven "Frequently Bought Together" recommendations
                             if (_apiRecommendations.isNotEmpty)
@@ -1672,6 +1757,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

@@ -14,10 +14,13 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     super.key,
     this.showBackButton = false,
     this.onBack,
+    this.extraActions,
   });
 
   final bool showBackButton;
   final VoidCallback? onBack;
+  /// Optional extra action widgets prepended before the standard search/wishlist/cart icons.
+  final List<Widget>? extraActions;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -56,6 +59,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       titleSpacing: showBackButton ? 0 : 16,
       centerTitle: false,
       actions: [
+        if (extraActions != null) ...extraActions!,
         IconButton(
           icon: const Icon(Icons.search, size: 24),
           onPressed: () => context.push('/search'),

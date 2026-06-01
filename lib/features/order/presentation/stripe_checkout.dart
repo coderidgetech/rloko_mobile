@@ -127,9 +127,8 @@ Future<void> runStripeCheckout({
     final message = e is ApiException
         ? e.message
         : (getApiException(e)?.message ?? e.toString());
-    if (kDebugMode) {
-      debugPrint('[StripeCheckout] $message\n$st');
-    }
+    if (kDebugMode) debugPrint('[StripeCheckout] Unhandled error: $e\n$st');
+    // TODO(E7): Add FirebaseCrashlytics.instance.recordError(e, st) when crashlytics is configured
     messenger.showSnackBar(
       SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
     );

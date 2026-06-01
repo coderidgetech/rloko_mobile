@@ -17,7 +17,6 @@ import '../../../../core/region/app_region.dart';
 import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
-import '../../../../core/widgets/bottom_nav.dart';
 import '../../../../core/widgets/deliver_to_location_sheet.dart';
 import '../../../../core/widgets/delivery_location_strip.dart';
 import '../../../../core/widgets/payment_method_picker.dart';
@@ -616,7 +615,6 @@ class _CartPageState extends State<CartPage> {
         return Scaffold(
           backgroundColor: AppTheme.backgroundColor(context),
           appBar: const AppHeader(showBackButton: false),
-          bottomNavigationBar: const BottomNav(currentIndex: 4),
           body: Column(
             children: [
               const DeliveryLocationStrip(),

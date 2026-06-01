@@ -5,13 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
-import '../../../../core/widgets/bottom_nav.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../../config/domain/entities/site_config.dart';
 import '../../../config/presentation/bloc/config_bloc.dart';
 import '../../../config/utils/config_category_utils.dart';
+import '../../../product/data/datasources/product_local_datasource.dart';
 import '../../../product/domain/entities/category_entity.dart';
 import '../../../product/domain/entities/product_entity.dart';
 import '../../../product/presentation/bloc/category_list_bloc.dart';
@@ -77,6 +78,7 @@ class _HomePageState extends State<HomePage> {
                           if (config.homepage.sections.shopByCategory) Container(height: 8, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
                           const _GiftsSection(),
                           Container(height: 8, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
+                          const _RecentlyViewedSection(),
                           _HomeProductSections(config: config),
                           if (config.homepage.sections.promotionalBanner) _PromoBanner(),
                           _TrustBadges(),
@@ -92,7 +94,6 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }
 }
@@ -1477,6 +1478,97 @@ class _HomeFooter extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Shows a horizontal scroll of recently viewed products.
+/// Reads persisted IDs from [ProductLocalDataSource] and matches them against
+/// any already-loaded [ProductListHomeLoaded] products so no extra network call
+/// is needed.
+class _RecentlyViewedSection extends StatefulWidget {
+  const _RecentlyViewedSection();
+
+  @override
+  State<_RecentlyViewedSection> createState() => _RecentlyViewedSectionState();
+}
+
+class _RecentlyViewedSectionState extends State<_RecentlyViewedSection> {
+  List<String> _recentIds = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _recentIds = sl<ProductLocalDataSource>().getRecentProductIds();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh when the widget re-appears (e.g. user navigated back from detail page).
+    final fresh = sl<ProductLocalDataSource>().getRecentProductIds();
+    if (fresh.length != _recentIds.length) {
+      setState(() => _recentIds = fresh);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_recentIds.isEmpty) return const SizedBox.shrink();
+
+    return BlocBuilder<ProductListBloc, ProductListState>(
+      buildWhen: (prev, next) => next is ProductListHomeLoaded,
+      builder: (context, state) {
+        if (state is! ProductListHomeLoaded) return const SizedBox.shrink();
+
+        // Gather all known products from the loaded sections.
+        final allProducts = [
+          ...state.featured,
+          ...state.newArrivals,
+          ...state.sale,
+        ];
+        final productMap = {for (final p in allProducts) p.id: p};
+
+        // Preserve recency order, keep only products we already have locally.
+        final recent = _recentIds
+            .map((id) => productMap[id])
+            .whereType<ProductEntity>()
+            .toList();
+
+        if (recent.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'Recently Viewed',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+            SizedBox(
+              height: 260,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: recent.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 12),
+                itemBuilder: (context, index) => SizedBox(
+                  width: 140,
+                  child: ProductGridTile(
+                    key: ValueKey(recent[index].id),
+                    product: recent[index],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Divider(height: 2, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
+          ],
+        );
+      },
     );
   }
 }

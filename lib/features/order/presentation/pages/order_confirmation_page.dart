@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/injection.dart';
@@ -25,7 +26,14 @@ class _OrderConfirmationPageState extends State<OrderConfirmationPage> {
   @override
   void initState() {
     super.initState();
+    FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
     _loadOrder();
+  }
+
+  @override
+  void dispose() {
+    FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
+    super.dispose();
   }
 
   Future<void> _loadOrder() async {

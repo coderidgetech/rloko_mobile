@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/currency_constants.dart';
@@ -71,6 +73,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   @override
   void initState() {
     super.initState();
+    FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
     final fromCart = widget.initialPaymentMethod?.trim();
     if (fromCart == 'card' || fromCart == 'upi' || fromCart == 'cod') {
       final pm = fromCart!;
@@ -481,6 +484,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
   static const double _giftChargePerItemUsd = 0.60; // ~₹50
 
   Future<void> _placeOrder() async {
+    final connectivity = await Connectivity().checkConnectivity();
+    if (!mounted) return;
+    if (connectivity.contains(ConnectivityResult.none)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No internet connection. Please check your network and try again.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) {
       context.push('/login', extra: '/checkout');
@@ -586,6 +602,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   void dispose() {
+    FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
     _promoController.dispose();
     super.dispose();
   }

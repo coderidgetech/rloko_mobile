@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/di/injection.dart';
+import '../../core/widgets/bottom_nav.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/models/login_otp_route_extra.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
@@ -58,6 +59,30 @@ import '../../features/order/presentation/pages/guest_checkout_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavKey = GlobalKey<NavigatorState>();
 
+/// Shell widget that wraps the five tab branches with a shared BottomNav.
+/// [StatefulShellRoute.indexedStack] keeps each branch's navigator alive so
+/// scroll position, BLoC state and page history are preserved when switching tabs.
+class _AppShell extends StatelessWidget {
+  const _AppShell({required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: navigationShell,
+      bottomNavigationBar: BottomNav(
+        currentIndex: navigationShell.currentIndex,
+        onTap: (i) => navigationShell.goBranch(
+          i,
+          // Re-tapping the active tab navigates back to its initial location.
+          initialLocation: i == navigationShell.currentIndex,
+        ),
+      ),
+    );
+  }
+}
+
 GoRouter createAppRouter() {
   return GoRouter(
     navigatorKey: _rootNavKey,
@@ -73,9 +98,14 @@ GoRouter createAppRouter() {
         '/payment-methods',
         '/add-payment-method',
         '/notifications',
-        '/reviews/write',
+        '/reviews',
         '/rewards',
         '/return',
+        '/order-confirmation',
+        '/tracking',
+        '/coupons',
+        '/delivery-location',
+        '/settings',
       ];
       final path = state.matchedLocation;
       final isProtected = protected.any((r) => path.startsWith(r));
@@ -133,10 +163,6 @@ GoRouter createAppRouter() {
         builder: (context, state) => const OnboardingPage(),
       ),
       GoRoute(
-        path: '/',
-        builder: (context, state) => const HomePage(),
-      ),
-      GoRoute(
         path: '/login',
         builder: (context, state) =>
             LoginPage(redirectAfterLogin: state.extra as String?),
@@ -149,10 +175,76 @@ GoRouter createAppRouter() {
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordPage(),
       ),
-      GoRoute(
-        path: '/categories',
-        builder: (context, state) => const CategoriesPage(),
+
+      // ── StatefulShellRoute: five tabs with preserved navigator stacks ──────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            _AppShell(navigationShell: navigationShell),
+        branches: [
+          // Branch 0 — Home
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const HomePage(),
+              ),
+            ],
+          ),
+          // Branch 1 — Categories
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/categories',
+                builder: (context, state) => const CategoriesPage(),
+                routes: [
+                  GoRoute(
+                    path: 'category/:gender/:slug',
+                    builder: (context, state) {
+                      final gender = state.pathParameters['gender'] ?? '';
+                      final slug = state.pathParameters['slug'] ?? '';
+                      final isGift = state.uri.queryParameters['gift'] == 'true';
+                      return CategoryProductsPage(
+                        gender: gender,
+                        slug: slug,
+                        isGiftMode: isGift,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          // Branch 2 — Search
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/search',
+                builder: (context, state) => const SearchPage(),
+              ),
+            ],
+          ),
+          // Branch 3 — Account
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/account',
+                builder: (context, state) => const AccountPage(),
+              ),
+            ],
+          ),
+          // Branch 4 — Cart
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/cart',
+                builder: (context, state) => const CartPage(),
+              ),
+            ],
+          ),
+        ],
       ),
+      // ── End StatefulShellRoute ─────────────────────────────────────────────
+
       GoRoute(
         path: '/category/:gender/:slug',
         builder: (context, state) {
@@ -177,10 +269,6 @@ GoRouter createAppRouter() {
             isGiftMode: isGift,
           );
         },
-      ),
-      GoRoute(
-        path: '/search',
-        builder: (context, state) => const SearchPage(),
       ),
       GoRoute(
         path: '/all-products',
@@ -234,10 +322,6 @@ GoRouter createAppRouter() {
           if (id.isEmpty) return const CategoriesPage();
           return ProductDetailPage(productId: id);
         },
-      ),
-      GoRoute(
-        path: '/account',
-        builder: (context, state) => const AccountPage(),
       ),
       GoRoute(
         path: '/profile/edit',
@@ -371,10 +455,6 @@ GoRouter createAppRouter() {
         },
       ),
       GoRoute(
-        path: '/cart',
-        builder: (context, state) => const CartPage(),
-      ),
-      GoRoute(
         path: '/wishlist',
         builder: (context, state) => const WishlistPage(),
       ),
@@ -414,11 +494,12 @@ GoRouter createAppRouter() {
         path: '/video/:id',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
+          if (extra == null) return const SizedBox.shrink();
           return VideoPlayerPage(
-            videoUrl: extra?['videoUrl'] as String? ?? '',
-            title: extra?['title'] as String? ?? '',
-            category: extra?['category'] as String? ?? '',
-            thumbnailUrl: extra?['thumbnailUrl'] as String?,
+            videoUrl: extra['videoUrl'] as String? ?? '',
+            title: extra['title'] as String? ?? '',
+            category: extra['category'] as String? ?? '',
+            thumbnailUrl: extra['thumbnailUrl'] as String?,
           );
         },
       ),

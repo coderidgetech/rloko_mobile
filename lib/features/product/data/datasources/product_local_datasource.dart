@@ -71,4 +71,19 @@ class ProductLocalDataSource {
   }
 
   Future<void> clearCache() async => _prefs.remove(_homeKey);
+
+  // ── Recently viewed ──────────────────────────────────────────────────────
+
+  static const _kRecentKey = 'rloco_recent_products';
+  static const _kMaxRecent = 10;
+
+  Future<void> recordView(String productId) async {
+    final recent = _prefs.getStringList(_kRecentKey) ?? [];
+    recent.removeWhere((id) => id == productId);
+    recent.insert(0, productId);
+    if (recent.length > _kMaxRecent) recent.removeRange(_kMaxRecent, recent.length);
+    await _prefs.setStringList(_kRecentKey, recent);
+  }
+
+  List<String> getRecentProductIds() => _prefs.getStringList(_kRecentKey) ?? [];
 }

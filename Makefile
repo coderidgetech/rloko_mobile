@@ -13,7 +13,7 @@ build-dev:
 	flutter build apk --flavor dev --dart-define-from-file=assets/env/app.dev.env
 
 build-prod:
-	flutter build apk --flavor prod --dart-define-from-file=assets/env/app.prod.env --release
+	flutter build apk --flavor prod --dart-define-from-file=assets/env/app.prod.env --release --obfuscate --split-debug-info=build/symbols/
 
 get:
 	flutter pub get
