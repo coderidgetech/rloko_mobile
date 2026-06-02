@@ -16,6 +16,7 @@ import '../../address/domain/entities/address_entity.dart';
 import '../../payment/domain/usecases/create_payment_intent_usecase.dart';
 import '../domain/entities/order_entity.dart';
 import '../domain/usecases/order_usecases.dart';
+import '../domain/utils/order_mappers.dart';
 
 /// Matches web: POST /orders with `payment_method` `card` or `upi`, then POST /payments/intent, then Stripe sheet.
 Future<void> runStripeCheckout({
@@ -25,6 +26,7 @@ Future<void> runStripeCheckout({
   required AddressEntity selectedAddress,
   required String orderPaymentMethod,
   String? promotionCode,
+  Set<String> giftItemKeys = const {},
 }) async {
   assert(
     orderPaymentMethod == 'card' || orderPaymentMethod == 'upi',
@@ -48,11 +50,12 @@ Future<void> runStripeCheckout({
   final router = GoRouter.of(context);
   final messenger = ScaffoldMessenger.of(context);
 
-  final shipping = _addressToShipping(selectedAddress, authState.user.email);
-  final orderItems = _cartToOrderItems(cartItems);
+  final shipping = addressToShipping(selectedAddress, authState.user.email);
+  final orderItems = cartItemsToOrderItems(cartItems, giftItemKeys: giftItemKeys);
 
+  OrderEntity? order;
   try {
-    final order = await sl<CreateOrderUseCase>().call(
+    order = await sl<CreateOrderUseCase>().call(
       items: orderItems,
       shippingInfo: shipping,
       paymentMethod: orderPaymentMethod,
@@ -64,7 +67,7 @@ Future<void> runStripeCheckout({
       );
     }
 
-    final payCurrency = _stripeCurrencyForCountry(shipping.country);
+    final payCurrency = stripeCurrencyForCountry(shipping.country);
     final intent = await sl<CreatePaymentIntentUseCase>().call(
       orderId: order.id,
       amount: order.total,
@@ -83,7 +86,7 @@ Future<void> runStripeCheckout({
       phone: shipping.phone.trim().isEmpty ? null : shipping.phone.trim(),
       address: Address(
         city: shipping.city.trim().isEmpty ? null : shipping.city.trim(),
-        country: _stripeCountryCodeForShipping(shipping.country),
+        country: stripeCountryCodeForShipping(shipping.country),
         line1: shipping.address.trim().isEmpty ? null : shipping.address.trim(),
         line2: null,
         postalCode:
@@ -118,12 +121,31 @@ Future<void> runStripeCheckout({
     cartBloc.add(const CartClearRequested());
     router.go('/order-confirmation/${order.id}');
   } on StripeException catch (e) {
-    if (e.error.code == FailureCode.Canceled) return;
+    if (e.error.code == FailureCode.Canceled) {
+      // User cancelled — void the order silently.
+      if (order != null) {
+        try {
+          await sl<CancelOrderUseCase>().call(order.id, reason: 'payment_cancelled');
+        } catch (_) {}
+      }
+      return;
+    }
+    // Payment failed — cancel the order and show error.
+    if (order != null) {
+      try {
+        await sl<CancelOrderUseCase>().call(order.id, reason: 'payment_failed');
+      } catch (_) {}
+    }
     final msg = e.error.localizedMessage ?? e.error.message ?? 'Payment failed';
     messenger.showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: AppTheme.destructive),
     );
   } catch (e, st) {
+    if (order != null) {
+      try {
+        await sl<CancelOrderUseCase>().call(order.id, reason: 'payment_error');
+      } catch (_) {}
+    }
     final message = e is ApiException
         ? e.message
         : (getApiException(e)?.message ?? e.toString());
@@ -133,58 +155,4 @@ Future<void> runStripeCheckout({
       SnackBar(content: Text(message), backgroundColor: AppTheme.destructive),
     );
   }
-}
-
-ShippingInfoEntity _addressToShipping(AddressEntity a, String userEmail) {
-  final parts = a.name.trim().split(RegExp(r'\s+'));
-  final firstName = parts.isNotEmpty ? parts.first : a.name;
-  final lastName = parts.length > 1 ? parts.skip(1).join(' ') : '';
-  final addressLine =
-      a.addressLine +
-      (a.addressLine2 != null && a.addressLine2!.isNotEmpty
-          ? ', ${a.addressLine2}'
-          : '');
-  return ShippingInfoEntity(
-    firstName: firstName,
-    lastName: lastName,
-    email: userEmail,
-    phone: a.mobile,
-    address: addressLine,
-    city: a.city,
-    state: a.state,
-    zipCode: a.pincode,
-    country: a.country,
-  );
-}
-
-List<OrderItemEntity> _cartToOrderItems(List<CartItemEntity> items) {
-  return items
-      .map(
-        (e) => OrderItemEntity(
-          productId: e.productId,
-          productName: e.productName,
-          image: e.image,
-          price: e.price,
-          size: e.size,
-          quantity: e.quantity,
-        ),
-      )
-      .toList();
-}
-
-String _stripeCurrencyForCountry(String country) {
-  final c = country.trim().toLowerCase();
-  if (c == 'in' || c == 'india' || c.contains('india')) {
-    return 'inr';
-  }
-  return 'usd';
-}
-
-/// Two-letter ISO for Stripe [Address.country].
-String _stripeCountryCodeForShipping(String country) {
-  final c = country.trim().toLowerCase();
-  if (c == 'in' || c == 'india' || c.contains('india')) return 'IN';
-  if (c == 'us' || c == 'usa' || c.contains('united states')) return 'US';
-  if (country.trim().length == 2) return country.trim().toUpperCase();
-  return 'IN';
 }

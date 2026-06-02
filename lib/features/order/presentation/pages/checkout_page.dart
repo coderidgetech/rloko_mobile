@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ import '../../../shipping/domain/entities/shipping_method_entity.dart';
 import '../../../shipping/domain/usecases/calculate_shipping_usecase.dart';
 import '../../domain/entities/order_entity.dart';
 import '../../domain/usecases/order_usecases.dart';
+import '../../domain/utils/order_mappers.dart';
 import '../stripe_checkout.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -68,6 +70,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   double? _quotedShipping;
   String _quotedShippingCurrency = 'USD';
   bool _shippingQuoteLoading = false;
+  String? _shippingError;
+  int _quoteFetchGen = 0;
   late String _selectedPaymentMethod;
 
   @override
@@ -89,6 +93,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (widget.initialCouponCode != null && widget.initialCouponDiscount != null) {
       _appliedCouponCode = widget.initialCouponCode;
       _promoCode = widget.initialCouponCode!;
+      _promoController.text = widget.initialCouponCode!;
       _appliedDiscount = widget.initialCouponDiscount;
     }
     _loadAddresses();
@@ -374,6 +379,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _refreshShippingQuote() async {
+    final myGen = ++_quoteFetchGen;
     final auth = context.read<AuthBloc>().state;
     if (auth is! AuthAuthenticated) return;
     final cartState = context.read<CartBloc>().state;
@@ -383,6 +389,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         setState(() {
           _quotedShipping = null;
           _shippingQuoteLoading = false;
+          _shippingError = null;
         });
       }
       return;
@@ -392,8 +399,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final w = _cartWeightLb(cartState.cart.items);
     final weight = w > 0 ? w : kDefaultItemWeightLb;
     final addr = _addresses.firstWhere((a) => a.id == _selectedAddressId);
-    final ship = _addressToShipping(addr, auth.user.email);
-    if (mounted) setState(() => _shippingQuoteLoading = true);
+    final ship = addressToShipping(addr, auth.user.email);
+    if (mounted) setState(() { _shippingQuoteLoading = true; _shippingError = null; });
     try {
       final methods = await sl<CalculateShippingUseCase>().call(
         CalculateShippingParams(
@@ -411,6 +418,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
       );
       if (!mounted) return;
+      if (myGen != _quoteFetchGen) return;
       if (methods.isNotEmpty) {
         final defaultMethod = _selectedShippingMethodId != null &&
                 methods.any((m) => m.id == _selectedShippingMethodId)
@@ -433,52 +441,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('[CheckoutPage] shipping quote: $e');
-      if (mounted) {
+      if (mounted && myGen == _quoteFetchGen) {
         setState(() {
           _quotedShipping = null;
           _shippingQuoteLoading = false;
+          _shippingError = 'Could not fetch shipping rates. Tap to retry.';
         });
       }
     }
-  }
-
-  ShippingInfoEntity _addressToShipping(AddressEntity a, String userEmail) {
-    final parts = a.name.trim().split(RegExp(r'\s+'));
-    final firstName = parts.isNotEmpty ? parts.first : a.name;
-    final lastName = parts.length > 1 ? parts.skip(1).join(' ') : '';
-    final addressLine =
-        a.addressLine +
-        (a.addressLine2 != null && a.addressLine2!.isNotEmpty
-            ? ', ${a.addressLine2}'
-            : '');
-    return ShippingInfoEntity(
-      firstName: firstName,
-      lastName: lastName,
-      email: userEmail,
-      phone: a.mobile,
-      address: addressLine,
-      city: a.city,
-      state: a.state,
-      zipCode: a.pincode,
-      country: a.country,
-    );
-  }
-
-  List<OrderItemEntity> _cartToOrderItems(List<CartItemEntity> items) {
-    return items.map((e) {
-      final key = '${e.productId}-${e.size}';
-      final isGift = _giftItemKeys.contains(key);
-      return OrderItemEntity(
-        productId: e.productId,
-        productName: e.productName,
-        image: e.image,
-        price: e.price,
-        size: e.size,
-        quantity: e.quantity,
-        isGift: isGift,
-        giftWrapColor: isGift ? 'default' : null,
-      );
-    }).toList();
   }
 
   static const double _giftChargePerItemUsd = 0.60; // ~₹50
@@ -542,6 +512,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         selectedAddress: selectedAddress,
         orderPaymentMethod: _selectedPaymentMethod,
         promotionCode: promo,
+        giftItemKeys: _giftItemKeys,
       );
       if (mounted) {
         setState(() => _placing = false);
@@ -549,8 +520,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
-    final orderItems = _cartToOrderItems(cartState.cart.items);
-    final shipping = _addressToShipping(selectedAddress, authState.user.email);
+    final orderItems = cartItemsToOrderItems(cartState.cart.items, giftItemKeys: _giftItemKeys);
+    final shipping = addressToShipping(selectedAddress, authState.user.email);
     setState(() {
       _placing = true;
       _error = null;
@@ -559,7 +530,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final order = await sl<CreateOrderUseCase>().call(
         items: orderItems,
         shippingInfo: shipping,
-        paymentMethod: 'cod',
+        paymentMethod: _selectedPaymentMethod,
         promotionCode: promo,
       );
       if (kDebugMode) {
@@ -611,8 +582,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final code = _promoController.text.trim().toUpperCase();
     if (code.isEmpty) return;
     final cartState = context.read<CartBloc>().state;
+    final region = CurrencyScope.of(context).region;
     final subtotal = cartState is CartLoaded
-        ? cartState.cart.items.fold(0.0, (s, i) => s + i.price * i.quantity)
+        ? _cartSubtotalUsd(cartState.cart.items, region)
         : 0.0;
     setState(() {
       _couponValidating = true;
@@ -744,6 +716,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
           child: Scaffold(
             backgroundColor: AppTheme.backgroundColor(context),
             body: BlocBuilder<CartBloc, CartState>(
+              buildWhen: (prev, curr) =>
+                  curr.runtimeType != prev.runtimeType ||
+                  (curr is CartLoaded &&
+                      prev is CartLoaded &&
+                      curr.cart != prev.cart) ||
+                  curr is CartItemUpdateFailed,
               builder: (context, cartState) {
                 if (cartState is CartLoading) {
                   return const Center(
@@ -794,63 +772,54 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                 final cart = cartState.cart;
                 final region = CurrencyScope.of(context).region;
-                final subtotal = cart.items.fold(0.0, (s, i) {
-                  if (region == AppRegion.india && i.priceInr != null) {
-                    return s + i.priceInr! * i.quantity;
-                  }
-                  return s + i.price * i.quantity;
-                });
-                final shipAdd = _quotedShipping == null
+                // C1: Always use USD for subtotal math; convert for display only.
+                final subtotalUsd = _cartSubtotalUsd(cart.items, region);
+                final subtotalInr = subtotalUsd * kUsdToInrDisplay;
+                // Shipping is always in the method's own currency; normalise to USD for totals.
+                final shippingUsd = _quotedShipping == null
                     ? 0.0
-                    : (region == AppRegion.india &&
-                              _quotedShippingCurrency == 'USD'
-                          ? _quotedShipping! * kUsdToInrDisplay
-                          : _quotedShipping!);
+                    : _quotedShippingCurrency == 'INR'
+                        ? _quotedShipping! / kUsdToInrDisplay
+                        : _quotedShipping!;
                 final giftCount = _giftItemKeys.isEmpty
                     ? 0
                     : cart.items.where((i) => _giftItemKeys.contains('${i.productId}-${i.size}')).length;
                 final giftChargeUsd = giftCount * _giftChargePerItemUsd;
-                final giftAdd = region == AppRegion.india ? giftChargeUsd * kUsdToInrDisplay : giftChargeUsd;
                 final giftText = giftCount == 0
                     ? null
                     : region == AppRegion.india
-                        ? '+₹${giftAdd.round()}'
-                        : '+\$${giftAdd.toStringAsFixed(2)}';
-                final discountAdd = _appliedDiscount == null
-                    ? 0.0
-                    : (region == AppRegion.india
-                        ? _appliedDiscount! * kUsdToInrDisplay
-                        : _appliedDiscount!);
+                        ? '+₹${(giftChargeUsd * kUsdToInrDisplay).round()}'
+                        : '+\$${giftChargeUsd.toStringAsFixed(2)}';
+                final discountUsd = _appliedDiscount ?? 0.0;
                 final discountText = _appliedDiscount == null
                     ? null
                     : region == AppRegion.india
                         ? '-${CurrencyScope.of(context).formatPrice(_appliedDiscount!, _appliedDiscount! * kUsdToInrDisplay)}'
                         : '-\$${_appliedDiscount!.toStringAsFixed(2)}';
-                final totalWithShipping = (subtotal + (_quotedShipping == null ? 0.0 : shipAdd) + giftAdd - discountAdd).clamp(0.0, double.infinity);
+                // Total in USD; convert for display when region is India.
+                final totalUsd = (subtotalUsd + shippingUsd + giftChargeUsd - discountUsd).clamp(0.0, double.infinity);
                 final subtotalText = region == AppRegion.india
-                    ? CurrencyScope.of(
-                        context,
-                      ).formatPrice(subtotal / kUsdToInrDisplay, subtotal)
-                    : CurrencyScope.of(context).formatPrice(subtotal, null);
+                    ? CurrencyScope.of(context).formatPrice(subtotalUsd, subtotalInr)
+                    : CurrencyScope.of(context).formatPrice(subtotalUsd, null);
+                final shippingDisplayCost = _quotedShipping == null
+                    ? null
+                    : (_quotedShippingCurrency == 'USD' && region == AppRegion.india
+                        ? _quotedShipping! * kUsdToInrDisplay
+                        : _quotedShipping!);
                 final shippingText = _shippingQuoteLoading
                     ? '...'
                     : _quotedShipping == null
                     ? 'Add address to estimate'
-                    : (region == AppRegion.india &&
-                          _quotedShippingCurrency == 'USD')
-                    ? CurrencyScope.of(
-                        context,
-                      ).formatPrice(_quotedShipping!, _quotedShipping! * kUsdToInrDisplay)
+                    : shippingDisplayCost == 0
+                    ? 'Free'
+                    : (region == AppRegion.india && _quotedShippingCurrency == 'USD')
+                    ? CurrencyScope.of(context).formatPrice(_quotedShipping!, _quotedShipping! * kUsdToInrDisplay)
                     : (_quotedShippingCurrency == 'USD'
                           ? '\$${_quotedShipping!.toStringAsFixed(2)}'
                           : '₹${_quotedShipping!.round()}');
                 final totalText = region == AppRegion.india
-                    ? CurrencyScope.of(
-                        context,
-                      ).formatPrice(totalWithShipping / kUsdToInrDisplay, totalWithShipping)
-                    : CurrencyScope.of(
-                        context,
-                      ).formatPrice(totalWithShipping, null);
+                    ? CurrencyScope.of(context).formatPrice(totalUsd, totalUsd * kUsdToInrDisplay)
+                    : CurrencyScope.of(context).formatPrice(totalUsd, null);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -860,7 +829,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       child: Stack(
                         children: [
                           SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                            padding: EdgeInsets.fromLTRB(16, 16, 16, 80 + MediaQuery.paddingOf(context).bottom),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -981,7 +950,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     ),
                                   )
                                 else
-                                  Material(
+                                  Builder(builder: (context) {
+                                    // M6: extract selectedAddr once to avoid repeated firstWhere calls.
+                                    final selectedAddr = _selectedAddressId != null
+                                        ? _addresses.firstWhereOrNull((a) => a.id == _selectedAddressId)
+                                        : null;
+                                    return Material(
                                     color: Colors.transparent,
                                     child: InkWell(
                                       onTap: _showAddressPickerSheet,
@@ -1018,13 +992,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    _addresses
-                                                        .firstWhere(
-                                                          (a) =>
-                                                              a.id ==
-                                                              _selectedAddressId,
-                                                        )
-                                                        .name,
+                                                    selectedAddr?.name ?? '',
                                                     style: const TextStyle(
                                                       fontSize: 15,
                                                       fontWeight:
@@ -1033,13 +1001,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    _addresses
-                                                        .firstWhere(
-                                                          (a) =>
-                                                              a.id ==
-                                                              _selectedAddressId,
-                                                        )
-                                                        .addressLine,
+                                                    selectedAddr?.addressLine ?? '',
                                                     style: TextStyle(
                                                       fontSize: 13,
                                                       color:
@@ -1054,13 +1016,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                         TextOverflow.ellipsis,
                                                   ),
                                                   Text(
-                                                    _addresses
-                                                        .firstWhere(
-                                                          (a) =>
-                                                              a.id ==
-                                                              _selectedAddressId,
-                                                        )
-                                                        .mobile,
+                                                    selectedAddr?.mobile ?? '',
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color:
@@ -1083,7 +1039,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         ),
                                       ),
                                     ),
-                                  ),
+                                  );
+                                  }),
                                 if (_shippingMethods.isNotEmpty) ...[
                                   const SizedBox(height: 16),
                                   const Text(
@@ -1120,11 +1077,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                         final m = _shippingMethods[i];
                                         final selected = m.id == _selectedShippingMethodId;
                                         final region = CurrencyScope.of(context).region;
-                                        final costDisplay = m.currency == 'USD' && region == AppRegion.india
-                                            ? '₹${(m.baseCost * kUsdToInrDisplay).round()}'
-                                            : m.currency == 'USD'
-                                                ? '\$${m.baseCost.toStringAsFixed(2)}'
-                                                : '₹${m.baseCost.round()}';
+                                        final costDisplay = m.baseCost == 0
+                                            ? 'Free'
+                                            : m.currency == 'USD' && region == AppRegion.india
+                                                ? '₹${(m.baseCost * kUsdToInrDisplay).round()}'
+                                                : m.currency == 'USD'
+                                                    ? '\$${m.baseCost.toStringAsFixed(2)}'
+                                                    : '₹${m.baseCost.round()}';
                                         final showDivider = i < _shippingMethods.length - 1;
                                         return Column(
                                           children: [
@@ -1205,6 +1164,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                     ),
                                   ),
                                 ],
+                                // M4: Shipping error with retry
+                                if (_shippingError != null)
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(0, 4, 0, 0),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _shippingError!,
+                                            style: const TextStyle(
+                                              color: AppTheme.destructive,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: _refreshShippingQuote,
+                                          child: const Text('Retry'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 const SizedBox(height: 24),
                                 const Text(
                                   'Promo code (optional)',
@@ -1232,14 +1213,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                             style: TextStyle(fontSize: 14, color: Colors.green.shade700, fontWeight: FontWeight.w500),
                                           ),
                                         ),
-                                        GestureDetector(
-                                          onTap: () => setState(() {
-                                            _appliedCouponCode = null;
-                                            _appliedDiscount = null;
-                                            _promoCode = '';
-                                            _promoController.clear();
-                                          }),
-                                          child: Icon(Icons.close, size: 18, color: Colors.green.shade700),
+                                        Semantics(
+                                          label: 'Remove coupon',
+                                          button: true,
+                                          child: GestureDetector(
+                                            onTap: () => setState(() {
+                                              _appliedCouponCode = null;
+                                              _appliedDiscount = null;
+                                              _promoCode = '';
+                                              _promoController.clear();
+                                            }),
+                                            child: Icon(Icons.close, size: 18, color: Colors.green.shade700),
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -1262,7 +1247,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                                 errorText: _couponError,
                                               ),
-                                              onChanged: (v) => _promoCode = v,
+                                              onChanged: (v) => setState(() => _promoCode = v),
                                             ),
                                           ),
                                           const SizedBox(width: 8),
@@ -1289,13 +1274,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  'Mark items as gifts (+\$${_giftChargePerItemUsd.toStringAsFixed(2)} per item)',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
-                                  ),
-                                ),
+                                Builder(builder: (context) {
+                                  // H5: Region-aware gift wrap label
+                                  final giftLabelRegion = CurrencyScope.of(context).region;
+                                  final giftLabel = giftLabelRegion == AppRegion.india
+                                      ? 'Mark items as gifts (+₹${(_giftChargePerItemUsd * kUsdToInrDisplay).round()} per item)'
+                                      : 'Mark items as gifts (+\$${_giftChargePerItemUsd.toStringAsFixed(2)} per item)';
+                                  return Text(
+                                    giftLabel,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                                    ),
+                                  );
+                                }),
                                 const SizedBox(height: 8),
                                 Container(
                                   decoration: BoxDecoration(
@@ -1365,16 +1357,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                   children: [
                                                     Icon(Icons.card_giftcard_outlined, size: 16, color: isGift ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.4)),
                                                     const SizedBox(width: 4),
-                                                    Switch(
-                                                      value: isGift,
-                                                      onChanged: (v) => setState(() {
-                                                        if (v) {
-                                                          _giftItemKeys.add(key);
-                                                        } else {
-                                                          _giftItemKeys.remove(key);
-                                                        }
-                                                      }),
-                                                      activeThumbColor: AppTheme.primaryColor(context),
+                                                    Semantics(
+                                                      label: 'Gift wrap ${item.productName}',
+                                                      toggled: isGift,
+                                                      child: Switch(
+                                                        value: isGift,
+                                                        onChanged: (v) => setState(() {
+                                                          if (v) {
+                                                            _giftItemKeys.add(key);
+                                                          } else {
+                                                            _giftItemKeys.remove(key);
+                                                          }
+                                                        }),
+                                                        activeThumbColor: AppTheme.primaryColor(context),
+                                                      ),
                                                     ),
                                                   ],
                                                 ),
@@ -1433,7 +1429,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
-                                            child: Column(
+                                            child: Builder(builder: (context) {
+                                              // M7: extract to avoid calling paymentMethodDetailLine twice
+                                              final pmDetail = paymentMethodDetailLine(_selectedPaymentMethod);
+                                              return Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
@@ -1446,15 +1445,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                     fontWeight: FontWeight.w600,
                                                   ),
                                                 ),
-                                                if (paymentMethodDetailLine(
-                                                      _selectedPaymentMethod,
-                                                    ) !=
-                                                    null) ...[
+                                                if (pmDetail != null) ...[
                                                   const SizedBox(height: 2),
                                                   Text(
-                                                    paymentMethodDetailLine(
-                                                      _selectedPaymentMethod,
-                                                    )!,
+                                                    pmDetail,
                                                     style: TextStyle(
                                                       fontSize: 13,
                                                       color:
@@ -1467,7 +1461,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                                   ),
                                                 ],
                                               ],
-                                            ),
+                                            );
+                                            }),
                                           ),
                                           Text(
                                             'Change',
@@ -1652,52 +1647,55 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   ),
                                 ),
                               ),
-                              child: SafeArea(
-                                top: false,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (!_addressesLoading && _addresses.isEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(bottom: 8),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.info_outline, size: 14, color: AppTheme.mutedForegroundColor(context)),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              'Add a delivery address to place your order',
-                                              style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: FilledButton(
-                                        onPressed:
-                                            _placing ||
-                                                _addresses.isEmpty ||
-                                                _selectedAddressId == null
-                                            ? null
-                                            : _placeOrder,
-                                        style: FilledButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(vertical: 16),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(999),
+                              // M1: Removed SafeArea wrapper — manual bottom padding already accounts for safe area inset.
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (!_addressesLoading && _addresses.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.info_outline, size: 14, color: AppTheme.mutedForegroundColor(context)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Add a delivery address to place your order',
+                                            style: TextStyle(fontSize: 12, color: AppTheme.mutedForegroundColor(context)),
                                           ),
-                                        ),
-                                        child: _placing
-                                            ? const SizedBox(
-                                                height: 24,
-                                                width: 24,
-                                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                              )
-                                            : const Text('Place order'),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton(
+                                      onPressed:
+                                          _placing ||
+                                              _addresses.isEmpty ||
+                                              _selectedAddressId == null
+                                          ? null
+                                          : _placeOrder,
+                                      style: FilledButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(999),
+                                        ),
+                                      ),
+                                      // H6: Dynamic label for card/UPI vs COD
+                                      child: _placing
+                                          ? const SizedBox(
+                                              height: 24,
+                                              width: 24,
+                                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                            )
+                                          : Text(
+                                              (_selectedPaymentMethod == 'card' || _selectedPaymentMethod == 'upi')
+                                                  ? 'Continue to payment'
+                                                  : 'Place order',
+                                            ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1748,7 +1746,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const Text(
-            'Delivery Address',
+            'Checkout',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 36),
