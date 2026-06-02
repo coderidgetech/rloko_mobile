@@ -10,6 +10,7 @@ class CreateOrderUseCase {
     required String paymentMethod,
     Map<String, dynamic>? paymentInfo,
     String? promotionCode,
+    double giftPackingCharge = 0,
   }) =>
       _repo.create(
         items: items,
@@ -17,5 +18,6 @@ class CreateOrderUseCase {
         paymentMethod: paymentMethod,
         paymentInfo: paymentInfo,
         promotionCode: promotionCode,
+        giftPackingCharge: giftPackingCharge,
       );
 }

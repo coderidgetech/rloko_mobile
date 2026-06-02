@@ -77,6 +77,7 @@ class OrderRepositoryImpl implements OrderRepository {
     required String paymentMethod,
     Map<String, dynamic>? paymentInfo,
     String? promotionCode,
+    double giftPackingCharge = 0,
   }) async {
     try {
       final itemsJson = items
@@ -106,6 +107,7 @@ class OrderRepositoryImpl implements OrderRepository {
         paymentMethod: paymentMethod,
         paymentInfo: paymentInfo,
         promotionCode: promotionCode,
+        giftPackingCharge: giftPackingCharge > 0 ? giftPackingCharge : null,
       );
       final dto = await _dataSource.create(request);
       return dto.toEntity();

@@ -53,6 +53,12 @@ Future<void> runStripeCheckout({
   final shipping = addressToShipping(selectedAddress, authState.user.email);
   final orderItems = cartItemsToOrderItems(cartItems, giftItemKeys: giftItemKeys);
 
+  final giftCount = giftItemKeys.isEmpty
+      ? 0
+      : cartItems.where((i) => giftItemKeys.contains('${i.productId}-${i.size}')).length;
+  const giftChargePerItem = 0.60;
+  final totalGiftCharge = giftCount * giftChargePerItem;
+
   OrderEntity? order;
   try {
     order = await sl<CreateOrderUseCase>().call(
@@ -60,6 +66,7 @@ Future<void> runStripeCheckout({
       shippingInfo: shipping,
       paymentMethod: orderPaymentMethod,
       promotionCode: promotionCode,
+      giftPackingCharge: totalGiftCharge,
     );
     if (kDebugMode) {
       debugPrint(

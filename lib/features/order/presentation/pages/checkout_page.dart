@@ -522,6 +522,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final orderItems = cartItemsToOrderItems(cartState.cart.items, giftItemKeys: _giftItemKeys);
     final shipping = addressToShipping(selectedAddress, authState.user.email);
+    final giftCount = _giftItemKeys.isEmpty
+        ? 0
+        : cartState.cart.items.where((i) => _giftItemKeys.contains('${i.productId}-${i.size}')).length;
+    final giftChargeUsd = giftCount * _giftChargePerItemUsd;
     setState(() {
       _placing = true;
       _error = null;
@@ -532,6 +536,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         shippingInfo: shipping,
         paymentMethod: _selectedPaymentMethod,
         promotionCode: promo,
+        giftPackingCharge: giftChargeUsd,
       );
       if (kDebugMode) {
         debugPrint('[CheckoutPage] Order placed: id=${order.id}');

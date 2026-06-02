@@ -17,6 +17,7 @@ abstract class OrderRepository {
     required String paymentMethod,
     Map<String, dynamic>? paymentInfo,
     String? promotionCode,
+    double giftPackingCharge = 0,
   });
 
   Future<OrderEntity> createGuest({
