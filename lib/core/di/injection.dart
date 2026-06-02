@@ -11,7 +11,9 @@ import '../delivery/guest_delivery_location_repository_impl.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
 import '../../features/auth/data/repositories/auth_repository_impl.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
+import '../../features/auth/domain/usecases/change_password_usecase.dart';
 import '../../features/auth/domain/usecases/complete_login_otp_usecase.dart';
+import '../../features/auth/domain/usecases/forgot_password_usecase.dart';
 import '../../features/auth/domain/usecases/get_me_usecase.dart';
 import '../../features/auth/domain/usecases/login_usecase.dart';
 import '../../features/auth/domain/usecases/login_with_google_usecase.dart';
@@ -142,6 +144,12 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<UpdateProfileUseCase>(
     () => UpdateProfileUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<ChangePasswordUseCase>(
+    () => ChangePasswordUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<ForgotPasswordUseCase>(
+    () => ForgotPasswordUseCase(sl<AuthRepository>()),
   );
 
   // Product

@@ -30,7 +30,6 @@ import '../../../promotion/domain/usecases/validate_promotion_usecase.dart';
 import '../../../shipping/domain/entities/calculate_shipping_params.dart';
 import '../../../shipping/domain/entities/shipping_method_entity.dart';
 import '../../../shipping/domain/usecases/calculate_shipping_usecase.dart';
-import '../../domain/entities/order_entity.dart';
 import '../../domain/usecases/order_usecases.dart';
 import '../../domain/utils/order_mappers.dart';
 import '../stripe_checkout.dart';

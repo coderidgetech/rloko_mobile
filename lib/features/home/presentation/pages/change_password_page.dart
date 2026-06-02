@@ -1,11 +1,11 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/injection.dart';
-import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../auth/domain/usecases/change_password_usecase.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -36,12 +36,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await sl<DioClient>().dio.put<void>(
-        '/auth/password',
-        data: {
-          'current_password': _currentController.text,
-          'new_password': _newController.text,
-        },
+      await sl<ChangePasswordUseCase>().call(
+        _currentController.text,
+        _newController.text,
       );
       if (!mounted) return;
       setState(() => _loading = false);
@@ -49,13 +46,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         const SnackBar(content: Text('Password changed successfully')),
       );
       context.go('/settings');
-    } on DioException catch (e) {
+    } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      final msg = e.response?.data?['message'] as String? ??
-          e.response?.data?['error'] as String? ??
-          'Failed to change password. Please try again.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "350870700467",
+    "project_id": "rloko-bc8e5",
+    "storage_bucket": "rloko-bc8e5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350870700467:android:9d421eb42ac7e02bb54bc6",
+        "android_client_info": {
+          "package_name": "com.coderidge.rloko"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDIc59N3eyTkPgVP6jbk0RZJRlfSJu1Db0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

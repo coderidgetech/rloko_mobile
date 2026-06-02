@@ -138,4 +138,25 @@ class AuthRepositoryImpl implements AuthRepository {
       throw getApiException(e) ?? e;
     }
   }
+
+  @override
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    try {
+      await _dataSource.changePassword(currentPassword, newPassword);
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    try {
+      await _dataSource.forgotPassword(email);
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
 }

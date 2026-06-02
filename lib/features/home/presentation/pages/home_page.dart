@@ -849,7 +849,7 @@ class _ShopByCategorySection extends StatelessWidget {
 }
 
 class _ShopCategoryCard extends StatelessWidget {
-  const _ShopCategoryCard({required this.category, required this.index});
+  const _ShopCategoryCard({super.key, required this.category, required this.index});
 
   final CategoryEntity category;
   final int index;

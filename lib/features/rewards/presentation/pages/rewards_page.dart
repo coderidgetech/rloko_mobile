@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../domain/entities/rewards_transaction.dart';
 import '../../domain/usecases/get_rewards_summary_usecase.dart';
 import '../../domain/usecases/get_rewards_transactions_usecase.dart';
 import '../../domain/usecases/redeem_rewards_usecase.dart';
@@ -353,13 +354,13 @@ class _EmptyTransactions extends StatelessWidget {
 
 class _TransactionRow extends StatelessWidget {
   const _TransactionRow({required this.tx});
-  final dynamic tx;
+  final RewardsTransaction tx;
 
   @override
   Widget build(BuildContext context) {
     final isEarned = tx.type == 'earned';
     final color = isEarned ? Colors.green.shade600 : Colors.red.shade600;
-    final dt = tx.createdAt as DateTime;
+    final dt = tx.createdAt;
     final date = '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
     return Container(
@@ -390,7 +391,7 @@ class _TransactionRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  tx.description as String,
+                  tx.description,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,

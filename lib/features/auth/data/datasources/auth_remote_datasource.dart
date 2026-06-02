@@ -294,4 +294,18 @@ class AuthRemoteDataSource {
     if (url == null || url.isEmpty) throw Exception('Upload failed: no URL returned');
     return url;
   }
+
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    await _dio.put<void>('/auth/password', data: {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
+
+  Future<void> forgotPassword(String email) async {
+    await _dio.post<void>('/auth/forgot-password', data: {'email': email});
+  }
 }

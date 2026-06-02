@@ -21,4 +21,6 @@ abstract class AuthRepository {
     String? city,
   });
   Future<String> uploadAvatar(File file);
+  Future<void> changePassword(String currentPassword, String newPassword);
+  Future<void> forgotPassword(String email);
 }

@@ -1,11 +1,11 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/form_hints.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/network/dio_client.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../domain/usecases/forgot_password_usecase.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -33,24 +33,18 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _sent = false;
     });
     try {
-      await sl<DioClient>().dio.post<void>(
-        '/auth/forgot-password',
-        data: {'email': _emailController.text.trim()},
-      );
+      await sl<ForgotPasswordUseCase>().call(_emailController.text.trim());
       if (mounted) {
         setState(() {
           _loading = false;
           _sent = true;
         });
       }
-    } on DioException catch (e) {
+    } on ApiException catch (e) {
       if (!mounted) return;
-      final msg = e.response?.data?['message'] as String? ??
-          e.response?.data?['error'] as String? ??
-          'Failed to send reset link. Please try again.';
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
+        SnackBar(content: Text(e.message)),
       );
     } catch (_) {
       if (!mounted) return;
