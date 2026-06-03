@@ -57,7 +57,14 @@ import '../../features/review/presentation/pages/write_review_page.dart';
 import '../../features/video/presentation/pages/video_player_page.dart';
 import '../../features/order/presentation/pages/guest_checkout_page.dart';
 
-final GlobalKey<NavigatorState> _rootNavKey = GlobalKey<NavigatorState>();
+// Stable navigator keys created once — must live outside createAppRouter so they
+// are not re-created on hot reload, which would cause the GlobalKey duplicate error.
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _homeNavKey = GlobalKey<NavigatorState>(debugLabel: 'home');
+final _categoriesNavKey = GlobalKey<NavigatorState>(debugLabel: 'categories');
+final _searchNavKey = GlobalKey<NavigatorState>(debugLabel: 'search');
+final _accountNavKey = GlobalKey<NavigatorState>(debugLabel: 'account');
+final _cartNavKey = GlobalKey<NavigatorState>(debugLabel: 'cart');
 
 /// Shell widget that wraps the five tab branches with a shared BottomNav.
 /// [StatefulShellRoute.indexedStack] keeps each branch's navigator alive so
@@ -85,7 +92,7 @@ class _AppShell extends StatelessWidget {
 
 GoRouter createAppRouter() {
   return GoRouter(
-    navigatorKey: _rootNavKey,
+    navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
     errorBuilder: (context, state) => const NotFoundPage(),
     redirect: (context, state) {
@@ -183,6 +190,7 @@ GoRouter createAppRouter() {
         branches: [
           // Branch 0 — Home
           StatefulShellBranch(
+            navigatorKey: _homeNavKey,
             routes: [
               GoRoute(
                 path: '/',
@@ -192,6 +200,7 @@ GoRouter createAppRouter() {
           ),
           // Branch 1 — Categories
           StatefulShellBranch(
+            navigatorKey: _categoriesNavKey,
             routes: [
               GoRoute(
                 path: '/categories',
@@ -216,6 +225,7 @@ GoRouter createAppRouter() {
           ),
           // Branch 2 — Search
           StatefulShellBranch(
+            navigatorKey: _searchNavKey,
             routes: [
               GoRoute(
                 path: '/search',
@@ -225,6 +235,7 @@ GoRouter createAppRouter() {
           ),
           // Branch 3 — Account
           StatefulShellBranch(
+            navigatorKey: _accountNavKey,
             routes: [
               GoRoute(
                 path: '/account',
@@ -234,6 +245,7 @@ GoRouter createAppRouter() {
           ),
           // Branch 4 — Cart
           StatefulShellBranch(
+            navigatorKey: _cartNavKey,
             routes: [
               GoRoute(
                 path: '/cart',
