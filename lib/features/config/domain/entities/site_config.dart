@@ -90,6 +90,14 @@ class SiteConfig extends Equatable {
             twitter: '',
             pinterest: '',
           ),
+          regions: const {
+            'US': RegionAvailability(enabled: true, status: 'live'),
+            'IN': RegionAvailability(
+              enabled: false,
+              status: 'coming_soon',
+              comingSoonMessage: "We're launching in India soon. Stay tuned!",
+            ),
+          },
         ),
         design: DesignConfig(
           colors: DesignColorsConfig(
@@ -184,6 +192,7 @@ class GeneralConfig extends Equatable {
     required this.supportEmail,
     required this.address,
     required this.socialMedia,
+    this.regions = const {},
   });
 
   final String siteName;
@@ -195,8 +204,27 @@ class GeneralConfig extends Equatable {
   final String address;
   final SocialMediaConfig socialMedia;
 
+  /// Per-region availability keyed by market code ('US', 'IN'). Empty on older
+  /// configs — callers treat a missing region as enabled.
+  final Map<String, RegionAvailability> regions;
+
+  /// Whether the given market code (e.g. 'US', 'IN') is open for shopping/ordering.
+  /// Defaults to true when the region isn't present in config.
+  bool isRegionEnabled(String marketCode) => regions[marketCode]?.enabled ?? true;
+
   @override
-  List<Object?> get props => [siteName, tagline, description, email, phone, supportEmail, address, socialMedia];
+  List<Object?> get props => [siteName, tagline, description, email, phone, supportEmail, address, socialMedia, regions];
+
+  static Map<String, RegionAvailability> _parseRegions(dynamic raw) {
+    if (raw is! Map) return const {};
+    final result = <String, RegionAvailability>{};
+    raw.forEach((key, value) {
+      if (value is Map) {
+        result[key.toString()] = RegionAvailability.fromMap(Map<String, dynamic>.from(value));
+      }
+    });
+    return result;
+  }
 
   factory GeneralConfig.fromMap(Map<String, dynamic>? m) {
     if (m == null) return const GeneralConfig(siteName: 'Rloco', tagline: '', description: '', email: '', phone: '', supportEmail: '', address: '', socialMedia: SocialMediaConfig(instagram: '', facebook: '', twitter: '', pinterest: ''));
@@ -209,6 +237,7 @@ class GeneralConfig extends Equatable {
       supportEmail: (m['supportEmail'] ?? '').toString(),
       address: (m['address'] ?? '').toString(),
       socialMedia: SocialMediaConfig.fromMap(m['socialMedia'] is Map ? Map<String, dynamic>.from(m['socialMedia'] as Map) : null),
+      regions: _parseRegions(m['regions']),
     );
   }
 
@@ -221,7 +250,33 @@ class GeneralConfig extends Equatable {
         'supportEmail': supportEmail,
         'address': address,
         'socialMedia': socialMedia.toMap(),
+        'regions': {for (final e in regions.entries) e.key: e.value.toMap()},
       };
+}
+
+/// Availability of a single shopping region (market), mirroring the web
+/// RegionAvailability shape served via /api/config.
+class RegionAvailability extends Equatable {
+  const RegionAvailability({required this.enabled, this.status = '', this.comingSoonMessage = ''});
+
+  final bool enabled;
+  final String status;
+  final String comingSoonMessage;
+
+  factory RegionAvailability.fromMap(Map<String, dynamic> m) => RegionAvailability(
+        enabled: m['enabled'] != false,
+        status: (m['status'] ?? '').toString(),
+        comingSoonMessage: (m['comingSoonMessage'] ?? '').toString(),
+      );
+
+  Map<String, dynamic> toMap() => {
+        'enabled': enabled,
+        'status': status,
+        'comingSoonMessage': comingSoonMessage,
+      };
+
+  @override
+  List<Object?> get props => [enabled, status, comingSoonMessage];
 }
 
 class SocialMediaConfig extends Equatable {

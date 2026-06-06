@@ -7,6 +7,20 @@ import '../region/presentation/region_bloc.dart'; // RegionSetRequested
 import '../theme/app_theme.dart';
 import '../delivery/presentation/guest_delivery_cubit.dart';
 import '../delivery/apply_guest_gps_to_stores.dart';
+import '../../features/config/presentation/bloc/config_bloc.dart';
+
+/// Reads region availability from loaded site config; a region is open unless
+/// explicitly disabled. Returns (enabled, comingSoonMessage).
+({bool enabled, String message}) _regionAvailability(BuildContext context, String marketCode) {
+  final state = context.read<ConfigBloc>().state;
+  if (state is ConfigLoaded) {
+    final region = state.config.general.regions[marketCode];
+    if (region != null) {
+      return (enabled: region.enabled, message: region.comingSoonMessage);
+    }
+  }
+  return (enabled: true, message: '');
+}
 
 /// Half-sheet: **current location** first (Myntra-style), then optional manual pin / ZIP.
 Future<void> showDeliverToLocationSheet(BuildContext context) {
@@ -64,6 +78,10 @@ class _SheetBodyState extends State<_SheetBody> {
     super.didChangeDependencies();
     if (_loadedFromCubit) return;
     _loadedFromCubit = true;
+    // If India isn't available yet, never start on it.
+    if (_isIndia && !_regionAvailability(context, 'IN').enabled) {
+      _isIndia = false;
+    }
     final s = context.read<GuestDeliveryCubit>().state;
     if (_isIndia) {
       _code.text = s.indiaPincode ?? '';
@@ -207,21 +225,24 @@ class _SheetBodyState extends State<_SheetBody> {
           Row(
             children: [
               Expanded(
-                child: _Segment(
-                  label: 'India',
-                  selected: _isIndia,
-                  onTap: _gpsBusy || _saving
-                      ? null
-                      : () {
-                          final s = context.read<GuestDeliveryCubit>().state;
-                          setState(() {
-                            _isIndia = true;
-                            _code.text = s.indiaPincode ?? '';
-                            _city.text = s.indiaCityHint ?? '';
-                            _error = null;
-                          });
-                        },
-                ),
+                child: Builder(builder: (context) {
+                  final india = _regionAvailability(context, 'IN');
+                  return _Segment(
+                    label: india.enabled ? 'India' : 'India (Coming soon)',
+                    selected: _isIndia,
+                    onTap: !india.enabled || _gpsBusy || _saving
+                        ? null
+                        : () {
+                            final s = context.read<GuestDeliveryCubit>().state;
+                            setState(() {
+                              _isIndia = true;
+                              _code.text = s.indiaPincode ?? '';
+                              _city.text = s.indiaCityHint ?? '';
+                              _error = null;
+                            });
+                          },
+                  );
+                }),
               ),
               const SizedBox(width: 10),
               Expanded(
