@@ -11,6 +11,22 @@ class OrderRepositoryImpl implements OrderRepository {
 
   final OrderRemoteDataSource _dataSource;
 
+  /// Serializes an order item, including per-item gift fields when set so the
+  /// backend records which units are gifts (matches web's conditional spread).
+  static Map<String, dynamic> _itemToJson(OrderItemEntity e) => {
+        'product_id': e.productId,
+        'product_name': e.productName,
+        'image': e.image,
+        'price': e.price,
+        'size': e.size,
+        'quantity': e.quantity,
+        if (e.isGift == true) 'is_gift': true,
+        if (e.isGift == true && e.giftWrapColor != null)
+          'gift_wrap_color': e.giftWrapColor,
+        if (e.isGift == true && e.giftMessage != null)
+          'gift_message': e.giftMessage,
+      };
+
   @override
   Future<OrderListResult> list({int? limit, int? skip, String? status}) async {
     try {
@@ -78,18 +94,12 @@ class OrderRepositoryImpl implements OrderRepository {
     Map<String, dynamic>? paymentInfo,
     String? promotionCode,
     double giftPackingCharge = 0,
+    String? idempotencyKey,
+    String? shippingCarrier,
+    String? shippingService,
   }) async {
     try {
-      final itemsJson = items
-          .map((e) => {
-                'product_id': e.productId,
-                'product_name': e.productName,
-                'image': e.image,
-                'price': e.price,
-                'size': e.size,
-                'quantity': e.quantity,
-              })
-          .toList();
+      final itemsJson = items.map(_itemToJson).toList();
       final shippingJson = {
         'first_name': shippingInfo.firstName,
         'last_name': shippingInfo.lastName,
@@ -107,9 +117,11 @@ class OrderRepositoryImpl implements OrderRepository {
         paymentMethod: paymentMethod,
         paymentInfo: paymentInfo,
         promotionCode: promotionCode,
+        shippingCarrier: shippingCarrier,
+        shippingService: shippingService,
         giftPackingCharge: giftPackingCharge > 0 ? giftPackingCharge : null,
       );
-      final dto = await _dataSource.create(request);
+      final dto = await _dataSource.create(request, idempotencyKey: idempotencyKey);
       return dto.toEntity();
     } on DioException catch (e) {
       throw getApiException(e) ?? e;
@@ -123,18 +135,11 @@ class OrderRepositoryImpl implements OrderRepository {
     required List<OrderItemEntity> items,
     required ShippingInfoEntity shippingInfo,
     String? promotionCode,
+    String? shippingCarrier,
+    String? shippingService,
   }) async {
     try {
-      final itemsJson = items
-          .map((e) => {
-                'product_id': e.productId,
-                'product_name': e.productName,
-                'image': e.image,
-                'price': e.price,
-                'size': e.size,
-                'quantity': e.quantity,
-              })
-          .toList();
+      final itemsJson = items.map(_itemToJson).toList();
       final shippingJson = {
         'first_name': shippingInfo.firstName,
         'last_name': shippingInfo.lastName,
@@ -152,6 +157,8 @@ class OrderRepositoryImpl implements OrderRepository {
         items: itemsJson,
         shippingInfo: shippingJson,
         promotionCode: promotionCode,
+        shippingCarrier: shippingCarrier,
+        shippingService: shippingService,
       );
       final dto = await _dataSource.createGuest(request);
       return dto.toEntity();

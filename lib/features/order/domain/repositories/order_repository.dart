@@ -18,6 +18,9 @@ abstract class OrderRepository {
     Map<String, dynamic>? paymentInfo,
     String? promotionCode,
     double giftPackingCharge = 0,
+    String? idempotencyKey,
+    String? shippingCarrier,
+    String? shippingService,
   });
 
   Future<OrderEntity> createGuest({
@@ -26,6 +29,8 @@ abstract class OrderRepository {
     required List<OrderItemEntity> items,
     required ShippingInfoEntity shippingInfo,
     String? promotionCode,
+    String? shippingCarrier,
+    String? shippingService,
   });
 }
 

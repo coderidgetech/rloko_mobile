@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Theme extension for Rloco design tokens. Used when theme is built from config.
+/// Theme extension for Rloko design tokens. Used when theme is built from config.
 class RlocoThemeExtension extends ThemeExtension<RlocoThemeExtension> {
   const RlocoThemeExtension({
     required this.primary,

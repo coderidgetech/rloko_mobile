@@ -77,10 +77,18 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     if (result != null && mounted) setState(() => _filterState = result);
   }
 
-  /// "clothing" and "accessories" are broad config slugs; products use specific categories (Dresses, Tops, etc).
-  /// Don't pass these to the API—load by gender only, then filter by subcategory on client.
+  /// Maps the URL slug to the API `category` query param.
+  ///
+  /// Rules:
+  /// - Empty slug → null (load all for this gender)
+  /// - Slug equals gender (e.g. "women" under gender "women") → null (top-level
+  ///   gender category; products use specific values like "Dresses", "Tops")
+  /// - "clothing" / "accessories" → null (broad bucket slugs that don't match
+  ///   any product.category value directly)
+  /// - Anything else → pass through so the backend regex-matches it
   String? _apiCategoryParam() {
     if (widget.slug.isEmpty) return null;
+    if (widget.slug == widget.gender) return null;
     if (widget.slug == 'clothing' || widget.slug == 'accessories') return null;
     return widget.slug;
   }

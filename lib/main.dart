@@ -18,6 +18,7 @@ import 'core/di/injection.dart';
 import 'core/delivery/guest_delivery_location_repository.dart';
 import 'core/delivery/presentation/guest_delivery_cubit.dart';
 import 'core/network/dio_client.dart';
+import 'core/region/app_region.dart';
 import 'core/region/currency_scope.dart';
 import 'core/region/region_repository.dart';
 import 'core/region/presentation/region_bloc.dart';
@@ -108,6 +109,7 @@ void main() async {
 
 final GoRouter _appRouter = createAppRouter();
 
+/// Providers only — no builders at this level so MaterialApp.router stays stable.
 class RlocoApp extends StatelessWidget {
   const RlocoApp({super.key});
 
@@ -191,45 +193,99 @@ class RlocoApp extends StatelessWidget {
           ),
         ),
       ],
-      child: BlocBuilder<RegionBloc, RegionState>(
-        builder: (context, state) => CurrencyScope(
-          region: state.region,
-          child: _AppLifecycleHandler(
-            child: BlocListener<AuthBloc, AuthState>(
-              listener: (context, state) {
-                if (state is AuthAuthenticated) {
-                  context.read<CartBloc>().add(const CartMergeGuestCartRequested());
-                  context.read<WishlistBloc>().add(const WishlistMergeGuestRequested());
-                  context.read<AddressListBloc>().add(const AddressListLoadRequested());
-                  sl<FCMService>().init();
-                } else if (state is AuthUnauthenticated) {
-                  context.read<AddressListBloc>().add(const AddressListResetRequested());
-                }
-              },
-              child: BlocBuilder<ConfigBloc, ConfigState>(
-                buildWhen: (a, b) => b is ConfigLoaded,
-                builder: (context, state) {
-                  final config = state is ConfigLoaded ? state.config : SiteConfig.defaultConfig;
-                  final theme = ConfigThemeBuilder.build(config.design);
-                  return ValueListenableBuilder<Locale>(
-                    valueListenable: appLocale,
-                    builder: (context, loc, _) {
-                      return MaterialApp.router(
-                        title: config.general.siteName,
-                        theme: theme,
-                        routerConfig: _appRouter,
-                        locale: loc,
-                        supportedLocales: const [Locale('en'), Locale('hi')],
-                        localizationsDelegates: const [
-                          GlobalMaterialLocalizations.delegate,
-                          GlobalWidgetsLocalizations.delegate,
-                          GlobalCupertinoLocalizations.delegate,
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
+      child: const _AppCore(),
+    );
+  }
+}
+
+/// Stateful shell that owns theme / title / region as local state and feeds
+/// them into a *single, stable* MaterialApp.router instance.
+///
+/// Crucially, MaterialApp.router is NOT rebuilt inside any BlocBuilder or
+/// ValueListenableBuilder — doing so creates two Navigator widgets that both
+/// claim the same _rootNavKey in the same frame, which triggers the
+/// "LabeledGlobalKey<NavigatorState> used multiple times" crash.
+///
+/// Instead we use BlocListener (fires callbacks without rebuilding the tree)
+/// and setState to mutate properties, so MaterialApp.router stays as one
+/// long-lived element that Flutter updates in place.
+class _AppCore extends StatefulWidget {
+  const _AppCore();
+
+  @override
+  State<_AppCore> createState() => _AppCoreState();
+}
+
+class _AppCoreState extends State<_AppCore> {
+  late ThemeData _theme;
+  late String _title;
+  late AppRegion _region;
+
+  @override
+  void initState() {
+    super.initState();
+    final region = context.read<RegionBloc>().state.region;
+    _region = region;
+    _theme = ConfigThemeBuilder.build(SiteConfig.defaultConfig.design);
+    _title = SiteConfig.defaultConfig.general.siteName;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocListener(
+      listeners: [
+        // Region changes: update CurrencyScope data via setState.
+        BlocListener<RegionBloc, RegionState>(
+          listener: (ctx, state) => setState(() => _region = state.region),
+        ),
+        // Config loads: update theme + title via setState — no tree rebuild.
+        BlocListener<ConfigBloc, ConfigState>(
+          listenWhen: (_, b) => b is ConfigLoaded,
+          listener: (ctx, state) {
+            if (state is ConfigLoaded) {
+              setState(() {
+                _theme = ConfigThemeBuilder.build(state.config.design);
+                _title = state.config.general.siteName;
+              });
+              // If India is no longer available, fall back any persisted India
+              // selection to the US region.
+              if (!state.config.general.isRegionEnabled('IN') &&
+                  ctx.read<RegionBloc>().state.region == AppRegion.india) {
+                ctx.read<RegionBloc>().add(const RegionSetRequested(AppRegion.unitedStates));
+              }
+            }
+          },
+        ),
+        // Auth state side-effects.
+        BlocListener<AuthBloc, AuthState>(
+          listener: (ctx, state) {
+            if (state is AuthAuthenticated) {
+              ctx.read<CartBloc>().add(const CartMergeGuestCartRequested());
+              ctx.read<WishlistBloc>().add(const WishlistMergeGuestRequested());
+              ctx.read<AddressListBloc>().add(const AddressListLoadRequested());
+              sl<FCMService>().init();
+            } else if (state is AuthUnauthenticated) {
+              ctx.read<AddressListBloc>().add(const AddressListResetRequested());
+            }
+          },
+        ),
+      ],
+      child: CurrencyScope(
+        region: _region,
+        child: _AppLifecycleHandler(
+          child: ValueListenableBuilder<Locale>(
+            valueListenable: appLocale,
+            builder: (ctx, loc, _) => MaterialApp.router(
+              title: _title,
+              theme: _theme,
+              routerConfig: _appRouter,
+              locale: loc,
+              supportedLocales: const [Locale('en'), Locale('hi')],
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
             ),
           ),
         ),

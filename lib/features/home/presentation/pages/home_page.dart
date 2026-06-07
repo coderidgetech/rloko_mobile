@@ -22,6 +22,7 @@ import '../../../video/presentation/bloc/inspiration_videos_bloc.dart';
 import '../../../product/presentation/widgets/product_grid_skeleton.dart';
 import '../../../product/presentation/widgets/product_grid_tile.dart';
 import '../../../../core/widgets/delivery_location_strip.dart';
+import '../../../../core/utils/navigation_utils.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -300,7 +301,7 @@ class _HeroCarousel extends StatelessWidget {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
-                            onPressed: () => context.push(s.link),
+                            onPressed: () => context.safePush(s.link),
                             style: FilledButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: AppTheme.foregroundColor(context),
@@ -408,7 +409,7 @@ class _StoryCirclesStrip extends StatelessWidget {
               key: ValueKey(item.id),
               padding: const EdgeInsets.only(right: 16),
               child: InkWell(
-                onTap: () => context.push(item.link),
+                onTap: () => context.safePush(item.link),
                 borderRadius: BorderRadius.circular(32),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -555,7 +556,7 @@ class _InspirationVideosContent extends StatelessWidget {
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: GestureDetector(
-                        onTap: () => context.push(
+                        onTap: () => context.safePush(
                           '/video/${video.id}',
                           extra: {
                             'videoUrl': video.videoUrl,
@@ -862,7 +863,7 @@ class _ShopCategoryCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push(link),
+        onTap: () => context.safePush(link),
         borderRadius: BorderRadius.circular(20),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
@@ -1038,7 +1039,7 @@ class _GiftCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => context.push(link),
+        onTap: () => context.safePush(link),
         borderRadius: BorderRadius.circular(16),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
@@ -1381,7 +1382,7 @@ class _PromoBanner extends StatelessWidget {
           FilledButton(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("You're already using the Rloco app")),
+                const SnackBar(content: Text("You're already using the Rloko app")),
               );
             },
             style: FilledButton.styleFrom(

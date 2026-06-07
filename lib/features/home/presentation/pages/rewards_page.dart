@@ -9,7 +9,7 @@ import '../../../auth/presentation/widgets/sign_in_to_continue_panel.dart';
 import '../../../rewards/domain/entities/rewards_summary.dart';
 import '../../../rewards/domain/usecases/get_rewards_summary_usecase.dart';
 
-/// Rloco Rewards — live data from GET /rewards/summary (order history).
+/// Rloko Rewards — live data from GET /rewards/summary (order history).
 class RewardsPage extends StatefulWidget {
   const RewardsPage({super.key});
 
@@ -118,7 +118,7 @@ class _RewardsPageState extends State<RewardsPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Rloco Rewards',
+            'Rloko Rewards',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 8),

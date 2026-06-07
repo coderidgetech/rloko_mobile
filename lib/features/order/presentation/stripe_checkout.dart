@@ -8,6 +8,7 @@ import '../../../core/constants/stripe_constants.dart';
 import '../../../core/di/injection.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/dio_client.dart';
+import '../../../core/region/currency_scope.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/bloc/auth_bloc.dart';
 import '../../cart/domain/entities/cart_item_entity.dart';
@@ -18,7 +19,8 @@ import '../domain/entities/order_entity.dart';
 import '../domain/usecases/order_usecases.dart';
 import '../domain/utils/order_mappers.dart';
 
-/// Matches web: POST /orders with `payment_method` `card` or `upi`, then POST /payments/intent, then Stripe sheet.
+/// Matches web: POST /orders with `payment_method` `card`/`upi`/`wallet`, then
+/// POST /payments/intent, then Stripe sheet.
 Future<void> runStripeCheckout({
   required BuildContext context,
   required AuthAuthenticated authState,
@@ -27,10 +29,16 @@ Future<void> runStripeCheckout({
   required String orderPaymentMethod,
   String? promotionCode,
   Set<String> giftItemKeys = const {},
+  String? walletName,
+  String? idempotencyKey,
+  String? shippingCarrier,
+  String? shippingService,
 }) async {
   assert(
-    orderPaymentMethod == 'card' || orderPaymentMethod == 'upi',
-    'orderPaymentMethod must be card or upi',
+    orderPaymentMethod == 'card' ||
+        orderPaymentMethod == 'upi' ||
+        orderPaymentMethod == 'wallet',
+    'orderPaymentMethod must be card, upi or wallet',
   );
 
   if (kStripePublishableKey.isEmpty) {
@@ -53,11 +61,13 @@ Future<void> runStripeCheckout({
   final shipping = addressToShipping(selectedAddress, authState.user.email);
   final orderItems = cartItemsToOrderItems(cartItems, giftItemKeys: giftItemKeys);
 
-  final giftCount = giftItemKeys.isEmpty
-      ? 0
-      : cartItems.where((i) => giftItemKeys.contains('${i.productId}-${i.size}')).length;
-  const giftChargePerItem = 0.60;
-  final totalGiftCharge = giftCount * giftChargePerItem;
+  final region = CurrencyScope.of(context).region;
+  final giftUnits = giftUnitCount(cartItems, giftItemKeys);
+  final totalGiftCharge = giftChargeForOrder(giftUnits, region);
+
+  final paymentInfo = orderPaymentMethod == 'wallet' && walletName != null
+      ? <String, dynamic>{'wallet_name': walletName}
+      : null;
 
   OrderEntity? order;
   try {
@@ -65,8 +75,12 @@ Future<void> runStripeCheckout({
       items: orderItems,
       shippingInfo: shipping,
       paymentMethod: orderPaymentMethod,
+      paymentInfo: paymentInfo,
       promotionCode: promotionCode,
       giftPackingCharge: totalGiftCharge,
+      idempotencyKey: idempotencyKey,
+      shippingCarrier: shippingCarrier,
+      shippingService: shippingService,
     );
     if (kDebugMode) {
       debugPrint(
@@ -105,7 +119,7 @@ Future<void> runStripeCheckout({
     await Stripe.instance.initPaymentSheet(
       paymentSheetParameters: SetupPaymentSheetParameters(
         paymentIntentClientSecret: intent.clientSecret,
-        merchantDisplayName: 'Rloco',
+        merchantDisplayName: 'Rloko',
         style: ThemeMode.system,
         billingDetails: billing,
         billingDetailsCollectionConfiguration:
@@ -116,9 +130,13 @@ Future<void> runStripeCheckout({
           address: AddressCollectionMode.never,
           attachDefaultsToPaymentMethod: true,
         ),
+        // Wallet leaves ordering to Stripe (intent decides available methods);
+        // card/UPI keep their explicit preferred method.
         paymentMethodOrder: orderPaymentMethod == 'upi'
             ? <String>['upi']
-            : <String>['card'],
+            : orderPaymentMethod == 'card'
+                ? <String>['card']
+                : null,
       ),
     );
 

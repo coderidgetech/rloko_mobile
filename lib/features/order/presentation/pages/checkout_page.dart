@@ -4,7 +4,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/currency_constants.dart';
@@ -18,6 +17,7 @@ import '../../../../core/region/currency_scope.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/checkout_idempotency.dart';
 import '../../../../core/widgets/payment_method_picker.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -30,6 +30,8 @@ import '../../../promotion/domain/usecases/validate_promotion_usecase.dart';
 import '../../../shipping/domain/entities/calculate_shipping_params.dart';
 import '../../../shipping/domain/entities/shipping_method_entity.dart';
 import '../../../shipping/domain/usecases/calculate_shipping_usecase.dart';
+import '../../../tax/domain/entities/calculate_tax_params.dart';
+import '../../../tax/domain/usecases/calculate_tax_usecase.dart';
 import '../../domain/usecases/order_usecases.dart';
 import '../../domain/utils/order_mappers.dart';
 import '../stripe_checkout.dart';
@@ -69,18 +71,35 @@ class _CheckoutPageState extends State<CheckoutPage> {
   double? _quotedShipping;
   String _quotedShippingCurrency = 'USD';
   bool _shippingQuoteLoading = false;
+
+  /// The shipping method the customer picked, sent with the order so the backend
+  /// prices and fulfills that rate instead of the cheapest.
+  ShippingMethodEntity? get _selectedShippingMethod {
+    for (final m in _shippingMethods) {
+      if (m.id == _selectedShippingMethodId) return m;
+    }
+    return null;
+  }
   String? _shippingError;
   int _quoteFetchGen = 0;
+  double? _taxUsd; // tax for the selected address, in USD (null until quoted)
   late String _selectedPaymentMethod;
+  String _selectedWallet = kWalletOptions.first;
+  // Stable key for the current checkout attempt; reused across retries so the
+  // backend dedupes instead of creating duplicate orders (matches web).
+  String? _idempotencyKey;
 
   @override
   void initState() {
     super.initState();
-    FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
     final fromCart = widget.initialPaymentMethod?.trim();
-    if (fromCart == 'card' || fromCart == 'upi' || fromCart == 'cod') {
+    if (fromCart == 'card' ||
+        fromCart == 'upi' ||
+        fromCart == 'wallet' ||
+        fromCart == 'cod') {
       final pm = fromCart!;
-      if ((pm == 'card' || pm == 'upi') && kStripePublishableKey.isEmpty) {
+      if ((pm == 'card' || pm == 'upi' || pm == 'wallet') &&
+          kStripePublishableKey.isEmpty) {
         _selectedPaymentMethod = 'cod';
       } else {
         _selectedPaymentMethod = pm;
@@ -387,6 +406,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       if (mounted) {
         setState(() {
           _quotedShipping = null;
+          _taxUsd = null;
           _shippingQuoteLoading = false;
           _shippingError = null;
         });
@@ -448,9 +468,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
         });
       }
     }
-  }
 
-  static const double _giftChargePerItemUsd = 0.60; // ~₹50
+    // Tax preview (parity with web): independent of shipping success so a tax
+    // failure never clears the shipping quote. Falls back to web's 8% estimate.
+    try {
+      final tax = await sl<CalculateTaxUseCase>().call(
+        CalculateTaxParams(
+          country: ship.country,
+          state: ship.state,
+          city: ship.city,
+          postalCode: ship.zipCode,
+          subtotal: sub,
+        ),
+      );
+      if (!mounted || myGen != _quoteFetchGen) return;
+      setState(() => _taxUsd = tax);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[CheckoutPage] tax quote: $e');
+      if (mounted && myGen == _quoteFetchGen) {
+        setState(() => _taxUsd = sub * 0.08);
+      }
+    }
+  }
 
   Future<void> _placeOrder() async {
     final connectivity = await Connectivity().checkConnectivity();
@@ -498,8 +537,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
     final promo = _promoCode.trim().isEmpty ? null : _promoCode.trim();
+    final region = CurrencyScope.of(context).region;
+    // One key per checkout attempt, reused on retry so the backend dedupes.
+    final idemKey = _idempotencyKey ??= generateIdempotencyKey();
 
-    if (_selectedPaymentMethod == 'card' || _selectedPaymentMethod == 'upi') {
+    if (_selectedPaymentMethod == 'card' ||
+        _selectedPaymentMethod == 'upi' ||
+        _selectedPaymentMethod == 'wallet') {
       setState(() {
         _placing = true;
         _error = null;
@@ -512,7 +556,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
         orderPaymentMethod: _selectedPaymentMethod,
         promotionCode: promo,
         giftItemKeys: _giftItemKeys,
+        walletName: _selectedPaymentMethod == 'wallet' ? _selectedWallet : null,
+        idempotencyKey: idemKey,
+        shippingCarrier: _selectedShippingMethod?.carrier,
+        shippingService: _selectedShippingMethod?.name,
       );
+      // Attempt finished (success navigates away; cancel/failure voids the order
+      // server-side). Either way the next tap is a brand-new attempt, so rotate
+      // the key — reusing it would dedupe onto the now-cancelled order.
+      _idempotencyKey = null;
       if (mounted) {
         setState(() => _placing = false);
       }
@@ -521,10 +573,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final orderItems = cartItemsToOrderItems(cartState.cart.items, giftItemKeys: _giftItemKeys);
     final shipping = addressToShipping(selectedAddress, authState.user.email);
-    final giftCount = _giftItemKeys.isEmpty
-        ? 0
-        : cartState.cart.items.where((i) => _giftItemKeys.contains('${i.productId}-${i.size}')).length;
-    final giftChargeUsd = giftCount * _giftChargePerItemUsd;
+    final giftUnits = giftUnitCount(cartState.cart.items, _giftItemKeys);
+    final giftCharge = giftChargeForOrder(giftUnits, region);
     setState(() {
       _placing = true;
       _error = null;
@@ -535,13 +585,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
         shippingInfo: shipping,
         paymentMethod: _selectedPaymentMethod,
         promotionCode: promo,
-        giftPackingCharge: giftChargeUsd,
+        giftPackingCharge: giftCharge,
+        idempotencyKey: idemKey,
+        shippingCarrier: _selectedShippingMethod?.carrier,
+        shippingService: _selectedShippingMethod?.name,
       );
       if (kDebugMode) {
         debugPrint('[CheckoutPage] Order placed: id=${order.id}');
       }
       if (!mounted) return;
       context.read<CartBloc>().add(const CartClearRequested());
+      _idempotencyKey = null; // order placed; a future checkout is a new attempt
       context.go('/order-confirmation/${order.id}');
     } catch (e, st) {
       final message = e is ApiException
@@ -566,18 +620,32 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _openPaymentMethodPicker() async {
+    // Wallet is INR-only, mirroring web's `walletAvailable`.
+    final walletAvailable =
+        CurrencyScope.of(context).region == AppRegion.india;
     final next = await showPaymentMethodPicker(
       context,
       selected: _selectedPaymentMethod,
+      walletAvailable: walletAvailable,
     );
-    if (next != null && mounted) {
-      setState(() => _selectedPaymentMethod = next);
+    if (next == null || !mounted) return;
+    if (next == 'wallet') {
+      final wallet =
+          await showWalletPicker(context, selected: _selectedWallet);
+      if (!mounted) return;
+      // Cancelling the wallet sub-picker leaves the payment method unchanged.
+      if (wallet == null) return;
+      setState(() {
+        _selectedPaymentMethod = 'wallet';
+        _selectedWallet = wallet;
+      });
+      return;
     }
+    setState(() => _selectedPaymentMethod = next);
   }
 
   @override
   void dispose() {
-    FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
     _promoController.dispose();
     super.dispose();
   }
@@ -785,15 +853,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     : _quotedShippingCurrency == 'INR'
                         ? _quotedShipping! / kUsdToInrDisplay
                         : _quotedShipping!;
-                final giftCount = _giftItemKeys.isEmpty
-                    ? 0
-                    : cart.items.where((i) => _giftItemKeys.contains('${i.productId}-${i.size}')).length;
-                final giftChargeUsd = giftCount * _giftChargePerItemUsd;
-                final giftText = giftCount == 0
+                final giftUnits = giftUnitCount(cart.items, _giftItemKeys);
+                final giftUsd = giftChargeSummaryUsd(giftUnits, region);
+                final giftText = giftUnits == 0
                     ? null
                     : region == AppRegion.india
-                        ? '+₹${(giftChargeUsd * kUsdToInrDisplay).round()}'
-                        : '+\$${giftChargeUsd.toStringAsFixed(2)}';
+                        ? '+₹${(giftUsd * kUsdToInrDisplay).round()}'
+                        : '+\$${giftUsd.toStringAsFixed(2)}';
+                // Tax: backend returns it in USD (same as subtotal); show only
+                // once quoted for an address. Mirrors web's tax line.
+                final taxUsd = _taxUsd ?? 0.0;
+                final taxText = _taxUsd == null
+                    ? null
+                    : region == AppRegion.india
+                        ? CurrencyScope.of(context).formatPrice(taxUsd, taxUsd * kUsdToInrDisplay)
+                        : '\$${taxUsd.toStringAsFixed(2)}';
                 final discountUsd = _appliedDiscount ?? 0.0;
                 final discountText = _appliedDiscount == null
                     ? null
@@ -801,7 +875,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         ? '-${CurrencyScope.of(context).formatPrice(_appliedDiscount!, _appliedDiscount! * kUsdToInrDisplay)}'
                         : '-\$${_appliedDiscount!.toStringAsFixed(2)}';
                 // Total in USD; convert for display when region is India.
-                final totalUsd = (subtotalUsd + shippingUsd + giftChargeUsd - discountUsd).clamp(0.0, double.infinity);
+                final totalUsd = (subtotalUsd + shippingUsd + taxUsd + giftUsd - discountUsd).clamp(0.0, double.infinity);
                 final subtotalText = region == AppRegion.india
                     ? CurrencyScope.of(context).formatPrice(subtotalUsd, subtotalInr)
                     : CurrencyScope.of(context).formatPrice(subtotalUsd, null);
@@ -1282,8 +1356,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                   // H5: Region-aware gift wrap label
                                   final giftLabelRegion = CurrencyScope.of(context).region;
                                   final giftLabel = giftLabelRegion == AppRegion.india
-                                      ? 'Mark items as gifts (+₹${(_giftChargePerItemUsd * kUsdToInrDisplay).round()} per item)'
-                                      : 'Mark items as gifts (+\$${_giftChargePerItemUsd.toStringAsFixed(2)} per item)';
+                                      ? 'Mark items as gifts (+₹${kGiftPackingPerItemInr.round()} per item)'
+                                      : 'Mark items as gifts (+\$${giftPerItemUsd().toStringAsFixed(2)} per item)';
                                   return Text(
                                     giftLabel,
                                     style: TextStyle(
@@ -1435,7 +1509,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                           Expanded(
                                             child: Builder(builder: (context) {
                                               // M7: extract to avoid calling paymentMethodDetailLine twice
-                                              final pmDetail = paymentMethodDetailLine(_selectedPaymentMethod);
+                                              final pmDetail = _selectedPaymentMethod == 'wallet'
+                                                  ? '$_selectedWallet · via Stripe'
+                                                  : paymentMethodDetailLine(_selectedPaymentMethod);
                                               return Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
@@ -1553,13 +1629,32 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                           ),
                                         ],
                                       ),
+                                      if (taxText != null) ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Tax',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                                              ),
+                                            ),
+                                            Text(
+                                              taxText,
+                                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                       if (giftText != null) ...[
                                         const SizedBox(height: 8),
                                         Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              'Gift wrapping ($giftCount item${giftCount == 1 ? '' : 's'})',
+                                              'Gift wrapping ($giftUnits item${giftUnits == 1 ? '' : 's'})',
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
@@ -1693,7 +1788,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                             )
                                           : Text(
-                                              (_selectedPaymentMethod == 'card' || _selectedPaymentMethod == 'upi')
+                                              (_selectedPaymentMethod == 'card' ||
+                                                      _selectedPaymentMethod == 'upi' ||
+                                                      _selectedPaymentMethod == 'wallet')
                                                   ? 'Continue to payment'
                                                   : 'Place order',
                                             ),

@@ -26,6 +26,7 @@ import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../review/domain/entities/review_entity.dart';
 import '../../../review/domain/usecases/get_product_reviews_usecase.dart';
 import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
+import '../../../../core/utils/navigation_utils.dart';
 
 class ProductDetailPage extends StatelessWidget {
   const ProductDetailPage({super.key, required this.productId});
@@ -637,13 +638,17 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(
@@ -1385,7 +1390,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                               ),
                                             ),
                                           );
-                                          context.push('/cart');
+                                          context.safePush('/cart');
                                         },
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor:
@@ -1425,7 +1430,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                       child: FilledButton(
                                         onPressed: () {
                                           if (inCart) {
-                                            context.push('/cart');
+                                            context.safePush('/cart');
                                             return;
                                           }
                                           if (product.sizes.isNotEmpty &&
@@ -1786,22 +1791,27 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          icon,
-                          size: 20,
-                          color: AppTheme.primaryColor(context),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(
+                            icon,
+                            size: 20,
+                            color: AppTheme.primaryColor(context),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     TextButton(
                       onPressed:
@@ -1927,7 +1937,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     return SizedBox(
       width: width,
       child: InkWell(
-        onTap: () => context.push('/product/${p.id}'),
+        onTap: () => context.safePush('/product/${p.id}'),
         borderRadius: BorderRadius.circular(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -2359,17 +2369,24 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   Widget _productDetailRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+        Flexible(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+            ),
           ),
         ),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        const SizedBox(width: 16),
+        Flexible(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.end,
+          ),
         ),
       ],
     );

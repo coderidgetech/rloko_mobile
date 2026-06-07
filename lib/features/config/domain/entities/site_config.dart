@@ -77,9 +77,9 @@ class SiteConfig extends Equatable {
 
   static SiteConfig get defaultConfig => SiteConfig(
         general: GeneralConfig(
-          siteName: 'Rloco',
+          siteName: 'Rloko',
           tagline: 'Modern Luxury Fashion',
-          description: 'Rloco is a premium fashion retailer offering curated collections.',
+          description: 'Rloko is a premium fashion retailer offering curated collections.',
           email: '',
           phone: '',
           supportEmail: '',
@@ -166,7 +166,7 @@ class SiteConfig extends Equatable {
             showNewsletter: true,
             showSocial: true,
             showPaymentIcons: true,
-            copyrightText: '© 2026 Rloco. All rights reserved.',
+            copyrightText: '© 2026 Rloko. All rights reserved.',
           ),
         ),
         categories: CategoriesConfig(
@@ -227,9 +227,9 @@ class GeneralConfig extends Equatable {
   }
 
   factory GeneralConfig.fromMap(Map<String, dynamic>? m) {
-    if (m == null) return const GeneralConfig(siteName: 'Rloco', tagline: '', description: '', email: '', phone: '', supportEmail: '', address: '', socialMedia: SocialMediaConfig(instagram: '', facebook: '', twitter: '', pinterest: ''));
+    if (m == null) return const GeneralConfig(siteName: 'Rloko', tagline: '', description: '', email: '', phone: '', supportEmail: '', address: '', socialMedia: SocialMediaConfig(instagram: '', facebook: '', twitter: '', pinterest: ''));
     return GeneralConfig(
-      siteName: (m['siteName'] ?? 'Rloco').toString(),
+      siteName: (m['siteName'] ?? 'Rloko').toString(),
       tagline: (m['tagline'] ?? '').toString(),
       description: (m['description'] ?? '').toString(),
       email: (m['email'] ?? '').toString(),

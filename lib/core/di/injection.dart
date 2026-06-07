@@ -74,6 +74,10 @@ import '../../features/config/domain/repositories/config_repository.dart';
 import '../../features/config/domain/usecases/get_site_config_usecase.dart';
 import '../../features/shipping/domain/usecases/calculate_shipping_usecase.dart';
 import '../../features/shipping/domain/usecases/get_shipping_methods_usecase.dart';
+import '../../features/tax/data/datasources/tax_remote_datasource.dart';
+import '../../features/tax/data/repositories/tax_repository_impl.dart';
+import '../../features/tax/domain/repositories/tax_repository.dart';
+import '../../features/tax/domain/usecases/calculate_tax_usecase.dart';
 import '../../features/payment/data/datasources/payment_remote_datasource.dart';
 import '../../features/payment/data/repositories/payment_repository_impl.dart';
 import '../../features/payment/domain/repositories/payment_repository.dart';
@@ -101,7 +105,7 @@ Future<void> initInjection() async {
   // Log API base URL in debug so user can verify
   if (kDebugMode) {
     final url = resolveApiBaseUrl();
-    debugPrint('Rloco API base URL: $url');
+    debugPrint('Rloko API base URL: $url');
   }
   // Core
   final prefs = await SharedPreferences.getInstance();
@@ -348,6 +352,17 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<CalculateShippingUseCase>(
     () => CalculateShippingUseCase(sl<ShippingRepository>()),
+  );
+
+  // Tax
+  sl.registerLazySingleton<TaxRemoteDataSource>(
+    () => TaxRemoteDataSource(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<TaxRepository>(
+    () => TaxRepositoryImpl(sl<TaxRemoteDataSource>()),
+  );
+  sl.registerLazySingleton<CalculateTaxUseCase>(
+    () => CalculateTaxUseCase(sl<TaxRepository>()),
   );
 
   // Payment (Stripe)

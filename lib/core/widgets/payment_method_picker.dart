@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../constants/stripe_constants.dart';
 import '../theme/app_theme.dart';
 
-/// Labels aligned with web [CheckoutPage] (`card` | `upi` | `cod`).
+/// Wallet brands offered when paying via wallet — matches web checkout.
+const List<String> kWalletOptions = ['Paytm', 'PhonePe', 'Google Pay', 'Amazon Pay'];
+
+/// Labels aligned with web [CheckoutPage] (`card` | `upi` | `wallet` | `cod`).
 String paymentMethodLabel(String id) {
   switch (id) {
     case 'cod':
@@ -12,6 +15,8 @@ String paymentMethodLabel(String id) {
       return 'Credit / Debit Card';
     case 'upi':
       return 'UPI';
+    case 'wallet':
+      return 'Wallet';
     default:
       return id;
   }
@@ -25,6 +30,8 @@ String? paymentMethodDetailLine(String id) {
       return 'Pay securely via Stripe';
     case 'upi':
       return 'UPI via Stripe (India)';
+    case 'wallet':
+      return 'Paytm, PhonePe, Google Pay & more (Stripe)';
     default:
       return null;
   }
@@ -36,16 +43,20 @@ IconData paymentMethodLeadingIcon(String id) {
       return Icons.money_outlined;
     case 'upi':
       return Icons.phone_android_outlined;
+    case 'wallet':
+      return Icons.account_balance_wallet_outlined;
     case 'card':
     default:
       return Icons.credit_card_outlined;
   }
 }
 
-/// Same options as web checkout: COD + Stripe (card / UPI) when key is set.
+/// Same options as web checkout: COD + Stripe (card / UPI / wallet) when key is
+/// set. [walletAvailable] mirrors web's `walletAvailable` (INR market only).
 Future<String?> showPaymentMethodPicker(
   BuildContext context, {
   required String selected,
+  bool walletAvailable = false,
 }) {
   return showModalBottomSheet<String>(
     context: context,
@@ -132,6 +143,85 @@ Future<String?> showPaymentMethodPicker(
                     enabled: kStripePublishableKey.isNotEmpty,
                     onTap: () => Navigator.pop(ctx, 'upi'),
                   ),
+                  if (walletAvailable) ...[
+                    const SizedBox(height: 8),
+                    _PaymentOptionRow(
+                      label: paymentMethodLabel('wallet'),
+                      subtitle: paymentMethodDetailLine('wallet')!,
+                      icon: paymentMethodLeadingIcon('wallet'),
+                      isSelected: selected == 'wallet',
+                      enabled: kStripePublishableKey.isNotEmpty,
+                      onTap: () => Navigator.pop(ctx, 'wallet'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+/// Lets the user pick a wallet brand ([kWalletOptions]) once Wallet is chosen.
+/// Returns the selected wallet name, or null if dismissed.
+Future<String?> showWalletPicker(
+  BuildContext context, {
+  required String selected,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Container(
+      decoration: BoxDecoration(
+        color: AppTheme.backgroundColor(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select wallet',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                children: [
+                  for (final w in kWalletOptions) ...[
+                    _PaymentOptionRow(
+                      label: w,
+                      subtitle: 'Pay via $w (Stripe)',
+                      icon: Icons.account_balance_wallet_outlined,
+                      isSelected: selected == w,
+                      onTap: () => Navigator.pop(ctx, w),
+                    ),
+                    if (w != kWalletOptions.last) const SizedBox(height: 8),
+                  ],
                 ],
               ),
             ),

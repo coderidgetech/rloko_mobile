@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
+import '../utils/navigation_utils.dart';
 import 'auth_logo.dart';
 import '../../features/cart/presentation/bloc/cart_bloc.dart';
 import '../../features/wishlist/presentation/bloc/wishlist_bloc.dart';
@@ -62,7 +63,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
         if (extraActions != null) ...extraActions!,
         IconButton(
           icon: const Icon(Icons.search, size: 24),
-          onPressed: () => context.push('/search'),
+          onPressed: () => context.safePush('/search'),
           style: IconButton.styleFrom(
             foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -118,7 +119,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.shopping_bag_outlined, size: 24),
-                  onPressed: () => context.push('/cart'),
+                  onPressed: () => context.safePush('/cart'),
                   style: IconButton.styleFrom(
                     foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,

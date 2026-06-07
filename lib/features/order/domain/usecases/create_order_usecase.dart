@@ -11,6 +11,9 @@ class CreateOrderUseCase {
     Map<String, dynamic>? paymentInfo,
     String? promotionCode,
     double giftPackingCharge = 0,
+    String? idempotencyKey,
+    String? shippingCarrier,
+    String? shippingService,
   }) =>
       _repo.create(
         items: items,
@@ -19,5 +22,8 @@ class CreateOrderUseCase {
         paymentInfo: paymentInfo,
         promotionCode: promotionCode,
         giftPackingCharge: giftPackingCharge,
+        idempotencyKey: idempotencyKey,
+        shippingCarrier: shippingCarrier,
+        shippingService: shippingService,
       );
 }

@@ -54,11 +54,17 @@ class OrderRemoteDataSource {
     );
   }
 
-  Future<OrderDto> create(CreateOrderRequestDto request) async {
+  Future<OrderDto> create(
+    CreateOrderRequestDto request, {
+    String? idempotencyKey,
+  }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/orders',
         data: request.toJson(),
+        options: (idempotencyKey != null && idempotencyKey.isNotEmpty)
+            ? Options(headers: {'Idempotency-Key': idempotencyKey})
+            : null,
       );
       final data = response.data;
       if (kDebugMode) debugPrint('[OrderRemoteDataSource] create response: $data');

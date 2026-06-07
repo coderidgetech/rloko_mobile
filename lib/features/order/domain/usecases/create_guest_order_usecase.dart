@@ -10,6 +10,8 @@ class CreateGuestOrderUseCase {
     required List<OrderItemEntity> items,
     required ShippingInfoEntity shippingInfo,
     String? promotionCode,
+    String? shippingCarrier,
+    String? shippingService,
   }) =>
       _repo.createGuest(
         guestEmail: guestEmail,
@@ -17,5 +19,7 @@ class CreateGuestOrderUseCase {
         items: items,
         shippingInfo: shippingInfo,
         promotionCode: promotionCode,
+        shippingCarrier: shippingCarrier,
+        shippingService: shippingService,
       );
 }

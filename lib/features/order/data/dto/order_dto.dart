@@ -125,6 +125,8 @@ class CreateGuestOrderRequestDto {
     required this.items,
     required this.shippingInfo,
     this.promotionCode,
+    this.shippingCarrier,
+    this.shippingService,
   });
 
   final String guestEmail;
@@ -132,6 +134,9 @@ class CreateGuestOrderRequestDto {
   final List<Map<String, dynamic>> items;
   final Map<String, dynamic> shippingInfo;
   final String? promotionCode;
+  // Customer-selected shipping rate so fulfillment buys that rate, not the cheapest.
+  final String? shippingCarrier;
+  final String? shippingService;
 
   Map<String, dynamic> toJson() => {
         'guest_email': guestEmail,
@@ -139,6 +144,8 @@ class CreateGuestOrderRequestDto {
         'items': items,
         'shipping_info': shippingInfo,
         if (promotionCode != null && promotionCode!.isNotEmpty) 'promotion_code': promotionCode,
+        if (shippingCarrier != null && shippingCarrier!.isNotEmpty) 'shipping_carrier': shippingCarrier,
+        if (shippingService != null && shippingService!.isNotEmpty) 'shipping_service': shippingService,
       };
 }
 
@@ -151,6 +158,8 @@ class CreateOrderRequestDto {
     this.paymentInfo,
     this.promotionCode,
     this.giftPackingCharge,
+    this.shippingCarrier,
+    this.shippingService,
   });
 
   final List<Map<String, dynamic>> items;
@@ -159,6 +168,9 @@ class CreateOrderRequestDto {
   final Map<String, dynamic>? paymentInfo;
   final String? promotionCode;
   final double? giftPackingCharge;
+  // Customer-selected shipping rate so fulfillment buys that rate, not the cheapest.
+  final String? shippingCarrier;
+  final String? shippingService;
 
   Map<String, dynamic> toJson() => {
         'items': items,
@@ -167,6 +179,8 @@ class CreateOrderRequestDto {
         if (paymentInfo != null && paymentInfo!.isNotEmpty) 'payment_info': paymentInfo,
         if (promotionCode != null && promotionCode!.isNotEmpty) 'promotion_code': promotionCode,
         if (giftPackingCharge != null && giftPackingCharge! > 0) 'gift_packing_charge': giftPackingCharge,
+        if (shippingCarrier != null && shippingCarrier!.isNotEmpty) 'shipping_carrier': shippingCarrier,
+        if (shippingService != null && shippingService!.isNotEmpty) 'shipping_service': shippingService,
       };
 }
 

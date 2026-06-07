@@ -13,6 +13,7 @@ import '../bloc/wishlist_bloc.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
+import '../../../../core/utils/navigation_utils.dart';
 
 /// Match React MobileWishlistPage: grid grid-cols-2 gap-3, card rounded-2xl border,
 /// image aspect 3/4, Trash top-right, p-3 name/price, Add to Cart button rounded-full.
@@ -101,7 +102,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   final item = state.items[index];
                   return _WishlistCard(
                     item: item,
-                    onTap: () => context.push('/product/${item.productId}'),
+                    onTap: () => context.safePush('/product/${item.productId}'),
                     onRemove: () {
                       context.read<WishlistBloc>().add(
                           WishlistRemoveItemRequested(item.productId));

@@ -10,6 +10,7 @@ import '../../../../core/widgets/safe_network_image.dart' show SafeCachedNetwork
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../review/domain/entities/review_entity.dart';
 import '../../../review/domain/usecases/get_my_reviews_usecase.dart';
+import '../../../../core/utils/navigation_utils.dart';
 
 /// Lists reviews written by the current user (GET /api/reviews/me).
 class ReviewsPage extends StatefulWidget {
@@ -142,7 +143,7 @@ class _ReviewsPageState extends State<ReviewsPage> {
                   child: InkWell(
                     onTap: () {
                       if (r.productId.isNotEmpty) {
-                        context.push('/product/${r.productId}');
+                        context.safePush('/product/${r.productId}');
                       }
                     },
                     borderRadius: BorderRadius.circular(16),

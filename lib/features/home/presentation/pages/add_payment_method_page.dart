@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/navigation_utils.dart';
 import '../../../../core/widgets/app_header.dart';
 
 /// We don’t collect card data on a separate “add card” screen — payment happens at checkout via Stripe.
@@ -35,7 +36,7 @@ class AddPaymentMethodPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () => context.push('/cart'),
+              onPressed: () => context.safePush('/cart'),
               child: const Text('Go to checkout'),
             ),
             const SizedBox(height: 12),

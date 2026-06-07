@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 
-/// About Rloco – brand story and info.
+/// About Rloko – brand story and info.
 class AboutPage extends StatelessWidget {
   const AboutPage({super.key});
 
@@ -18,7 +18,7 @@ class AboutPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'About Rloco',
+              'About Rloko',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
@@ -28,7 +28,7 @@ class AboutPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'Rloco is your destination for curated fashion and lifestyle products. We bring you quality apparel, accessories, and home goods from trusted brands and emerging labels—all in one place, with easy ordering and hassle-free returns.',
+              'Rloko is your destination for curated fashion and lifestyle products. We bring you quality apparel, accessories, and home goods from trusted brands and emerging labels—all in one place, with easy ordering and hassle-free returns.',
               style: TextStyle(fontSize: 15, color: AppTheme.foregroundColor(context), height: 1.5),
             ),
             const SizedBox(height: 20),

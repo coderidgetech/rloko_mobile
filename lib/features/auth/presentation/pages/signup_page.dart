@@ -231,7 +231,7 @@ class _SignupPageState extends State<SignupPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Join Rloco today',
+          'Join Rloko today',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,

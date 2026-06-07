@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-
 import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/navigation_utils.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../domain/entities/product_entity.dart';
 import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
@@ -33,7 +32,7 @@ class ProductGridTile extends StatelessWidget {
     });
 
     return InkWell(
-      onTap: () => context.push('/product/${product.id}'),
+      onTap: () => context.safePush('/product/${product.id}'),
       borderRadius: BorderRadius.circular(AppTheme.radius2xl),
       child: Container(
         decoration: BoxDecoration(
