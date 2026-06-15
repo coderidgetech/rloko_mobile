@@ -4,6 +4,7 @@ import 'app_region.dart';
 import 'region_repository.dart';
 
 const String _keySelectedCountry = 'selectedCountry';
+const String _keyLocationChosen = 'locationChosen';
 
 class RegionRepositoryImpl implements RegionRepository {
   RegionRepositoryImpl(this._prefs);
@@ -31,5 +32,13 @@ class RegionRepositoryImpl implements RegionRepository {
   @override
   Future<void> setRegion(AppRegion region) async {
     await _prefs.setString(_keySelectedCountry, region.displayName);
+  }
+
+  @override
+  bool hasChosenLocation() => _prefs.getBool(_keyLocationChosen) ?? false;
+
+  @override
+  Future<void> markLocationChosen() async {
+    await _prefs.setBool(_keyLocationChosen, true);
   }
 }

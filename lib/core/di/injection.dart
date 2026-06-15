@@ -6,6 +6,10 @@ import '../network/base_url_resolver.dart';
 import '../network/dio_client.dart';
 import '../region/region_repository.dart';
 import '../region/region_repository_impl.dart';
+import '../region/resolve/data/datasources/region_resolve_remote_datasource.dart';
+import '../region/resolve/data/repositories/region_resolve_repository_impl.dart';
+import '../region/resolve/domain/repositories/region_resolve_repository.dart';
+import '../region/resolve/domain/usecases/resolve_region_usecase.dart';
 import '../delivery/guest_delivery_location_repository.dart';
 import '../delivery/guest_delivery_location_repository_impl.dart';
 import '../../features/auth/data/datasources/auth_remote_datasource.dart';
@@ -116,6 +120,16 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<GuestDeliveryLocationRepository>(
     () => GuestDeliveryLocationRepositoryImpl(sl<SharedPreferences>()),
+  );
+  // Region resolve (pincode → market) via GET /region/resolve.
+  sl.registerLazySingleton<RegionResolveRemoteDataSource>(
+    () => RegionResolveRemoteDataSource(sl<DioClient>()),
+  );
+  sl.registerLazySingleton<RegionResolveRepository>(
+    () => RegionResolveRepositoryImpl(sl<RegionResolveRemoteDataSource>()),
+  );
+  sl.registerLazySingleton<ResolveRegionUseCase>(
+    () => ResolveRegionUseCase(sl<RegionResolveRepository>()),
   );
 
   // Auth
