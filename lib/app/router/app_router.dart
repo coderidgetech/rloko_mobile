@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/di/injection.dart';
+import '../../core/region/region_repository.dart';
+import '../../core/region/resolve/presentation/location_gate_page.dart';
 import '../../core/widgets/bottom_nav.dart';
 import '../../features/auth/presentation/bloc/auth_bloc.dart';
 import '../../features/auth/presentation/models/login_otp_route_extra.dart';
@@ -96,6 +98,25 @@ GoRouter createAppRouter() {
     initialLocation: '/splash',
     errorBuilder: (context, state) => const NotFoundPage(),
     redirect: (context, state) {
+      final path = state.matchedLocation;
+
+      // First-launch location gate: until a location is chosen, force the gate.
+      // Routes that must remain reachable before a location exists are exempt.
+      // NOTE: '/' (home) is intentionally absent — it is gated by design.
+      const locationExempt = [
+        '/splash',
+        '/onboarding',
+        '/location-gate',
+        '/login',
+        '/signup',
+        '/forgot-password',
+        '/otp-verification',
+      ];
+      final isLocationExempt = locationExempt.any((r) => path.startsWith(r));
+      if (!isLocationExempt && !sl<RegionRepository>().hasChosenLocation()) {
+        return '/location-gate';
+      }
+
       final protected = [
         '/checkout',
         '/orders',
@@ -114,7 +135,6 @@ GoRouter createAppRouter() {
         '/delivery-location',
         '/settings',
       ];
-      final path = state.matchedLocation;
       final isProtected = protected.any((r) => path.startsWith(r));
       if (!isProtected) return null;
       final authState = context.read<AuthBloc>().state;
@@ -168,6 +188,10 @@ GoRouter createAppRouter() {
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingPage(),
+      ),
+      GoRoute(
+        path: '/location-gate',
+        builder: (context, state) => const LocationGatePage(),
       ),
       GoRoute(
         path: '/login',
