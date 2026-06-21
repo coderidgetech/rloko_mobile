@@ -19,6 +19,9 @@ abstract class ProductRepository {
 
   Future<ProductEntity> getById(String id);
 
+  /// Color-variant siblings (same variant_group_id) for the PDP color switcher.
+  Future<List<ProductEntity>> getVariants(String id);
+
   Future<List<ProductEntity>> getFeatured({int limit = 10});
 
   Future<List<ProductEntity>> getNewArrivals({int limit = 10});

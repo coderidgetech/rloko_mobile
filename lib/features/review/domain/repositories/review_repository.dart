@@ -12,5 +12,21 @@ abstract class ReviewRepository {
     required int rating,
     required String title,
     required String comment,
+    List<String>? images,
+  });
+  Future<void> updateReview({
+    required String productId,
+    required String reviewId,
+    required String title,
+    required String comment,
+    List<String>? images,
+  });
+  Future<void> deleteReview({
+    required String productId,
+    required String reviewId,
+  });
+  Future<void> markHelpful({
+    required String productId,
+    required String reviewId,
   });
 }
