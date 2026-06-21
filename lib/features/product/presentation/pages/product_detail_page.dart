@@ -273,6 +273,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   }
 
   String _careFromProduct(ProductEntity p) {
+    // Prefer the real care field; fall back to scraping details for legacy products.
+    if ((p.care ?? '').trim().isNotEmpty) {
+      return p.care!.trim();
+    }
     for (final d in p.details) {
       if (RegExp('wash|dry|clean|iron|care', caseSensitive: false).hasMatch(d)) {
         return d;
@@ -1613,6 +1617,10 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 ),
                                 child: Column(
                                   children: [
+                                    if ((product.brand ?? '').trim().isNotEmpty) ...[
+                                      _productDetailRow('Brand', product.brand!.trim()),
+                                      const SizedBox(height: 12),
+                                    ],
                                     _productDetailRow(
                                       'Material',
                                       product.material.isEmpty
@@ -1627,7 +1635,9 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                     const SizedBox(height: 12),
                                     _productDetailRow(
                                       'Country of origin',
-                                      _emDash,
+                                      (product.countryOfOrigin ?? '').trim().isEmpty
+                                          ? _emDash
+                                          : product.countryOfOrigin!.trim(),
                                     ),
                                     const SizedBox(height: 12),
                                     _productDetailRow(

@@ -60,6 +60,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const _kFlavor = String.fromEnvironment('APP_FLAVOR', defaultValue: 'local');
   await dotenv.load(fileName: 'assets/env/app.$_kFlavor.env', isOptional: true);
+  // Git-ignored local override: real secrets (Stripe/Maps/Google client IDs) live in
+  // assets/env/app.env and take precedence over the committed flavor placeholders.
+  final flavorEnv = Map<String, String>.of(dotenv.env);
+  await dotenv.load(
+    fileName: 'assets/env/app.env',
+    isOptional: true,
+    mergeWith: flavorEnv,
+  );
   await loadStripePublishableKeyFromAssets();
 
   try {

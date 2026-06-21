@@ -18,6 +18,7 @@ class GetProductListUseCase {
     double? minPrice,
     double? maxPrice,
     String? sort,
+    String? search,
   }) =>
       _repository.list(
         limit: limit,
@@ -31,5 +32,6 @@ class GetProductListUseCase {
         minPrice: minPrice,
         maxPrice: maxPrice,
         sort: sort,
+        search: search,
       );
 }

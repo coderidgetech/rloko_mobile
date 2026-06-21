@@ -25,6 +25,12 @@ class ProductEntity extends Equatable {
     required this.reviews,
     this.badge,
     this.videoUrl,
+    this.care,
+    this.brand,
+    this.countryOfOrigin,
+    this.variantGroupId,
+    this.color,
+    this.isMainVariant = false,
     required this.stock,
     this.vendorId,
     required this.createdAt,
@@ -54,6 +60,12 @@ class ProductEntity extends Equatable {
   final int reviews;
   final String? badge;
   final String? videoUrl;
+  final String? care;
+  final String? brand;
+  final String? countryOfOrigin;
+  final String? variantGroupId;
+  final String? color;
+  final bool isMainVariant;
   final Map<String, int> stock;
   final String? vendorId;
   final String createdAt;

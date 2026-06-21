@@ -28,6 +28,7 @@ class ProductRepositoryImpl implements ProductRepository {
     double? minPrice,
     double? maxPrice,
     String? sort,
+    String? search,
   }) async {
     try {
       final dto = await _dataSource.list(
@@ -42,6 +43,7 @@ class ProductRepositoryImpl implements ProductRepository {
         minPrice: minPrice,
         maxPrice: maxPrice,
         sort: sort,
+        search: search,
       );
       return ProductListResult(
         products: dto.products.map((e) => e.toEntity()).toList(),

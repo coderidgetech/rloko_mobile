@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -27,18 +29,31 @@ class _SearchPageState extends State<SearchPage> {
   final List<String> _recentSearches = [];
   String _query = '';
   late final VoidCallback _listener;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    context.read<ProductListBloc>().add(const ProductListLoadRequested(limit: 200));
     context.read<CategoryListBloc>().add(const CategoryListLoadRequested());
-    _listener = () => setState(() => _query = _searchController.text);
+    // Server-side search: debounce typing and query the backend (?search=) instead
+    // of filtering a locally-cached page, so the whole catalogue is searchable.
+    _listener = () {
+      final q = _searchController.text;
+      setState(() => _query = q);
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 350), () {
+        if (!mounted || q.trim().isEmpty) return;
+        context
+            .read<ProductListBloc>()
+            .add(ProductListLoadRequested(search: q.trim(), limit: 50));
+      });
+    };
     _searchController.addListener(_listener);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.removeListener(_listener);
     _searchController.dispose();
     super.dispose();
@@ -150,12 +165,8 @@ class _SearchPageState extends State<SearchPage> {
                     child: ProductGridSkeleton(itemCount: 6),
                   );
                 }
-                final q = query.toLowerCase();
-                final filtered = state.products
-                    .where((p) =>
-                        p.name.toLowerCase().contains(q) ||
-                        p.category.toLowerCase().contains(q))
-                    .toList();
+                // Backend already filtered by ?search=; render results directly.
+                final filtered = state.products;
                 if (filtered.isEmpty) {
                   return EmptyState(
                     title: 'No results',

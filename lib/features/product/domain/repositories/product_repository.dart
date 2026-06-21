@@ -14,6 +14,7 @@ abstract class ProductRepository {
     double? minPrice,
     double? maxPrice,
     String? sort,
+    String? search,
   });
 
   Future<ProductEntity> getById(String id);
