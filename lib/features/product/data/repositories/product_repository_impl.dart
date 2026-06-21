@@ -67,6 +67,16 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
+  Future<List<ProductEntity>> getVariants(String id) async {
+    try {
+      final dtos = await _dataSource.getVariants(id);
+      return dtos.map((e) => e.toEntity()).toList();
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
+
+  @override
   Future<List<ProductEntity>> getFeatured({int limit = 10}) async {
     try {
       final list = await _dataSource.getFeatured(limit: limit);

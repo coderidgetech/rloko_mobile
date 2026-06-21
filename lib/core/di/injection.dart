@@ -36,6 +36,7 @@ import '../../features/product/domain/usecases/get_featured_products_usecase.dar
 import '../../features/product/domain/usecases/get_new_arrivals_usecase.dart';
 import '../../features/product/domain/usecases/get_on_sale_products_usecase.dart';
 import '../../features/product/domain/usecases/get_product_by_id_usecase.dart';
+import '../../features/product/domain/usecases/get_product_variants_usecase.dart';
 import '../../features/product/domain/usecases/get_product_list_usecase.dart';
 import '../../features/cart/data/datasources/cart_local_datasource.dart';
 import '../../features/cart/data/datasources/cart_remote_datasource.dart';
@@ -98,6 +99,9 @@ import '../../features/review/domain/repositories/review_repository.dart';
 import '../../features/review/domain/usecases/get_my_reviews_usecase.dart';
 import '../../features/review/domain/usecases/get_product_reviews_usecase.dart';
 import '../../features/review/domain/usecases/submit_review_usecase.dart';
+import '../../features/review/domain/usecases/update_review_usecase.dart';
+import '../../features/review/domain/usecases/delete_review_usecase.dart';
+import '../../features/review/domain/usecases/mark_review_helpful_usecase.dart';
 import '../../features/product/data/datasources/product_local_datasource.dart';
 import '../../features/product/domain/usecases/get_recommendations_usecase.dart';
 import '../notifications/fcm_service.dart';
@@ -182,6 +186,9 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<GetProductByIdUseCase>(
     () => GetProductByIdUseCase(sl<ProductRepository>()),
+  );
+  sl.registerLazySingleton<GetProductVariantsUseCase>(
+    () => GetProductVariantsUseCase(sl<ProductRepository>()),
   );
   sl.registerLazySingleton<GetFeaturedProductsUseCase>(
     () => GetFeaturedProductsUseCase(sl<ProductRepository>()),
@@ -422,6 +429,15 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<SubmitReviewUseCase>(
     () => SubmitReviewUseCase(sl<ReviewRepository>()),
+  );
+  sl.registerLazySingleton<UpdateReviewUseCase>(
+    () => UpdateReviewUseCase(sl<ReviewRepository>()),
+  );
+  sl.registerLazySingleton<DeleteReviewUseCase>(
+    () => DeleteReviewUseCase(sl<ReviewRepository>()),
+  );
+  sl.registerLazySingleton<MarkReviewHelpfulUseCase>(
+    () => MarkReviewHelpfulUseCase(sl<ReviewRepository>()),
   );
 
   // Product local cache (offline / SharedPreferences)

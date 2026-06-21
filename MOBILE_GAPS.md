@@ -15,8 +15,8 @@ built. Gaps below; `✅` = fixed in branch `fix/mobile-gaps-batch1`.
 - ✅ **`getById` + recommendations missing `?market=`** → now send market (wrong-market PDP fixed).
 - ✅ **Search was client-side (first 200 products)** → now uses backend `?search=` (threaded through bloc→usecase→repo→datasource; search page debounces + renders backend results).
 - ✅ **PDP dropped real `care`/`brand`/`country_of_origin`** (faked from `details[]`/hardcoded) → now parsed + rendered.
-- 🟡 **Product variants (color siblings)** — DTO/entity now parse `variant_group_id`/`color`/`is_main_variant` and a `getVariants()` datasource method exists, **but the PDP color-switcher UI is not wired yet** (follow-up).
-- **Reviews** — read/create only; no update, delete, image upload, or "helpful" vote (all backend-supported).
+- ✅ **Product variants (color siblings)** — full slice: `getVariants()` repo/usecase/DI + a PDP **colour switcher** (`ProductVariantRow`) that shows sibling thumbnails and opens the tapped colour's PDP.
+- **Reviews** — ✅ data layer for **update / delete / helpful** (datasource/repo/usecases/DI) + a **"Helpful" button** on the PDP reviews. Still UI-pending: edit/delete actions on "My Reviews" and review image upload (the data layer is ready/callable).
 - **Shipping estimate uses a flat 0.5 lb/item, no dimensions** — checkout estimate can differ from the rate bought at fulfillment (backend uses real weight+dims). Cart entity carries no weight/dims to send.
 - **Promo validate sent in USD** — for India the backend reprices in INR → coupon min-purchase/discount preview can mismatch/reject.
 - **Filters hardcoded + in-memory** — static color/size lists, USD price buckets even in IN, filters the cached list instead of backend params.

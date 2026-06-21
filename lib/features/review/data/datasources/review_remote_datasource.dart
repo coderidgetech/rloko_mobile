@@ -61,10 +61,50 @@ class ReviewRemoteDataSource {
     required int rating,
     required String title,
     required String comment,
+    List<String>? images,
   }) async {
     await _dio.post<dynamic>(
       '/products/$productId/reviews',
-      data: {'rating': rating, 'title': title, 'comment': comment},
+      data: {
+        'rating': rating,
+        'title': title,
+        'comment': comment,
+        if (images != null && images.isNotEmpty) 'images': images,
+      },
     );
+  }
+
+  /// PUT /products/:id/reviews/:reviewId
+  Future<void> updateReview({
+    required String productId,
+    required String reviewId,
+    required String title,
+    required String comment,
+    List<String>? images,
+  }) async {
+    await _dio.put<dynamic>(
+      '/products/$productId/reviews/$reviewId',
+      data: {
+        'title': title,
+        'comment': comment,
+        if (images != null) 'images': images,
+      },
+    );
+  }
+
+  /// DELETE /products/:id/reviews/:reviewId
+  Future<void> deleteReview({
+    required String productId,
+    required String reviewId,
+  }) async {
+    await _dio.delete<dynamic>('/products/$productId/reviews/$reviewId');
+  }
+
+  /// POST /products/:id/reviews/:reviewId/helpful
+  Future<void> markHelpful({
+    required String productId,
+    required String reviewId,
+  }) async {
+    await _dio.post<dynamic>('/products/$productId/reviews/$reviewId/helpful');
   }
 }

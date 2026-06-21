@@ -58,11 +58,43 @@ class ReviewRepositoryImpl implements ReviewRepository {
     required int rating,
     required String title,
     required String comment,
+    List<String>? images,
   }) =>
       _dataSource.submitReview(
         productId: productId,
         rating: rating,
         title: title,
         comment: comment,
+        images: images,
       );
+
+  @override
+  Future<void> updateReview({
+    required String productId,
+    required String reviewId,
+    required String title,
+    required String comment,
+    List<String>? images,
+  }) =>
+      _dataSource.updateReview(
+        productId: productId,
+        reviewId: reviewId,
+        title: title,
+        comment: comment,
+        images: images,
+      );
+
+  @override
+  Future<void> deleteReview({
+    required String productId,
+    required String reviewId,
+  }) =>
+      _dataSource.deleteReview(productId: productId, reviewId: reviewId);
+
+  @override
+  Future<void> markHelpful({
+    required String productId,
+    required String reviewId,
+  }) =>
+      _dataSource.markHelpful(productId: productId, reviewId: reviewId);
 }

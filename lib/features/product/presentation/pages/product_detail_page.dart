@@ -21,10 +21,12 @@ import '../../domain/usecases/get_recommendations_usecase.dart';
 import '../bloc/product_detail_bloc.dart';
 import '../bloc/product_list_bloc.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/product_variant_row.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
 import '../../../review/domain/entities/review_entity.dart';
 import '../../../review/domain/usecases/get_product_reviews_usecase.dart';
+import '../../../review/domain/usecases/mark_review_helpful_usecase.dart';
 import '../../../wishlist/presentation/bloc/wishlist_bloc.dart';
 import '../../../../core/utils/navigation_utils.dart';
 
@@ -306,6 +308,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
       text.isNotEmpty ? text : '—',
       _formatReviewDate(r.createdAt),
       showBorder: showBorder,
+      onHelpful: r.id.isNotEmpty ? () => _markHelpful(r.id) : null,
     );
   }
 
@@ -624,6 +627,7 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     String text,
     String date, {
     bool showBorder = true,
+    VoidCallback? onHelpful,
   }) {
     return Container(
       padding: const EdgeInsets.only(bottom: 16),
@@ -687,9 +691,55 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
               color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
             ),
           ),
+          if (onHelpful != null) ...[
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: onHelpful,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.thumb_up_alt_outlined,
+                      size: 14,
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Helpful',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Future<void> _markHelpful(String reviewId) async {
+    try {
+      await sl<MarkReviewHelpfulUseCase>()(
+        productId: widget.productId,
+        reviewId: reviewId,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks for your feedback')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not submit, try again')),
+      );
+    }
   }
 
   @override
@@ -1165,6 +1215,9 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 ],
                               ],
                             ),
+                            // Colour variants (sibling products sharing variant_group_id)
+                            const SizedBox(height: 8),
+                            ProductVariantRow(productId: product.id),
                             // Size (match React: "Size: X", Size Chart link, recommended badge, grid 4 cols rounded-xl)
                             if (product.sizes.isNotEmpty) ...[
                               const SizedBox(height: 24),
