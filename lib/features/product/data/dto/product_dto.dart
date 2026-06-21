@@ -25,6 +25,12 @@ class ProductDto {
     required this.reviews,
     this.badge,
     this.videoUrl,
+    this.care,
+    this.brand,
+    this.countryOfOrigin,
+    this.variantGroupId,
+    this.color,
+    this.isMainVariant = false,
     required this.stock,
     this.vendorId,
     required this.createdAt,
@@ -81,6 +87,12 @@ class ProductDto {
       reviews: json['reviews'] is int ? json['reviews'] as int : 0,
       badge: json['badge'] as String?,
       videoUrl: json['video_url'] as String?,
+      care: json['care'] as String?,
+      brand: json['brand'] as String?,
+      countryOfOrigin: json['country_of_origin'] as String?,
+      variantGroupId: json['variant_group_id']?.toString(),
+      color: json['color'] as String?,
+      isMainVariant: json['is_main_variant'] as bool? ?? false,
       stock: stock,
       vendorId: json['vendor_id']?.toString(),
       createdAt: json['created_at'] != null
@@ -115,6 +127,12 @@ class ProductDto {
   final int reviews;
   final String? badge;
   final String? videoUrl;
+  final String? care;
+  final String? brand;
+  final String? countryOfOrigin;
+  final String? variantGroupId;
+  final String? color;
+  final bool isMainVariant;
   final Map<String, int> stock;
   final String? vendorId;
   final String createdAt;
@@ -144,6 +162,12 @@ class ProductDto {
         'reviews': reviews,
         if (badge != null) 'badge': badge,
         if (videoUrl != null) 'video_url': videoUrl,
+        if (care != null) 'care': care,
+        if (brand != null) 'brand': brand,
+        if (countryOfOrigin != null) 'country_of_origin': countryOfOrigin,
+        if (variantGroupId != null) 'variant_group_id': variantGroupId,
+        if (color != null) 'color': color,
+        'is_main_variant': isMainVariant,
         'stock': stock,
         if (vendorId != null) 'vendor_id': vendorId,
         'created_at': createdAt,
@@ -180,6 +204,12 @@ class ProductDto {
         reviews: reviews,
         badge: badge,
         videoUrl: videoUrl,
+        care: care,
+        brand: brand,
+        countryOfOrigin: countryOfOrigin,
+        variantGroupId: variantGroupId,
+        color: color,
+        isMainVariant: isMainVariant,
         stock: stock,
         vendorId: vendorId,
         createdAt: createdAt,

@@ -27,12 +27,14 @@ class ProductRemoteDataSource {
     double? minPrice,
     double? maxPrice,
     String? sort,
+    String? search,
   }) async {
     final query = <String, dynamic>{};
     if (limit != null) query['limit'] = limit;
     if (skip != null) query['skip'] = skip;
     if (category != null && category.isNotEmpty) query['category'] = category;
     if (gender != null && gender.isNotEmpty) query['gender'] = gender;
+    if (search != null && search.trim().isNotEmpty) query['search'] = search.trim();
     query['market'] = _marketCode;
     if (onSale == true) query['on_sale'] = 'true';
     if (featured == true) query['featured'] = 'true';
@@ -51,10 +53,27 @@ class ProductRemoteDataSource {
   }
 
   Future<ProductDto> getById(String id) async {
-    final response = await _dio.get<Map<String, dynamic>>('/products/$id');
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/products/$id',
+      queryParameters: {'market': _marketCode},
+    );
     final data = response.data;
     if (data == null) throw Exception('Invalid response');
     return ProductDto.fromJson(data);
+  }
+
+  /// Color-variant siblings (same variant_group_id) for the PDP color switcher.
+  Future<List<ProductDto>> getVariants(String id) async {
+    final response = await _dio.get<dynamic>(
+      '/products/$id/variants',
+      queryParameters: {'market': _marketCode},
+    );
+    final data = response.data;
+    final raw = data is Map ? data['variants'] ?? data['products'] : data;
+    if (raw is! List) return [];
+    return raw
+        .map((e) => ProductDto.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<List<ProductDto>> getFeatured({int limit = 10}) async {
@@ -96,7 +115,7 @@ class ProductRemoteDataSource {
   Future<List<ProductDto>> getRecommendations(String productId, {int limit = 8}) async {
     final response = await _dio.get<dynamic>(
       '/products/$productId/recommendations',
-      queryParameters: {'limit': limit},
+      queryParameters: {'limit': limit, 'market': _marketCode},
     );
     final data = response.data;
     if (data is! Map) return [];

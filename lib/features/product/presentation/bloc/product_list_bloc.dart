@@ -50,6 +50,7 @@ class ProductListBloc extends Bloc<ProductListEvent, ProductListState> {
         minPrice: event.minPrice,
         maxPrice: event.maxPrice,
         sort: event.sort,
+        search: event.search,
       );
       emit(ProductListLoaded(
         products: result.products,

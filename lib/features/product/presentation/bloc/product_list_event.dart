@@ -19,6 +19,7 @@ final class ProductListLoadRequested extends ProductListEvent {
     this.minPrice,
     this.maxPrice,
     this.sort,
+    this.search,
   });
 
   final int? limit;
@@ -31,10 +32,11 @@ final class ProductListLoadRequested extends ProductListEvent {
   final double? minPrice;
   final double? maxPrice;
   final String? sort;
+  final String? search;
 
   @override
   List<Object?> get props =>
-      [limit, skip, category, gender, onSale, featured, gift, minPrice, maxPrice, sort];
+      [limit, skip, category, gender, onSale, featured, gift, minPrice, maxPrice, sort, search];
 }
 
 final class ProductListLoadFeatured extends ProductListEvent {
