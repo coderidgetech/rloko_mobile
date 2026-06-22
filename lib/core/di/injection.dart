@@ -102,6 +102,7 @@ import '../../features/review/domain/usecases/submit_review_usecase.dart';
 import '../../features/review/domain/usecases/update_review_usecase.dart';
 import '../../features/review/domain/usecases/delete_review_usecase.dart';
 import '../../features/review/domain/usecases/mark_review_helpful_usecase.dart';
+import '../../features/review/domain/usecases/upload_review_image_usecase.dart';
 import '../../features/product/data/datasources/product_local_datasource.dart';
 import '../../features/product/domain/usecases/get_recommendations_usecase.dart';
 import '../notifications/fcm_service.dart';
@@ -438,6 +439,9 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<MarkReviewHelpfulUseCase>(
     () => MarkReviewHelpfulUseCase(sl<ReviewRepository>()),
+  );
+  sl.registerLazySingleton<UploadReviewImageUseCase>(
+    () => UploadReviewImageUseCase(sl<ReviewRepository>()),
   );
 
   // Product local cache (offline / SharedPreferences)

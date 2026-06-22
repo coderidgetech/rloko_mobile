@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../../domain/entities/review_entity.dart';
 import '../../domain/repositories/review_repository.dart';
 import '../datasources/review_remote_datasource.dart';
@@ -97,4 +99,7 @@ class ReviewRepositoryImpl implements ReviewRepository {
     required String reviewId,
   }) =>
       _dataSource.markHelpful(productId: productId, reviewId: reviewId);
+
+  @override
+  Future<String> uploadImage(File file) => _dataSource.uploadImage(file);
 }

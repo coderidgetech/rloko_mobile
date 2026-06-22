@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import '../entities/review_entity.dart';
 
 abstract class ReviewRepository {
@@ -29,4 +31,5 @@ abstract class ReviewRepository {
     required String productId,
     required String reviewId,
   });
+  Future<String> uploadImage(File file);
 }
