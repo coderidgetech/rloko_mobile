@@ -409,7 +409,16 @@ GoRouter createAppRouter() {
           final productId = state.pathParameters['productId'] ?? '';
           if (productId.isEmpty) return const ReviewsPage();
           final productName = state.uri.queryParameters['name'];
-          return WriteReviewPage(productId: productId, productName: productName);
+          // Edit mode passes the existing review via `extra`.
+          final extra = state.extra is Map ? state.extra as Map : const {};
+          return WriteReviewPage(
+            productId: productId,
+            productName: productName ?? extra['name'] as String?,
+            reviewId: extra['reviewId'] as String?,
+            initialRating: extra['rating'] as int?,
+            initialTitle: extra['title'] as String?,
+            initialComment: extra['comment'] as String?,
+          );
         },
       ),
       GoRoute(

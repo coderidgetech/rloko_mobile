@@ -23,6 +23,10 @@ class ShippingRemoteDataSource {
         if (params.phone != null && params.phone!.isNotEmpty) 'phone': params.phone,
         'subtotal': params.subtotal,
         if (params.weight != null && params.weight! > 0) 'weight': params.weight,
+        if (params.items != null && params.items!.isNotEmpty)
+          'items': params.items!
+              .map((i) => {'product_id': i.productId, 'quantity': i.quantity})
+              .toList(),
       };
 
   Future<List<ShippingMethodDto>> calculate(CalculateShippingParams params) async {

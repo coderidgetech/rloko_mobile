@@ -434,6 +434,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
           phone: ship.phone,
           subtotal: sub,
           weight: weight,
+          items: cartState.cart.items
+              .map((i) => (productId: i.productId, quantity: i.quantity))
+              .toList(),
         ),
       );
       if (!mounted) return;

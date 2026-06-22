@@ -5,22 +5,70 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/injection.dart';
 import '../../domain/usecases/get_my_reviews_usecase.dart';
 import '../../domain/usecases/submit_review_usecase.dart';
+import '../../domain/usecases/update_review_usecase.dart';
 import '../bloc/review_bloc.dart';
 
 class WriteReviewPage extends StatefulWidget {
-  const WriteReviewPage({super.key, required this.productId, this.productName});
+  const WriteReviewPage({
+    super.key,
+    required this.productId,
+    this.productName,
+    this.reviewId,
+    this.initialRating,
+    this.initialTitle,
+    this.initialComment,
+  });
 
   final String productId;
   final String? productName;
+  // When set, the page edits an existing review (PUT) instead of creating one.
+  final String? reviewId;
+  final int? initialRating;
+  final String? initialTitle;
+  final String? initialComment;
 
   @override
   State<WriteReviewPage> createState() => _WriteReviewPageState();
 }
 
 class _WriteReviewPageState extends State<WriteReviewPage> {
-  int _rating = 5;
-  final _titleController = TextEditingController();
-  final _commentController = TextEditingController();
+  late int _rating;
+  late final TextEditingController _titleController;
+  late final TextEditingController _commentController;
+  bool _saving = false;
+
+  bool get _isEditing => (widget.reviewId ?? '').isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _rating = widget.initialRating ?? 5;
+    _titleController = TextEditingController(text: widget.initialTitle ?? '');
+    _commentController = TextEditingController(text: widget.initialComment ?? '');
+  }
+
+  Future<void> _updateExisting() async {
+    setState(() => _saving = true);
+    try {
+      await sl<UpdateReviewUseCase>()(
+        productId: widget.productId,
+        reviewId: widget.reviewId!,
+        title: _titleController.text.trim(),
+        comment: _commentController.text.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review updated')),
+      );
+      context.pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update: $e')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -48,12 +96,14 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
           }
         },
         builder: (context, state) {
-          final isLoading = state is ReviewLoading;
+          final isLoading = state is ReviewLoading || _saving;
           return Scaffold(
             appBar: AppBar(
-              title: Text(widget.productName != null
-                  ? 'Review ${widget.productName}'
-                  : 'Write a Review'),
+              title: Text(_isEditing
+                  ? 'Edit Review'
+                  : widget.productName != null
+                      ? 'Review ${widget.productName}'
+                      : 'Write a Review'),
             ),
             body: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -106,12 +156,16 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                                 );
                                 return;
                               }
-                              context.read<ReviewBloc>().add(ReviewSubmitRequested(
-                                    productId: widget.productId,
-                                    rating: _rating,
-                                    title: _titleController.text.trim(),
-                                    comment: _commentController.text.trim(),
-                                  ));
+                              if (_isEditing) {
+                                _updateExisting();
+                              } else {
+                                context.read<ReviewBloc>().add(ReviewSubmitRequested(
+                                      productId: widget.productId,
+                                      rating: _rating,
+                                      title: _titleController.text.trim(),
+                                      comment: _commentController.text.trim(),
+                                    ));
+                              }
                             },
                       child: isLoading
                           ? const SizedBox(
@@ -119,7 +173,7 @@ class _WriteReviewPageState extends State<WriteReviewPage> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Submit Review'),
+                          : Text(_isEditing ? 'Update Review' : 'Submit Review'),
                     ),
                   ),
                 ],
