@@ -1,3 +1,7 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
+
 import '../dto/my_review_dto.dart';
 import '../dto/product_review_dto.dart';
 import '../../../../core/network/dio_client.dart';
@@ -106,5 +110,19 @@ class ReviewRemoteDataSource {
     required String reviewId,
   }) async {
     await _dio.post<dynamic>('/products/$productId/reviews/$reviewId/helpful');
+  }
+
+  /// POST /reviews/upload — multipart image; returns the stored URL.
+  Future<String> uploadImage(File file) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path),
+    });
+    final response = await _dio.post<dynamic>('/reviews/upload', data: formData);
+    final data = response.data;
+    final url = (data is Map) ? data['url'] as String? : null;
+    if (url == null || url.isEmpty) {
+      throw Exception('Upload failed: no URL returned');
+    }
+    return url;
   }
 }

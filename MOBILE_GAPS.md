@@ -16,8 +16,8 @@ built. Gaps below; `✅` = fixed in branch `fix/mobile-gaps-batch1`.
 - ✅ **Search was client-side (first 200 products)** → now uses backend `?search=` (threaded through bloc→usecase→repo→datasource; search page debounces + renders backend results).
 - ✅ **PDP dropped real `care`/`brand`/`country_of_origin`** (faked from `details[]`/hardcoded) → now parsed + rendered.
 - ✅ **Product variants (color siblings)** — full slice: `getVariants()` repo/usecase/DI + a PDP **colour switcher** (`ProductVariantRow`) that shows sibling thumbnails and opens the tapped colour's PDP.
-- **Reviews** — ✅ data layer for **update / delete / helpful** (datasource/repo/usecases/DI) + a **"Helpful" button** on the PDP reviews. Still UI-pending: edit/delete actions on "My Reviews" and review image upload (the data layer is ready/callable).
-- **Shipping estimate uses a flat 0.5 lb/item, no dimensions** — checkout estimate can differ from the rate bought at fulfillment (backend uses real weight+dims). Cart entity carries no weight/dims to send.
+- ✅ **Reviews** — full: **update / delete / helpful** (PDP "Helpful" button, Edit/Delete menu on "My Reviews", edit mode in the write form) and **photo upload** in the write form (image picker → `POST /reviews/upload` → `images[]`). Backend adds a customer-accessible `/reviews/upload` route (image-type + 5MB enforced, same trust level as `/auth/avatar`).
+- ✅ **Shipping estimate used a flat 0.5 lb/item, no dimensions** — checkout now sends cart `items`; `/shipping/calculate` computes real weight + parcel dims server-side (same rule as fulfillment) so the estimate matches the charged rate.
 - **Promo validate sent in USD** — for India the backend reprices in INR → coupon min-purchase/discount preview can mismatch/reject.
 - **Filters hardcoded + in-memory** — static color/size lists, USD price buckets even in IN, filters the cached list instead of backend params.
 - **No deep links / app links** — password-reset email links, shared product/order links, and notification taps can't open the app.

@@ -10,11 +10,13 @@ class SubmitReviewUseCase {
     required int rating,
     required String title,
     required String comment,
+    List<String>? images,
   }) =>
       _repository.submitReview(
         productId: productId,
         rating: rating,
         title: title,
         comment: comment,
+        images: images,
       );
 }
