@@ -10,6 +10,7 @@ import '../../../../core/widgets/safe_network_image.dart' show SafeCachedNetwork
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../review/domain/entities/review_entity.dart';
 import '../../../review/domain/usecases/get_my_reviews_usecase.dart';
+import '../../../review/domain/usecases/delete_review_usecase.dart';
 import '../../../../core/utils/navigation_utils.dart';
 
 /// Lists reviews written by the current user (GET /api/reviews/me).
@@ -60,6 +61,45 @@ class _ReviewsPageState extends State<ReviewsPage> {
         _error = e.toString();
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _editReview(MyReviewEntity r) async {
+    await context.push('/reviews/write/${r.productId}', extra: {
+      'reviewId': r.id,
+      'rating': r.rating,
+      'title': r.title,
+      'comment': r.comment,
+      'name': r.productName,
+    });
+    if (mounted) _load();
+  }
+
+  Future<void> _deleteReview(MyReviewEntity r) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete review?'),
+        content: const Text('This permanently removes your review for this product.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await sl<DeleteReviewUseCase>()(productId: r.productId, reviewId: r.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Review deleted')),
+      );
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete: $e')),
+      );
     }
   }
 
@@ -207,6 +247,17 @@ class _ReviewsPageState extends State<ReviewsPage> {
                                 ),
                               ],
                             ),
+                          ),
+                          PopupMenuButton<String>(
+                            icon: Icon(Icons.more_vert, size: 20, color: AppTheme.foregroundColor(context).withValues(alpha: 0.5)),
+                            onSelected: (v) {
+                              if (v == 'edit') _editReview(r);
+                              if (v == 'delete') _deleteReview(r);
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(value: 'delete', child: Text('Delete')),
+                            ],
                           ),
                         ],
                       ),
