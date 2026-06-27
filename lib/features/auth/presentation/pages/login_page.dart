@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../../core/constants/dial_countries.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/auth_logo.dart';
 import '../../domain/usecases/send_login_otp_usecase.dart';
@@ -34,12 +35,15 @@ class _LoginPageState extends State<LoginPage> {
 
   String get _returnTo => widget.redirectAfterLogin ?? '/account';
 
-  void _goSignup() {
-    if (_returnTo != '/account') {
-      context.push('/signup?redirect=${Uri.encodeComponent(_returnTo)}');
-    } else {
-      context.push('/signup');
-    }
+  void _goSignup({String? prefillPhoneLocal}) {
+    final params = <String, String>{
+      if (_returnTo != '/account') 'redirect': _returnTo,
+      if (prefillPhoneLocal != null && prefillPhoneLocal.isNotEmpty) 'phone': prefillPhoneLocal,
+    };
+    final query = params.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    context.push(query.isEmpty ? '/signup' : '/signup?$query');
   }
 
   Future<void> _sendPhoneOtp() async {
@@ -62,8 +66,15 @@ class _LoginPageState extends State<LoginPage> {
         '/otp-verification',
         extra: LoginOtpRouteExtra(phone: digits, returnTo: _returnTo),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      if (e is ApiException && e.code == 'USER_NOT_FOUND') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No account found — let's get you signed up")),
+        );
+        _goSignup(prefillPhoneLocal: _phoneLocal);
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("We couldn't send the code. Please try again.")),
       );

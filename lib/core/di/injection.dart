@@ -87,6 +87,7 @@ import '../../features/payment/data/datasources/payment_remote_datasource.dart';
 import '../../features/payment/data/repositories/payment_repository_impl.dart';
 import '../../features/payment/domain/repositories/payment_repository.dart';
 import '../../features/payment/domain/usecases/create_payment_intent_usecase.dart';
+import '../../features/payment/domain/usecases/process_payment_usecase.dart';
 import '../../features/rewards/data/datasources/rewards_remote_datasource.dart';
 import '../../features/rewards/data/repositories/rewards_repository_impl.dart';
 import '../../features/rewards/domain/repositories/rewards_repository.dart';
@@ -107,6 +108,7 @@ import '../../features/product/data/datasources/product_local_datasource.dart';
 import '../../features/product/domain/usecases/get_recommendations_usecase.dart';
 import '../notifications/fcm_service.dart';
 import '../../features/order/presentation/bloc/checkout_bloc.dart';
+import '../../features/product/presentation/bloc/product_list_bloc.dart';
 
 final GetIt sl = GetIt.instance;
 
@@ -199,6 +201,16 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<GetOnSaleProductsUseCase>(
     () => GetOnSaleProductsUseCase(sl<ProductRepository>()),
+  );
+  // Factory: each list/category/search/PDP route scopes its OWN ProductListBloc so the
+  // Home tab's shared home-sections load can't clobber a category list into a skeleton.
+  sl.registerFactory<ProductListBloc>(
+    () => ProductListBloc(
+      getProductListUseCase: sl<GetProductListUseCase>(),
+      getFeaturedProductsUseCase: sl<GetFeaturedProductsUseCase>(),
+      getNewArrivalsUseCase: sl<GetNewArrivalsUseCase>(),
+      getOnSaleProductsUseCase: sl<GetOnSaleProductsUseCase>(),
+    ),
   );
 
   // Config (site config for hero, etc.)
@@ -396,6 +408,9 @@ Future<void> initInjection() async {
   );
   sl.registerLazySingleton<CreatePaymentIntentUseCase>(
     () => CreatePaymentIntentUseCase(sl<PaymentRepository>()),
+  );
+  sl.registerLazySingleton<ProcessPaymentUseCase>(
+    () => ProcessPaymentUseCase(sl<PaymentRepository>()),
   );
 
   // Rewards

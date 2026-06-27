@@ -2,14 +2,81 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../firebase_options.dart';
 import '../network/dio_client.dart';
 
 const _kNotifLogKey = 'fcm_notification_log';
 const _kNotifMaxEntries = 50;
+
+/// Android channel id — must match `default_notification_channel_id` in AndroidManifest.xml
+/// so background notification-payload messages render on the same channel.
+const _kAndroidChannelId = 'rloko_default';
+
+final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+bool _localNotifInitialized = false;
+
+/// Initializes the local-notifications plugin and creates the Android channel. Idempotent.
+Future<void> initLocalNotifications() async {
+  if (_localNotifInitialized) return;
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const iosInit = DarwinInitializationSettings();
+  await _localNotifications.initialize(
+    const InitializationSettings(android: androidInit, iOS: iosInit),
+  );
+  await _localNotifications
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(const AndroidNotificationChannel(
+        _kAndroidChannelId,
+        'General',
+        description: 'Order updates and announcements',
+        importance: Importance.high,
+      ));
+  _localNotifInitialized = true;
+}
+
+/// Shows a heads-up local notification for an FCM message (used for foreground messages,
+/// which Android does NOT auto-display in the tray).
+Future<void> _showLocalNotification(RemoteMessage message) async {
+  final title = message.notification?.title ?? message.data['title'] ?? '';
+  final body = message.notification?.body ?? message.data['body'] ?? '';
+  if (title.isEmpty && body.isEmpty) return;
+  await initLocalNotifications();
+  await _localNotifications.show(
+    DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title,
+    body,
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        _kAndroidChannelId,
+        'General',
+        channelDescription: 'Order updates and announcements',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      ),
+      iOS: DarwinNotificationDetails(),
+    ),
+  );
+}
+
+/// Background/terminated message handler. Runs in a separate isolate, so Firebase must be
+/// re-initialized here. Registered via [FirebaseMessaging.onBackgroundMessage] in main().
+/// Must be a top-level function (vm:entry-point) — not a class method or closure.
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (_) {
+    // Already initialized in this isolate — ignore.
+  }
+  await FCMService._logMessage(message);
+}
 
 /// Handles FCM token registration, foreground message display, and local notification log.
 /// Call [init] once after the user authenticates. Safe to call multiple times — subsequent
@@ -25,6 +92,7 @@ class FCMService {
   Future<void> init() async {
     if (_initialized) return;
     try {
+      await initLocalNotifications();
       final settings = await FirebaseMessaging.instance.requestPermission(
         alert: true,
         badge: true,
@@ -39,8 +107,12 @@ class FCMService {
 
       _tokenRefreshSub = FirebaseMessaging.instance.onTokenRefresh.listen((t) => _registerToken(t));
 
-      // Log foreground messages locally so the notifications page can show history
-      _messageSub = FirebaseMessaging.onMessage.listen(_logMessage);
+      // Foreground messages: Android won't show these in the tray, so display a local
+      // heads-up notification AND log them for the in-app history.
+      _messageSub = FirebaseMessaging.onMessage.listen((m) {
+        _showLocalNotification(m);
+        _logMessage(m);
+      });
       _initialized = true;
     } catch (e) {
       if (kDebugMode) debugPrint('[FCM] init error: $e');

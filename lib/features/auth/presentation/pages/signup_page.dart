@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/dial_countries.dart';
 import '../../../../core/constants/form_hints.dart';
-import '../../../../core/constants/phone_input_formatters.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart' show getApiException;
@@ -14,10 +14,15 @@ import '../../data/datasources/auth_remote_datasource.dart';
 import '../../../../core/widgets/auth_logo.dart';
 import '../../../../core/widgets/otp_input.dart';
 import '../bloc/auth_bloc.dart';
+import '../widgets/google_g_logo.dart';
+import '../widgets/phone_country_row.dart';
 
 /// Signup page matching React MobileSignupPage: name, email, phone, password, terms → OTP → verify & register.
 class SignupPage extends StatefulWidget {
-  const SignupPage({super.key});
+  const SignupPage({super.key, this.initialPhoneLocal});
+
+  /// Phone prefilled when the user lands here from login after an unregistered-number lookup.
+  final String? initialPhoneLocal;
 
   @override
   State<SignupPage> createState() => _SignupPageState();
@@ -26,9 +31,13 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  String _phoneLocal = '';
+  DialCountry _country = kDialCountries[1];
   bool _agreeTerms = false;
+
+  /// Full international digits for the API (e.g. "919000000123"), matching web + login.
+  String get _apiPhone => buildPhoneDigitsForApi(_country.dialCode, _phoneLocal.trim());
   bool _otpSent = false;
   bool _loading = false;
   int _countdown = 0;
@@ -36,10 +45,18 @@ class _SignupPageState extends State<SignupPage> {
   Timer? _timer;
 
   @override
+  void initState() {
+    super.initState();
+    final prefill = widget.initialPhoneLocal?.trim();
+    if (prefill != null && prefill.isNotEmpty) {
+      _phoneLocal = prefill;
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     _passwordController.dispose();
     _timer?.cancel();
     super.dispose();
@@ -64,10 +81,16 @@ class _SignupPageState extends State<SignupPage> {
   Future<void> _sendOtp() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
-    if (name.isEmpty || email.isEmpty || phone.isEmpty) {
+    if (name.isEmpty || email.isEmpty || _phoneLocal.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
+      );
+      return;
+    }
+    final phone = _apiPhone;
+    if (phone.length < 11) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose country and enter your full mobile number')),
       );
       return;
     }
@@ -121,7 +144,7 @@ class _SignupPageState extends State<SignupPage> {
     setState(() => _loading = true);
     try {
       await sl<AuthRemoteDataSource>().completeRegistrationOtp(
-        phone: _phoneController.text.trim(),
+        phone: _apiPhone,
         code: otpValue,
         email: _emailController.text.trim(),
         password: _passwordController.text,
@@ -147,7 +170,7 @@ class _SignupPageState extends State<SignupPage> {
   Future<void> _resendOtp() async {
     if (_countdown > 0) return;
     try {
-      await sl<AuthRemoteDataSource>().sendRegistrationOtp(_phoneController.text.trim());
+      await sl<AuthRemoteDataSource>().sendRegistrationOtp(_apiPhone);
       if (!mounted) return;
       _startCountdown();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -256,21 +279,18 @@ class _SignupPageState extends State<SignupPage> {
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
           decoration: _inputDecoration(
-            hint: 'your@email.com',
+            hint: 'Email',
             icon: Icons.email_outlined,
           ),
         ),
         const SizedBox(height: 16),
         _label(context, 'Phone'),
         const SizedBox(height: 8),
-        TextField(
-          controller: _phoneController,
-          keyboardType: TextInputType.number,
-          inputFormatters: kPhoneLocal10DigitFormatters,
-          decoration: _inputDecoration(
-            hint: FormHints.phone,
-            icon: Icons.phone_outlined,
-          ),
+        PhoneCountryRow(
+          localPhone: _phoneLocal,
+          onLocalPhoneChanged: (v) => setState(() => _phoneLocal = v),
+          selectedCountry: _country,
+          onSelectCountry: (c) => setState(() => _country = c),
         ),
         const SizedBox(height: 16),
         _label(context, 'Password'),
@@ -389,14 +409,7 @@ class _SignupPageState extends State<SignupPage> {
         const SizedBox(height: 24),
         OutlinedButton.icon(
           onPressed: _loading ? null : _continueWithGoogle,
-          icon: const Text(
-            'G',
-            style: TextStyle(
-              color: Color(0xFF4285F4),
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
+          icon: const GoogleGLogo(size: 20),
           label: const Text('Continue with Google'),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -432,7 +445,7 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Widget _buildOtpStep(bool authLoading) {
-    final phone = _phoneController.text.trim();
+    final phone = _apiPhone;
     final loading = _loading || authLoading;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -563,10 +576,19 @@ class _SignupPageState extends State<SignupPage> {
         color: AppTheme.foregroundColor(context).withValues(alpha: 0.4),
       ),
       filled: true,
-      fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
+      // Match the phone-number field: white fill, subtle border, primary focus ring.
+      fillColor: Colors.white,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppTheme.primaryColor(context), width: 2),
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppTheme.borderColor(context).withValues(alpha: 0.3)),
+        borderSide: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.12)),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );

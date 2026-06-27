@@ -18,10 +18,33 @@ class ProductGridTile extends StatelessWidget {
   // Design-system amber (Tailwind amber-700). Kept as a constant to avoid
   // runtime Color.shade allocations and to make it easy to update centrally.
   static const Color _giftBadgeColor = Color(0xFFB45309);
+  // Tailwind red-600 — used for the discount-percentage badge.
+  static const Color _discountBadgeColor = Color(0xFFDC2626);
+
+  // Small rounded pill used for SALE / NEW / discount badges.
+  Widget _badge(String text, Color bg) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: AppTheme.fontSizeXs,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final imageUrl = product.firstImage;
+    final original = product.originalPrice;
+    final discountPct = (original != null && original > product.price && original > 0)
+        ? (((original - product.price) / original) * 100).round()
+        : 0;
 
     // context.select rebuilds this widget only when THIS product's wishlist
     // membership changes, not on every WishlistBloc emission.
@@ -112,13 +135,16 @@ class ProductGridTile extends StatelessWidget {
                             }
                           },
                           borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
+                          // 40x40 keeps a comfortable touch target (the old 32px
+                          // was below the recommended minimum and easy to miss).
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
                             child: Icon(
                               isInWishlist
                                   ? Icons.favorite
                                   : Icons.favorite_border,
-                              size: 16,
+                              size: 18,
                               color: isInWishlist
                                   ? AppTheme.primaryColor(context)
                                   : AppTheme.foregroundColor(
@@ -129,56 +155,24 @@ class ProductGridTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // SALE badge: top-2 left-2, text-xs px-2 py-1 rounded-full
-                    if (product.onSale)
+                    // Top-left badge stack: SALE/NEW, then the discount percentage.
+                    if (product.onSale || product.newArrival || discountPct > 0)
                       Positioned(
                         top: 8,
                         left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor(context),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusFull,
-                            ),
-                          ),
-                          child: const Text(
-                            'SALE',
-                            style: TextStyle(
-                              fontSize: AppTheme.fontSizeXs,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    // NEW badge (only if not on sale)
-                    if (product.newArrival && !product.onSale)
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.foregroundColor(context),
-                            borderRadius: BorderRadius.circular(
-                              AppTheme.radiusFull,
-                            ),
-                          ),
-                          child: const Text(
-                            'NEW',
-                            style: TextStyle(
-                              fontSize: AppTheme.fontSizeXs,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (product.onSale)
+                              _badge('SALE', AppTheme.primaryColor(context))
+                            else if (product.newArrival)
+                              _badge('NEW', AppTheme.foregroundColor(context)),
+                            if (discountPct > 0) ...[
+                              if (product.onSale || product.newArrival)
+                                const SizedBox(height: 4),
+                              _badge('-$discountPct%', _discountBadgeColor),
+                            ],
+                          ],
                         ),
                       ),
                     // GIFT badge

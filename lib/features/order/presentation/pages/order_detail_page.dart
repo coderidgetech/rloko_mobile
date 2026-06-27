@@ -417,6 +417,46 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 }
 
 /// Match React: Order Status Card - order number, placed date, status pill, in-transit/delivered box
+/// Returns the customer-facing label for a refund-related payment status, or null
+/// when there's nothing to show (e.g. paid/pending/failed).
+String? _refundLabel(String paymentStatus) {
+  switch (paymentStatus.toLowerCase()) {
+    case 'refunded':
+      return 'Refunded';
+    case 'partially_refunded':
+      return 'Partially refunded';
+    case 'refunding':
+      return 'Refund in progress';
+    default:
+      return null;
+  }
+}
+
+class _RefundBadge extends StatelessWidget {
+  const _RefundBadge({required this.paymentStatus});
+  final String paymentStatus;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _refundLabel(paymentStatus);
+    if (label == null) return const SizedBox.shrink();
+    final status = paymentStatus.toLowerCase();
+    final (Color color, Color bg) = switch (status) {
+      'refunding' => (Colors.blue.shade700, Colors.blue.shade50),
+      'partially_refunded' => (Colors.amber.shade800, Colors.amber.shade50),
+      _ => (Colors.green.shade700, Colors.green.shade50),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: color),
+      ),
+    );
+  }
+}
+
 class _OrderStatusCard extends StatelessWidget {
   const _OrderStatusCard({required this.order});
   final OrderEntity order;
@@ -480,25 +520,34 @@ class _OrderStatusCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 20, color: textColor),
-                    const SizedBox(width: 6),
-                    Text(
-                      order.status.isEmpty
-                          ? order.status
-                          : order.status.replaceAll('-', ' ').toLowerCase().replaceRange(0, 1, order.status[0].toUpperCase()),
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: textColor),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(999),
                     ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 20, color: textColor),
+                        const SizedBox(width: 6),
+                        Text(
+                          order.status.isEmpty
+                              ? order.status
+                              : order.status.replaceAll('-', ' ').toLowerCase().replaceRange(0, 1, order.status[0].toUpperCase()),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: textColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_refundLabel(order.paymentStatus) != null) ...[
+                    const SizedBox(height: 6),
+                    _RefundBadge(paymentStatus: order.paymentStatus),
                   ],
-                ),
+                ],
               ),
             ],
           ),

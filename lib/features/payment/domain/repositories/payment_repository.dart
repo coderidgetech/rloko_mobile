@@ -8,4 +8,9 @@ abstract class PaymentRepository {
     String gateway = 'stripe',
     String paymentMethod = 'card',
   });
+
+  Future<void> processPayment({
+    required String paymentIntentId,
+    String gateway = 'stripe',
+  });
 }

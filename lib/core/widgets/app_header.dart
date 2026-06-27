@@ -16,12 +16,16 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.showBackButton = false,
     this.onBack,
     this.extraActions,
+    this.title,
   });
 
   final bool showBackButton;
   final VoidCallback? onBack;
   /// Optional extra action widgets prepended before the standard search/wishlist/cart icons.
   final List<Widget>? extraActions;
+  /// When set, the page title is shown in place of the RLOKO logo (e.g. a
+  /// category listing shows "Women"). The logo remains the default.
+  final String? title;
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -43,20 +47,30 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   context.go('/');
                 }
               },
-              style: IconButton.styleFrom(
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
             )
           : null,
       leadingWidth: showBackButton ? 48 : null,
-      title: GestureDetector(
-        onTap: () => context.go('/'),
-        behavior: HitTestBehavior.opaque,
-        child: const Align(
-          alignment: Alignment.centerLeft,
-          child: AuthLogo(height: 24),
-        ),
-      ),
+      title: title != null
+          ? Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title!,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.foregroundColor(context),
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          : GestureDetector(
+              onTap: () => context.go('/'),
+              behavior: HitTestBehavior.opaque,
+              child: const Align(
+                alignment: Alignment.centerLeft,
+                child: AuthLogo(height: 24),
+              ),
+            ),
       titleSpacing: showBackButton ? 0 : 16,
       centerTitle: false,
       actions: [
@@ -66,7 +80,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
           onPressed: () => context.safePush('/search'),
           style: IconButton.styleFrom(
             foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
         BlocBuilder<WishlistBloc, WishlistState>(
@@ -80,7 +93,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   onPressed: () => context.push('/wishlist'),
                   style: IconButton.styleFrom(
                     foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
                 if (count > 0)
@@ -122,7 +134,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
                   onPressed: () => context.safePush('/cart'),
                   style: IconButton.styleFrom(
                     foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
                 if (count > 0)

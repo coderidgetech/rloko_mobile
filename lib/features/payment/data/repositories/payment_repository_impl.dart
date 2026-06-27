@@ -30,4 +30,19 @@ class PaymentRepositoryImpl implements PaymentRepository {
       throw getApiException(e) ?? e;
     }
   }
+
+  @override
+  Future<void> processPayment({
+    required String paymentIntentId,
+    String gateway = 'stripe',
+  }) async {
+    try {
+      await _dataSource.processPayment(
+        paymentIntentId: paymentIntentId,
+        gateway: gateway,
+      );
+    } on DioException catch (e) {
+      throw getApiException(e) ?? e;
+    }
+  }
 }

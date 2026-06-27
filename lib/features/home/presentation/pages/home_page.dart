@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/error_state_view.dart';
 import '../../../../core/widgets/safe_network_image.dart';
 import '../../../config/domain/entities/site_config.dart';
 import '../../../config/presentation/bloc/config_bloc.dart';
@@ -509,10 +510,9 @@ class _InspirationVideosSectionState extends State<_InspirationVideosSection> {
           );
         }
         if (state is InspirationVideosError) {
-          return Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            child: Text(state.message, style: const TextStyle(color: AppTheme.destructive, fontSize: 13)),
-          );
+          // Secondary section — fail quietly rather than showing a jarring
+          // error block above the fold; the main feed still loads.
+          return const SizedBox.shrink();
         }
         if (state is InspirationVideosLoaded && state.videos.isEmpty) {
           return const SizedBox.shrink();
@@ -794,10 +794,12 @@ class _ShopByCategorySection extends StatelessWidget {
                   'Shop by Category',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, letterSpacing: 0.5),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  state.message,
-                  style: TextStyle(fontSize: 14, color: AppTheme.mutedForegroundColor(context)),
+                ErrorStateView(
+                  message: state.message,
+                  compact: true,
+                  onRetry: () => context
+                      .read<CategoryListBloc>()
+                      .add(const CategoryListLoadRequested()),
                 ),
               ],
             ),
@@ -1242,9 +1244,11 @@ class _HomeProductSectionsState extends State<_HomeProductSections> {
           return _buildLoadingSections(context, s);
         }
         if (state is ProductListError) {
-          return Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(state.message, style: const TextStyle(color: AppTheme.destructive)),
+          return ErrorStateView(
+            message: state.message,
+            onRetry: () => context
+                .read<ProductListBloc>()
+                .add(const ProductListLoadHomeSections(limit: 10)),
           );
         }
         if (state is ProductListHomeLoaded) {

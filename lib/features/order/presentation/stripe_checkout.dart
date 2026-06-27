@@ -15,6 +15,7 @@ import '../../cart/domain/entities/cart_item_entity.dart';
 import '../../cart/presentation/bloc/cart_bloc.dart';
 import '../../address/domain/entities/address_entity.dart';
 import '../../payment/domain/usecases/create_payment_intent_usecase.dart';
+import '../../payment/domain/usecases/process_payment_usecase.dart';
 import '../domain/entities/order_entity.dart';
 import '../domain/usecases/order_usecases.dart';
 import '../domain/utils/order_mappers.dart';
@@ -141,6 +142,19 @@ Future<void> runStripeCheckout({
     );
 
     await Stripe.instance.presentPaymentSheet();
+
+    // Payment succeeded. Confirm it to the backend so the order is marked paid
+    // (mirrors web). Without this, and with no reachable Stripe webhook, the order
+    // stays pending and the abandoned-order sweeper cancels it. Guard separately:
+    // the charge already went through, so a confirm failure must NOT cancel the
+    // order (a Stripe webhook reconciles it server-side).
+    try {
+      await sl<ProcessPaymentUseCase>().call(paymentIntentId: intent.id);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[StripeCheckout] payment confirm failed (webhook will reconcile): $e');
+      }
+    }
 
     // Use pre-captured references — safe regardless of widget mount state.
     cartBloc.add(const CartClearRequested());

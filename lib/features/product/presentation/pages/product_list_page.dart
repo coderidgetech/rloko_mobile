@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/region/app_region.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
+import '../../../../core/widgets/error_state_view.dart';
 import '../bloc/product_list_bloc.dart';
-import '../widgets/empty_state.dart';
+import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/product_grid_skeleton.dart';
 import '../widgets/product_grid_tile.dart';
 import '../widgets/sort_bottom_sheet.dart';
@@ -52,6 +55,9 @@ class ProductListPage extends StatefulWidget {
 class _ProductListPageState extends State<ProductListPage> {
   late String _sortBy;
   String _selectedFilter = 'all';
+  CategoryFilterState _filterState = const CategoryFilterState();
+  // Products the filter facets are derived from (pill-scoped, pre-filter).
+  List<ProductEntity> _facetSource = const [];
 
   @override
   void initState() {
@@ -60,12 +66,26 @@ class _ProductListPageState extends State<ProductListPage> {
     context.read<ProductListBloc>().add(widget.loadEvent);
   }
 
+  bool get _isIndia => CurrencyScope.of(context).region == AppRegion.india;
+
+  bool get _sortActive => _sortBy != widget.initialSort;
+
+  String get _sortLabel {
+    if (!_sortActive) return 'Sort';
+    final match = widget.sortOptions.where((o) => o.value == _sortBy);
+    return match.isEmpty ? 'Sort' : match.first.label;
+  }
+
+  bool get _filtersActive => _filterState.activeCount > 0;
+  int get _activeFilterCount => _filterState.activeCount;
+
   List<ProductEntity> _filterAndSort(List<ProductEntity> products) {
     var list = products;
     if (widget.filterPills != null && _selectedFilter != 'all') {
       list = list.where((p) =>
           p.category.toLowerCase() == _selectedFilter.toLowerCase()).toList();
     }
+    list = applyCategoryFilters(list, _filterState, priceOf: priceSelector(india: _isIndia));
     list = List.from(list);
     if (_sortBy == 'price-low') {
       list.sort((a, b) => a.price.compareTo(b.price));
@@ -96,6 +116,21 @@ class _ProductListPageState extends State<ProductListPage> {
     if (result != null && mounted) setState(() => _sortBy = result);
   }
 
+  Future<void> _showFilterSheet() async {
+    final scope = CurrencyScope.of(context);
+    final facets = computeFacets(
+      _facetSource,
+      priceSelector(india: scope.region == AppRegion.india),
+    );
+    final result = await showFilterBottomSheet(
+      context,
+      initial: _filterState,
+      facets: facets,
+      formatPrice: scope.formatAmount,
+    );
+    if (result != null && mounted) setState(() => _filterState = result);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -111,22 +146,24 @@ class _ProductListPageState extends State<ProductListPage> {
             );
           }
           if (state is ProductListError) {
-            return EmptyState(
-              title: 'Something went wrong',
-              subtitle: state.message,
-              icon: Icons.error_outline,
-              actionLabel: 'Try Again',
-              onAction: () => context.read<ProductListBloc>().add(widget.loadEvent),
+            return ErrorStateView(
+              message: state.message,
+              onRetry: () => context.read<ProductListBloc>().add(widget.loadEvent),
             );
           }
           if (state is ProductListLoaded) {
+            _facetSource = (widget.filterPills != null && _selectedFilter != 'all')
+                ? state.products
+                    .where((p) => p.category.toLowerCase() == _selectedFilter.toLowerCase())
+                    .toList()
+                : state.products;
             final products = _filterAndSort(state.products);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (widget.showSaleBanner) _buildSaleBanner(state.products.length),
                 if (widget.filterPills != null) _buildFilterPills(),
-                _buildStatsBar(products.length),
+                _buildControlsBar(products.length),
                 Expanded(
                   child: products.isEmpty
                       ? _buildEmptyState()
@@ -135,7 +172,9 @@ class _ProductListPageState extends State<ProductListPage> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 0.5, // Match React: 3/4 image + info block
+                      // 3/4 image + info block. 0.56 trims excess card height so
+                      // more products show per screen while the image stays portrait.
+                      childAspectRatio: 0.56,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
                     ),
@@ -192,49 +231,22 @@ class _ProductListPageState extends State<ProductListPage> {
               ),
             ],
           ),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '$count',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700,
-                    ),
-                  ),
-                  Text(
-                    'Items',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
-                    ),
-                  ),
-                ],
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
+                ),
               ),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap: _showSortSheet,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.tune, size: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Sort',
-                        style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                      ),
-                    ],
-                  ),
+              Text(
+                'Items',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -324,8 +336,7 @@ class _ProductListPageState extends State<ProductListPage> {
     );
   }
 
-  Widget _buildStatsBar(int count) {
-    if (widget.showSaleBanner) return const SizedBox.shrink();
+  Widget _buildControlsBar(int count) {
     final label = widget.statsLabel.replaceAll('%d', '$count');
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -336,37 +347,78 @@ class _ProductListPageState extends State<ProductListPage> {
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+          // On the sale page the banner already shows the count, so just keep the
+          // controls right-aligned there.
+          if (widget.showSaleBanner)
+            const Spacer()
+          else
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+          _pillButton(
+            icon: Icons.filter_list,
+            label: _activeFilterCount > 0 ? 'Filter · $_activeFilterCount' : 'Filter',
+            active: _filtersActive,
+            onTap: _showFilterSheet,
           ),
-          GestureDetector(
+          const SizedBox(width: 8),
+          _pillButton(
+            icon: Icons.tune,
+            label: _sortLabel,
+            active: _sortActive,
             onTap: _showSortSheet,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.3)),
-                borderRadius: BorderRadius.circular(AppTheme.radiusFull),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.tune, size: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Sort',
-                    style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _pillButton({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    final fg = AppTheme.foregroundColor(context);
+    final accent = AppTheme.primaryColor(context);
+    final color = active ? accent : fg.withValues(alpha: 0.7);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? accent.withValues(alpha: 0.1) : Colors.transparent,
+          border: Border.all(color: active ? accent : fg.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(AppTheme.radiusFull),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: color,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

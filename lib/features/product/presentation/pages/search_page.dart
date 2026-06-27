@@ -13,6 +13,7 @@ import '../../../../core/widgets/app_header.dart';
 import '../../domain/entities/category_entity.dart';
 import '../bloc/category_list_bloc.dart';
 import '../bloc/product_list_bloc.dart';
+import '../../../../core/widgets/error_state_view.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/product_grid_skeleton.dart';
 import '../widgets/product_grid_tile.dart';
@@ -139,10 +140,9 @@ class _SearchPageState extends State<SearchPage> {
                       child: CircularProgressIndicator(strokeWidth: 2));
                 }
                 if (state is ProductListError) {
-                  return EmptyState(
-                    title: 'Something went wrong',
-                    subtitle: state.message,
-                    icon: Icons.error_outline,
+                  return ErrorStateView(
+                    message: state.message,
+                    onRetry: query.isEmpty ? null : () => _onSearch(query),
                   );
                 }
 

@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../core/region/app_region.dart';
+import '../../../../core/region/currency_scope.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_header.dart';
 import '../bloc/product_list_bloc.dart';
-import '../widgets/empty_state.dart';
+import '../../../../core/widgets/error_state_view.dart';
 import '../widgets/filter_bottom_sheet.dart';
 import '../widgets/product_grid_skeleton.dart';
 import '../widgets/product_grid_tile.dart';
-import '../widgets/quick_actions.dart';
-import '../widgets/quick_category_switcher.dart';
 import '../widgets/sort_bottom_sheet.dart';
 import '../../domain/entities/product_entity.dart';
 
@@ -37,6 +37,43 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   String _sortBy = 'featured';
   String _selectedSubCategory = 'all';
   CategoryFilterState _filterState = const CategoryFilterState();
+  // Products the filter facets are derived from (subcategory-scoped, pre-filter).
+  List<ProductEntity> _facetSource = const [];
+
+  bool get _isIndia => CurrencyScope.of(context).region == AppRegion.india;
+
+  /// Header title — the gift label, the subcategory, or the gender, capitalized.
+  String get _pageTitle {
+    if (widget.isGiftMode) {
+      return widget.gender == 'women'
+          ? 'Gifts for Her'
+          : widget.gender == 'men'
+              ? 'Gifts for Him'
+              : 'Gifts';
+    }
+    final raw = (widget.slug.isNotEmpty && widget.slug != widget.gender)
+        ? widget.slug
+        : widget.gender;
+    if (raw.isEmpty) return 'Products';
+    return raw[0].toUpperCase() + raw.substring(1);
+  }
+
+  int get _activeFilterCount => _filterState.activeCount;
+
+  bool get _sortActive => _sortBy != 'featured';
+
+  String get _sortLabel {
+    switch (_sortBy) {
+      case 'newest':
+        return 'Newest';
+      case 'price-low':
+        return 'Price ↑';
+      case 'price-high':
+        return 'Price ↓';
+      default:
+        return 'Sort';
+    }
+  }
 
   List<ProductEntity> _filterAndSort(List<ProductEntity> products) {
     var list = products;
@@ -44,7 +81,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
       list = list.where((p) =>
           p.category.toLowerCase() == _selectedSubCategory.toLowerCase()).toList();
     }
-    list = applyCategoryFilters(list, _filterState);
+    list = applyCategoryFilters(list, _filterState, priceOf: priceSelector(india: _isIndia));
     list = List.from(list);
     if (_sortBy == 'price-low') {
       list.sort((a, b) => a.price.compareTo(b.price));
@@ -73,7 +110,17 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   }
 
   Future<void> _showFilterSheet() async {
-    final result = await showFilterBottomSheet(context, initial: _filterState);
+    final scope = CurrencyScope.of(context);
+    final facets = computeFacets(
+      _facetSource,
+      priceSelector(india: scope.region == AppRegion.india),
+    );
+    final result = await showFilterBottomSheet(
+      context,
+      initial: _filterState,
+      facets: facets,
+      formatPrice: scope.formatAmount,
+    );
     if (result != null && mounted) setState(() => _filterState = result);
   }
 
@@ -96,6 +143,10 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
   @override
   void initState() {
     super.initState();
+    _load();
+  }
+
+  void _load() {
     final category = _apiCategoryParam();
     context.read<ProductListBloc>().add(
           ProductListLoadRequested(
@@ -135,7 +186,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor(context),
-      appBar: const AppHeader(showBackButton: true),
+      appBar: AppHeader(showBackButton: true, title: _pageTitle),
       body: BlocBuilder<ProductListBloc, ProductListState>(
         builder: (context, state) {
           // Show loading when: explicitly loading, or still initial/home state (load was just dispatched)
@@ -149,57 +200,41 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
             );
           }
           if (state is ProductListError) {
-            return EmptyState(
-              title: 'Something went wrong',
-              subtitle: state.message,
-              icon: Icons.error_outline,
+            return ErrorStateView(
+              message: state.message,
+              onRetry: _load,
             );
           }
           if (state is ProductListLoaded) {
+            // Facets reflect the current category (subcategory-scoped), independent
+            // of which filters are currently applied.
+            _facetSource = _selectedSubCategory == 'all'
+                ? state.products
+                : state.products
+                    .where((p) => p.category.toLowerCase() == _selectedSubCategory.toLowerCase())
+                    .toList();
             final products = _filterAndSort(state.products);
-            // Match React: always show filter bar + QuickActions, even when empty
-            final giftTitle = widget.isGiftMode
-                ? (widget.gender == 'women' ? 'Gift For Her' : widget.gender == 'men' ? 'Gift For Him' : 'Perfect Gifts')
-                : null;
+            // Title (gender/category/gift) lives in the AppHeader now; the page
+            // leads straight into the refine bar so products appear higher.
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (giftTitle != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: Text(
-                      giftTitle,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.foregroundColor(context),
-                          ),
-                    ),
-                  ),
-                QuickCategorySwitcher(gender: widget.gender, slug: widget.slug),
                 _buildFixedFilterBar(products.length, showSubPills, subCategories),
                 Expanded(
-                  child: Stack(
-                    children: [
-                      if (products.isEmpty)
-                        _buildCategoryEmptyState()
-                      else
-                        GridView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
+                  child: products.isEmpty
+                      ? _buildCategoryEmptyState()
+                      : GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.5,
+                            // Match product_list_page: 3/4 image + info block.
+                            childAspectRatio: 0.56,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
                           itemCount: products.length,
                           itemBuilder: (context, index) => ProductGridTile(product: products[index]),
                         ),
-                      QuickActions(
-                        onFilterTap: _showFilterSheet,
-                        onSortTap: _showSortSheet,
-                      ),
-                    ],
-                  ),
                 ),
               ],
             );
@@ -275,152 +310,135 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     );
   }
 
-  /// Filter bar matching React MobileCategoryPage: "Showing X products" + Filter/Sort buttons, then subcategory pills.
+  /// Refine bar: sibling-subcategory chips on top, then the result count with
+  /// Filter (active-count badge) and Sort (current selection) controls.
   Widget _buildFixedFilterBar(
     int count,
     bool showSubPills,
     List<String> subCategories,
   ) {
-    final hasActiveFilters = _filterState.priceRange != 'all' ||
-        _filterState.size != 'all' ||
-        _filterState.color != 'all';
+    final fg = AppTheme.foregroundColor(context);
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.backgroundColor(context),
-        border: Border(bottom: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1))),
+        border: Border(bottom: BorderSide(color: fg.withValues(alpha: 0.1))),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row: "Showing X products" (left) | Filter + Sort buttons (right) - React px-4 py-2
-          Padding(
+          // Sibling subcategory chips (All / Dresses / Tops ...).
+          if (showSubPills)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: subCategories.map((s) {
+                  final slug = s.toLowerCase();
+                  final selected = _selectedSubCategory == slug;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedSubCategory = slug),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selected ? AppTheme.primaryColor(context) : AppTheme.backgroundColor(context),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: selected ? AppTheme.primaryColor(context) : fg.withValues(alpha: 0.2),
+                          ),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))],
+                        ),
+                        child: Text(
+                          s,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: selected ? Colors.white : fg.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          // Count + Filter + Sort.
+          Container(
+            decoration: showSubPills
+                ? BoxDecoration(border: Border(top: BorderSide(color: fg.withValues(alpha: 0.1))))
+                : null,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Showing $count products',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.foregroundColor(context).withValues(alpha: 0.6),
+                Expanded(
+                  child: Text(
+                    '$count ${count == 1 ? 'item' : 'items'}',
+                    style: TextStyle(fontSize: 14, color: fg.withValues(alpha: 0.6)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Row(
-                  children: [
-                    // Filter button - React: rounded-full border border-border/30 shadow-sm, SlidersHorizontal 14
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _showFilterSheet,
-                        borderRadius: BorderRadius.circular(999),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, 1))],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.tune_rounded, size: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Filter',
-                                style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                              ),
-                              if (hasActiveFilters)
-                                Container(
-                                  margin: const EdgeInsets.only(left: 4),
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryColor(context),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Sort button
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _showSortSheet,
-                        borderRadius: BorderRadius.circular(999),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppTheme.foregroundColor(context).withValues(alpha: 0.2)),
-                            borderRadius: BorderRadius.circular(999),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, 1))],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.swap_vert_rounded, size: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Sort',
-                                style: TextStyle(fontSize: 14, color: AppTheme.foregroundColor(context).withValues(alpha: 0.7)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                _refinePill(
+                  icon: Icons.tune_rounded,
+                  label: _activeFilterCount > 0 ? 'Filter · $_activeFilterCount' : 'Filter',
+                  active: _activeFilterCount > 0,
+                  onTap: _showFilterSheet,
+                ),
+                const SizedBox(width: 8),
+                _refinePill(
+                  icon: Icons.swap_vert_rounded,
+                  label: _sortLabel,
+                  active: _sortActive,
+                  onTap: _showSortSheet,
                 ),
               ],
             ),
           ),
-          // Subcategory pills: only when gender && !category - React: border-t, rounded-full, border border-border/30 shadow-sm
-          if (showSubPills)
-            Container(
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: AppTheme.foregroundColor(context).withValues(alpha: 0.1))),
-              ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: subCategories.map((s) {
-                    final slug = s.toLowerCase();
-                    final selected = _selectedSubCategory == slug;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () => setState(() => _selectedSubCategory = slug),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: selected ? AppTheme.primaryColor(context) : AppTheme.backgroundColor(context),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: selected ? AppTheme.primaryColor(context) : AppTheme.foregroundColor(context).withValues(alpha: 0.2),
-                            ),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))],
-                          ),
-                          child: Text(
-                            s,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: selected ? Colors.white : AppTheme.foregroundColor(context).withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _refinePill({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    final fg = AppTheme.foregroundColor(context);
+    final accent = AppTheme.primaryColor(context);
+    final color = active ? accent : fg.withValues(alpha: 0.7);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? accent.withValues(alpha: 0.1) : Colors.transparent,
+            border: Border.all(color: active ? accent : fg.withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, 1))],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: color,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
-            ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

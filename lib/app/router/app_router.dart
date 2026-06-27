@@ -92,6 +92,15 @@ class _AppShell extends StatelessWidget {
   }
 }
 
+/// Scopes a fresh [ProductListBloc] to a route subtree. Each list/category/search/PDP
+/// page gets its own instance so the Home tab's shared home-sections load (which runs
+/// off-screen while a branch is kept alive) can't overwrite a category list into a
+/// permanent loading skeleton.
+Widget _withProductList(Widget child) => BlocProvider<ProductListBloc>(
+      create: (_) => sl<ProductListBloc>(),
+      child: child,
+    );
+
 GoRouter createAppRouter() {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -200,7 +209,8 @@ GoRouter createAppRouter() {
       ),
       GoRoute(
         path: '/signup',
-        builder: (context, state) => const SignupPage(),
+        builder: (context, state) =>
+            SignupPage(initialPhoneLocal: state.uri.queryParameters['phone']),
       ),
       GoRoute(
         path: '/forgot-password',
@@ -236,11 +246,11 @@ GoRouter createAppRouter() {
                       final gender = state.pathParameters['gender'] ?? '';
                       final slug = state.pathParameters['slug'] ?? '';
                       final isGift = state.uri.queryParameters['gift'] == 'true';
-                      return CategoryProductsPage(
+                      return _withProductList(CategoryProductsPage(
                         gender: gender,
                         slug: slug,
                         isGiftMode: isGift,
-                      );
+                      ));
                     },
                   ),
                 ],
@@ -253,7 +263,7 @@ GoRouter createAppRouter() {
             routes: [
               GoRoute(
                 path: '/search',
-                builder: (context, state) => const SearchPage(),
+                builder: (context, state) => _withProductList(const SearchPage()),
               ),
             ],
           ),
@@ -287,11 +297,11 @@ GoRouter createAppRouter() {
           final gender = state.pathParameters['gender'] ?? '';
           final slug = state.pathParameters['slug'] ?? '';
           final isGift = state.uri.queryParameters['gift'] == 'true';
-          return CategoryProductsPage(
+          return _withProductList(CategoryProductsPage(
             gender: gender,
             slug: slug,
             isGiftMode: isGift,
-          );
+          ));
         },
       ),
       GoRoute(
@@ -299,16 +309,16 @@ GoRouter createAppRouter() {
         builder: (context, state) {
           final gender = state.pathParameters['gender'] ?? '';
           final isGift = state.uri.queryParameters['gift'] == 'true';
-          return CategoryProductsPage(
+          return _withProductList(CategoryProductsPage(
             gender: gender,
             slug: '',
             isGiftMode: isGift,
-          );
+          ));
         },
       ),
       GoRoute(
         path: '/all-products',
-        builder: (context, state) => ProductListPage(
+        builder: (context, state) => _withProductList(ProductListPage(
           title: 'All Products',
           loadEvent: const ProductListLoadRequested(limit: 200),
           sortOptions: const [
@@ -319,11 +329,11 @@ GoRouter createAppRouter() {
           ],
           initialSort: 'featured',
           statsLabel: 'Showing %d products',
-        ),
+        )),
       ),
       GoRoute(
         path: '/new-arrivals',
-        builder: (context, state) => ProductListPage(
+        builder: (context, state) => _withProductList(ProductListPage(
           title: 'New Arrivals',
           loadEvent: const ProductListLoadNewArrivals(limit: 200),
           filterPills: const [
@@ -335,11 +345,11 @@ GoRouter createAppRouter() {
           ],
           statsLabel: '%d new items this week',
           emptyTitle: 'No new arrivals',
-        ),
+        )),
       ),
       GoRoute(
         path: '/sale',
-        builder: (context, state) => ProductListPage(
+        builder: (context, state) => _withProductList(ProductListPage(
           title: 'On Sale',
           loadEvent: const ProductListLoadOnSale(limit: 200),
           sortOptions: const [
@@ -349,14 +359,14 @@ GoRouter createAppRouter() {
           ],
           initialSort: 'discount',
           showSaleBanner: true,
-        ),
+        )),
       ),
       GoRoute(
         path: '/product/:id',
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? '';
           if (id.isEmpty) return const CategoriesPage();
-          return ProductDetailPage(productId: id);
+          return _withProductList(ProductDetailPage(productId: id));
         },
       ),
       GoRoute(

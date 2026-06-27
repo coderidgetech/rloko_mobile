@@ -129,7 +129,6 @@ class _PhoneCountryRowState extends State<PhoneCountryRow> {
     const h = 52.0;
     const r = 12.0;
     final line = fg.withValues(alpha: 0.12);
-    final grey = fg.withValues(alpha: 0.06);
     final focused = _phoneFocus.hasFocus;
 
     return Column(
@@ -149,7 +148,7 @@ class _PhoneCountryRowState extends State<PhoneCountryRow> {
               constraints: const BoxConstraints(minWidth: 108),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: grey,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(r),
                 border: Border.all(color: line),
               ),

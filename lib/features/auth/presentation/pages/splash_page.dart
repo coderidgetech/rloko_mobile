@@ -29,7 +29,7 @@ class _SplashPageState extends State<SplashPage>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 1100),
     );
     _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(
@@ -64,7 +64,8 @@ class _SplashPageState extends State<SplashPage>
     _controller.forward();
     Future(() async {
       await Future.wait([
-        Future.delayed(const Duration(milliseconds: 2500)),
+        // Minimum branding flash only — navigate as soon as auth resolves.
+        Future.delayed(const Duration(milliseconds: 700)),
         _waitForAuthResolved(),
       ]);
       if (!mounted) return;

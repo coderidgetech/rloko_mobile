@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/network/api_exception.dart';
 import '../../../../core/network/dio_client.dart';
 import '../dto/auth_response_dto.dart';
 import '../dto/user_dto.dart';
@@ -20,7 +21,12 @@ class AuthRemoteDataSource {
         data: {'phone': phone},
       );
     } on DioException catch (e) {
-      throw Exception(_otpDioMessage(e, 'Could not send verification code'));
+      // Preserve the server's error code (e.g. USER_NOT_FOUND) so callers can route to signup.
+      throw ApiException(
+        message: _otpDioMessage(e, 'Could not send verification code'),
+        code: getApiException(e)?.code,
+        statusCode: e.response?.statusCode,
+      );
     }
   }
 

@@ -13,6 +13,8 @@ import '../bloc/wishlist_bloc.dart';
 import '../../../product/presentation/widgets/empty_state.dart';
 import '../../../cart/domain/entities/cart_item_entity.dart';
 import '../../../cart/presentation/bloc/cart_bloc.dart';
+import '../../../../core/di/injection.dart';
+import '../../../product/domain/usecases/get_product_by_id_usecase.dart';
 import '../../../../core/utils/navigation_utils.dart';
 
 /// Match React MobileWishlistPage: grid grid-cols-2 gap-3, card rounded-2xl border,
@@ -110,23 +112,51 @@ class _WishlistPageState extends State<WishlistPage> {
                         const SnackBar(content: Text('Removed from wishlist')),
                       );
                     },
-                    onAddToCart: () {
-                      final name = item.productName ?? 'Product';
-                      final image = item.productImage ?? '';
-                      final price = item.productPrice ?? 0.0;
-                      context.read<CartBloc>().add(CartAddItemRequested(
-                            CartItemEntity(
-                              productId: item.productId,
-                              productName: name,
-                              image: image,
-                              price: price,
-                              size: 'One Size',
-                              quantity: 1,
-                            ),
-                          ));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Added to cart!')),
-                      );
+                    onAddToCart: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final cartBloc = context.read<CartBloc>();
+                      final wishlistBloc = context.read<WishlistBloc>();
+                      try {
+                        // The cart API validates stock per size, so we must send a real
+                        // in-stock size — not a placeholder. Fetch the product to find one.
+                        final product =
+                            await sl<GetProductByIdUseCase>()(item.productId);
+                        final available = product.stock.entries
+                            .where((e) => e.value > 0)
+                            .toList();
+                        if (available.isEmpty) {
+                          messenger.showSnackBar(const SnackBar(
+                              content: Text('Out of stock')));
+                          return;
+                        }
+                        // Prefer the first listed size that's in stock; else any in-stock key.
+                        final size = product.sizes.firstWhere(
+                          (s) => (product.stock[s] ?? 0) > 0,
+                          orElse: () => available.first.key,
+                        );
+                        cartBloc.add(CartAddItemRequested(
+                          CartItemEntity(
+                            productId: item.productId,
+                            productName: item.productName ?? product.name,
+                            image: item.productImage ??
+                                (product.images.isNotEmpty
+                                    ? product.images.first
+                                    : ''),
+                            price: item.productPrice ?? product.price,
+                            size: size,
+                            quantity: 1,
+                          ),
+                        ));
+                        // Only now (valid size, in stock) remove it from the wishlist.
+                        wishlistBloc
+                            .add(WishlistRemoveItemRequested(item.productId));
+                        messenger.showSnackBar(const SnackBar(
+                            content: Text('Moved to cart!')));
+                      } catch (_) {
+                        messenger.showSnackBar(const SnackBar(
+                            content:
+                                Text("Couldn't add to cart. Please try again.")));
+                      }
                     },
                   );
                 },

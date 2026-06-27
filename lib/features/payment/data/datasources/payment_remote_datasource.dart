@@ -44,4 +44,20 @@ class PaymentRemoteDataSource {
       currency: (data['currency'] as String?) ?? currency,
     );
   }
+
+  /// Confirms a succeeded payment with the backend so the order is marked paid.
+  /// Without this (and absent a reachable Stripe webhook) the order stays pending
+  /// and gets cancelled by the abandoned-order sweeper.
+  Future<void> processPayment({
+    required String paymentIntentId,
+    String gateway = 'stripe',
+  }) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/payments/process',
+      data: {
+        'payment_intent_id': paymentIntentId,
+        'gateway': gateway,
+      },
+    );
+  }
 }

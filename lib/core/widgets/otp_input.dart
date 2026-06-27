@@ -100,17 +100,18 @@ class _OtpInputState extends State<OtpInput> {
                 ),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: AppTheme.foregroundColor(context).withValues(alpha: 0.05),
+                  // Match the form fields: white fill, subtle border, primary focus.
+                  fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppTheme.borderColor(context).withValues(alpha: 0.3),
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.12),
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: AppTheme.borderColor(context).withValues(alpha: 0.3),
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.12),
                     ),
                   ),
                     focusedBorder: OutlineInputBorder(

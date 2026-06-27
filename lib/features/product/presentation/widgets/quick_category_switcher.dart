@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/navigation_utils.dart';
 
 /// Horizontal scroll of category pills matching React QuickCategorySwitcher.
 /// Women, Men, New, Sale, Dresses, Shoes, Jewelry, Bags, All. Active = primary bg.
@@ -56,7 +56,7 @@ class QuickCategorySwitcher extends StatelessWidget {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => context.go(cat.link),
+                  onTap: () => context.safePush(cat.link),
                   borderRadius: BorderRadius.circular(999),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
