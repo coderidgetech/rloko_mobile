@@ -22,6 +22,7 @@ class _CategoryItem {
     required this.link,
     this.badge,
     this.subcategories,
+    this.icon = Icons.checkroom,
   });
 
   final String id;
@@ -31,6 +32,8 @@ class _CategoryItem {
   final String link;
   final String? badge;
   final List<_SubcategoryItem>? subcategories;
+  /// Shown on the card when [image] is empty or fails to load.
+  final IconData icon;
 }
 
 class _SubcategoryItem {
@@ -67,10 +70,12 @@ List<_CategoryItem> _categoriesListFromState({
     const _CategoryItem(
       id: 'all-products',
       name: 'All Products',
-      image: '',
+      // Distinct from the catalog category images (Women uses 1483985988355).
+      image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80',
       description: 'Browse the full catalog',
       badge: 'Shop All',
       link: '/all-products',
+      icon: Icons.grid_view_rounded,
     ),
   ];
   for (final c in list) {
@@ -97,20 +102,22 @@ List<_CategoryItem> _categoriesListFromState({
     const _CategoryItem(
       id: 'new',
       name: 'New Arrivals',
-      image: '',
+      image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&q=80',
       description: 'Just added to the store',
       badge: 'New',
       link: '/new-arrivals',
+      icon: Icons.auto_awesome,
     ),
   );
   out.add(
     const _CategoryItem(
       id: 'sale',
       name: 'Sale',
-      image: '',
+      image: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=800&q=80',
       description: 'Current offers',
       badge: 'Sale',
       link: '/sale',
+      icon: Icons.local_offer,
     ),
   );
   return out;
@@ -315,9 +322,9 @@ class _CategoryGridCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: Icon(
-                      Icons.checkroom,
+                      category.icon,
                       size: 48,
-                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.2),
+                      color: AppTheme.foregroundColor(context).withValues(alpha: 0.25),
                     ),
                   ),
                 )
@@ -327,8 +334,23 @@ class _CategoryGridCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(color: AppTheme.mutedColor(context)),
                   errorWidget: (_, __, ___) => Container(
-                    color: AppTheme.mutedColor(context),
-                    child: const Icon(Icons.image, size: 40),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.mutedColor(context),
+                          AppTheme.primaryColor(context).withValues(alpha: 0.3),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        category.icon,
+                        size: 48,
+                        color: AppTheme.foregroundColor(context).withValues(alpha: 0.25),
+                      ),
+                    ),
                   ),
                 ),
               // Gradient - React: from-black/90 via-black/40 to-transparent

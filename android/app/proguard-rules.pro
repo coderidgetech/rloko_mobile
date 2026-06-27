@@ -23,3 +23,9 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 -dontwarn javax.annotation.**
+
+# Flutter references Play Core (deferred components / split installs) which this app
+# does not use. Without these, R8 fails the release build with "Missing class
+# com.google.android.play.core.*". Silence + keep so minify completes.
+-dontwarn com.google.android.play.core.**
+-keep class com.google.android.play.core.** { *; }

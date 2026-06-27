@@ -288,6 +288,7 @@ class _AppCoreState extends State<_AppCore> {
             valueListenable: appLocale,
             builder: (ctx, loc, _) => MaterialApp.router(
               title: _title,
+              debugShowCheckedModeBanner: false,
               theme: _theme,
               routerConfig: _appRouter,
               locale: loc,
