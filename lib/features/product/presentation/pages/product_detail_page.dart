@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -60,6 +58,9 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   String? _selectedSize;
   int _quantity = 1;
   String _expandedSection = '';
+  // Active tab inside the consolidated "Product Info" accordion
+  // (Details / Care / Shipping), match React `infoTab` state.
+  String _infoTab = 'details';
   bool _hasRequestedRecommendations = false;
   List<ProductEntity> _apiRecommendations = [];
   bool _productReviewsRequestStarted = false;
@@ -72,8 +73,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
   bool _reviewsLoadingMore = false;
   ProductEntity? _loadedProduct;
   late final PageController _pageController;
-  Timer? _imageTimer;
-  int _timerImageCount = 0;
 
   @override
   void initState() {
@@ -83,25 +82,8 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
 
   @override
   void dispose() {
-    _imageTimer?.cancel();
     _pageController.dispose();
     super.dispose();
-  }
-
-  void _startImageTimer(int count) {
-    if (count <= 1) { _imageTimer?.cancel(); return; }
-    if (count == _timerImageCount && _imageTimer != null && _imageTimer!.isActive) return;
-    _timerImageCount = count;
-    _imageTimer?.cancel();
-    _imageTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted || !_pageController.hasClients) return;
-      final next = (_imageIndex + 1) % _timerImageCount;
-      _pageController.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOut,
-      );
-    });
   }
 
   void _showSizeChartDialog(BuildContext context) {
@@ -274,20 +256,30 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     return _productReviewsTotal > 0;
   }
 
-  String _careFromProduct(ProductEntity p) {
-    // Prefer the real care field; fall back to scraping details for legacy products.
-    if ((p.care ?? '').trim().isNotEmpty) {
-      return p.care!.trim();
+  /// Match React `infoTab === 'care'`: leading material bullet (if any),
+  /// then `product.care` split on separators into bullet lines, falling
+  /// back to generic wash-care copy when there's no `care` data.
+  List<String> _careBulletLines(ProductEntity p) {
+    final lines = <String>[];
+    if (p.material.trim().isNotEmpty) {
+      lines.add(p.material.trim());
     }
-    for (final d in p.details) {
-      if (RegExp('wash|dry|clean|iron|care', caseSensitive: false).hasMatch(d)) {
-        return d;
-      }
+    final care = (p.care ?? '').trim();
+    if (care.isNotEmpty) {
+      lines.addAll(
+        care
+            .split(RegExp('[,;.\n]+'))
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty),
+      );
+    } else {
+      lines.addAll(const [
+        'Machine wash cold',
+        'Do not bleach',
+        'Tumble dry low',
+      ]);
     }
-    if (p.details.isNotEmpty) {
-      return p.details.first;
-    }
-    return _emDash;
+    return lines;
   }
 
   static String _formatReviewDate(DateTime? t) {
@@ -820,11 +812,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                 final productImages = product.images;
                 final hasProductImages = productImages.isNotEmpty;
                 final images = hasProductImages ? productImages : <String>[];
-                if (images.length > 1 && images.length != _timerImageCount) {
-                  WidgetsBinding.instance.addPostFrameCallback(
-                    (_) { if (mounted) _startImageTimer(images.length); },
-                  );
-                }
                 final isWishlisted = context.select<WishlistBloc, bool>((bloc) {
                   final s = bloc.state;
                   if (s is! WishlistLoaded) return false;
@@ -1116,108 +1103,149 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Title & category
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    product.name,
-                                    style: const TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                if (product.isGift) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber.shade100,
-                                      borderRadius: BorderRadius.circular(999),
-                                      border: Border.all(
-                                        color: Colors.amber.shade700,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      'GIFT',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.amber.shade900,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              product.category,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppTheme.foregroundColor(
-                                  context,
-                                ).withValues(alpha: 0.6),
+                            // Name/price/color consolidated into one bordered
+                            // info block (match React: single container with
+                            // border-t + border-b, space-y between sub-sections,
+                            // no inner divider lines between name/price/color).
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 20,
                               ),
-                            ),
-                            // Price row (match React: $price, strikethrough, % OFF badge)
-                            const SizedBox(height: 16),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  _formatPrice(context, product),
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: AppTheme.foregroundColor(
+                                      context,
+                                    ).withValues(alpha: 0.12),
+                                  ),
+                                  bottom: BorderSide(
+                                    color: AppTheme.foregroundColor(
+                                      context,
+                                    ).withValues(alpha: 0.12),
                                   ),
                                 ),
-                                if (product.originalPrice != null &&
-                                    product.originalPrice! > product.price) ...[
-                                  const SizedBox(width: 12),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Sub-section 1: Title & category
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          product.name,
+                                          style: const TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      if (product.isGift) ...[
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.shade100,
+                                            borderRadius:
+                                                BorderRadius.circular(999),
+                                            border: Border.all(
+                                              color: Colors.amber.shade700,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'GIFT',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.amber.shade900,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    _formatOriginalPrice(context, product),
+                                    product.category,
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       color: AppTheme.foregroundColor(
                                         context,
-                                      ).withValues(alpha: 0.4),
-                                      decoration: TextDecoration.lineThrough,
+                                      ).withValues(alpha: 0.6),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryColor(
-                                        context,
-                                      ).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      '${(((product.originalPrice! - product.price) / product.originalPrice!) * 100).round()}% OFF',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryColor(context),
+                                  // Sub-section 2: Price row (match React:
+                                  // $price, strikethrough, % OFF badge)
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Text(
+                                        _formatPrice(context, product),
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
+                                      if (product.originalPrice != null &&
+                                          product.originalPrice! >
+                                              product.price) ...[
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          _formatOriginalPrice(
+                                            context,
+                                            product,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: AppTheme.foregroundColor(
+                                              context,
+                                            ).withValues(alpha: 0.4),
+                                            decoration:
+                                                TextDecoration.lineThrough,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor(
+                                              context,
+                                            ).withValues(alpha: 0.15),
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '${(((product.originalPrice! - product.price) / product.originalPrice!) * 100).round()}% OFF',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.primaryColor(
+                                                context,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
+                                  // Sub-section 3: Colour variants (sibling
+                                  // products sharing variant_group_id)
+                                  const SizedBox(height: 20),
+                                  ProductVariantRow(productId: product.id),
                                 ],
-                              ],
+                              ),
                             ),
-                            // Colour variants (sibling products sharing variant_group_id)
-                            const SizedBox(height: 8),
-                            ProductVariantRow(productId: product.id),
                             // Size (match React: "Size: X", Size Chart link, recommended badge, grid 4 cols rounded-xl)
                             if (product.sizes.isNotEmpty) ...[
                               const SizedBox(height: 24),
@@ -1306,11 +1334,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                   final selected = _selectedSize == size;
                                   final available = product.stock[size] ?? 0;
                                   final outOfStock = available == 0;
-                                  final availabilityText = outOfStock
-                                      ? 'Out of stock'
-                                      : available <= 5
-                                      ? '$available left'
-                                      : 'In stock';
                                   final sizeColor = outOfStock
                                       ? AppTheme.foregroundColor(
                                           context,
@@ -1318,17 +1341,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                       : selected
                                       ? AppTheme.backgroundColor(context)
                                       : AppTheme.foregroundColor(context);
-                                  final availabilityColor = outOfStock
-                                      ? AppTheme.foregroundColor(
-                                          context,
-                                        ).withValues(alpha: 0.4)
-                                      : selected
-                                      ? AppTheme.backgroundColor(
-                                          context,
-                                        ).withValues(alpha: 0.9)
-                                      : AppTheme.foregroundColor(
-                                          context,
-                                        ).withValues(alpha: 0.7);
                                   return Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -1367,26 +1379,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                             width: 2,
                                           ),
                                         ),
-                                        child: Text.rich(
-                                          TextSpan(
-                                            children: [
-                                              TextSpan(
-                                                text: '$size  ',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: sizeColor,
-                                                ),
-                                              ),
-                                              TextSpan(
-                                                text: availabilityText,
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w400,
-                                                  color: availabilityColor,
-                                                ),
-                                              ),
-                                            ],
+                                        child: Text(
+                                          size,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: sizeColor,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
@@ -1642,63 +1640,23 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                               subtitle: DeliveryConstants.returnInspectionDays,
                               isGreen: true,
                             ),
-                            // Accordions: Description, Product Details, Customer Reviews (match React)
+                            // Accordions: consolidated Product Info
+                            // (Details / Care / Shipping tabs) + Customer
+                            // Reviews (match React: Description + Product
+                            // Details + Shipping & Returns merged into one
+                            // "Product Info" row with an internal tab bar;
+                            // Reviews stays a separate, untouched row).
                             const SizedBox(height: 24),
                             _mobileAccordion(
-                              'description',
-                              'Description',
-                              child: Text(
-                                product.description.isEmpty
-                                    ? 'No description available for this product.'
-                                    : product.description,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: AppTheme.foregroundColor(
-                                    context,
-                                  ).withValues(alpha: 0.7),
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                            _mobileAccordion(
-                              'details',
-                              'Product Details',
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 16,
-                                  bottom: 16,
-                                ),
-                                child: Column(
-                                  children: [
-                                    if ((product.brand ?? '').trim().isNotEmpty) ...[
-                                      _productDetailRow('Brand', product.brand!.trim()),
-                                      const SizedBox(height: 12),
-                                    ],
-                                    _productDetailRow(
-                                      'Material',
-                                      product.material.isEmpty
-                                          ? _emDash
-                                          : product.material,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _productDetailRow(
-                                      'Care / details',
-                                      _careFromProduct(product),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _productDetailRow(
-                                      'Country of origin',
-                                      (product.countryOfOrigin ?? '').trim().isEmpty
-                                          ? _emDash
-                                          : product.countryOfOrigin!.trim(),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    _productDetailRow(
-                                      'Product ID',
-                                      product.id,
-                                    ),
-                                  ],
-                                ),
+                              'info',
+                              'Product Info',
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _infoTabBar(),
+                                  const SizedBox(height: 16),
+                                  _infoTabContent(context, product),
+                                ],
                               ),
                             ),
                             _mobileAccordion(
@@ -2455,4 +2413,191 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     );
   }
 
+  /// Tab row for the consolidated "Product Info" accordion: Details / Care /
+  /// Shipping. Match React: flex row, bottom border-2 under the active tab,
+  /// uppercase small text, inactive tabs at foreground/50.
+  Widget _infoTabBar() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.foregroundColor(context).withValues(alpha: 0.12),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          _infoTabButton('details', 'Details'),
+          _infoTabButton('care', 'Care'),
+          _infoTabButton('shipping', 'Shipping'),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoTabButton(String key, String label) {
+    final active = _infoTab == key;
+    final fg = AppTheme.foregroundColor(context);
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() => _infoTab = key),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: active ? fg : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.5,
+              color: active ? fg : fg.withValues(alpha: 0.5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _infoTabContent(BuildContext context, ProductEntity product) {
+    switch (_infoTab) {
+      case 'care':
+        return _infoCareContent(context, product);
+      case 'shipping':
+        return _infoShippingContent(context);
+      case 'details':
+      default:
+        return _infoDetailsContent(context, product);
+    }
+  }
+
+  /// Match React `infoTab === 'details'`: description paragraph, bullet list
+  /// of `product.details`, then category/subcategory/material/SKU-equivalent
+  /// metadata (using the fields Flutter's ProductEntity exposes; brand and
+  /// country of origin are additionally kept since the prior "Product
+  /// Details" accordion already surfaced them).
+  Widget _infoDetailsContent(BuildContext context, ProductEntity product) {
+    final fg = AppTheme.foregroundColor(context);
+    final bodyStyle = TextStyle(
+      fontSize: 14,
+      color: fg.withValues(alpha: 0.7),
+      height: 1.5,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          product.description.isEmpty
+              ? 'Crafted with meticulous attention to detail, this piece '
+                    'embodies timeless elegance and modern sophistication.'
+              : product.description,
+          style: bodyStyle,
+        ),
+        if (product.details.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final d in product.details)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text('• $d', style: bodyStyle),
+                ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 16),
+        _productDetailRow(
+          'Category',
+          product.category.isEmpty ? _emDash : product.category,
+        ),
+        if (product.subcategory.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _productDetailRow('Subcategory', product.subcategory),
+        ],
+        if (product.material.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _productDetailRow('Material', product.material),
+        ],
+        if ((product.brand ?? '').trim().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _productDetailRow('Brand', product.brand!.trim()),
+        ],
+        if ((product.countryOfOrigin ?? '').trim().isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _productDetailRow(
+            'Country of origin',
+            product.countryOfOrigin!.trim(),
+          ),
+        ],
+        const SizedBox(height: 12),
+        _productDetailRow('Product ID', product.id),
+      ],
+    );
+  }
+
+  /// Match React `infoTab === 'care'`.
+  Widget _infoCareContent(BuildContext context, ProductEntity product) {
+    final fg = AppTheme.foregroundColor(context);
+    final bodyStyle = TextStyle(
+      fontSize: 14,
+      color: fg.withValues(alpha: 0.7),
+      height: 1.6,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final line in _careBulletLines(product))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text('• $line', style: bodyStyle),
+          ),
+      ],
+    );
+  }
+
+  /// Match React `infoTab === 'shipping'`: static shipping + returns copy.
+  Widget _infoShippingContent(BuildContext context) {
+    final fg = AppTheme.foregroundColor(context);
+    final bodyStyle = TextStyle(
+      fontSize: 14,
+      color: fg.withValues(alpha: 0.7),
+      height: 1.6,
+    );
+    final headingStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.5,
+      color: fg,
+    );
+    Widget bullet(String s) => Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text('• $s', style: bodyStyle),
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('SHIPPING', style: headingStyle),
+        const SizedBox(height: 8),
+        bullet('Free standard shipping on all orders'),
+        bullet('Express shipping available at checkout'),
+        bullet('International shipping to select countries'),
+        bullet('Orders processed within 1-2 business days'),
+        const SizedBox(height: 12),
+        Text('RETURNS', style: headingStyle),
+        const SizedBox(height: 8),
+        bullet('30-day return window from delivery date'),
+        bullet('Items must be unworn with original tags'),
+        bullet('Free returns for store credit'),
+        bullet('Refunds processed within 5-7 business days'),
+      ],
+    );
+  }
 }

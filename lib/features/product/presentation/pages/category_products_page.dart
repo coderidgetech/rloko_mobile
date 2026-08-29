@@ -58,6 +58,22 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     return raw[0].toUpperCase() + raw.substring(1);
   }
 
+  /// Compact context trail shown alongside the Filter/Sort controls — mirrors
+  /// the web CategoryPage's "Home / Gender / Category" breadcrumb using the
+  /// same gender/slug/gift inputs as [_pageTitle], just styled as a muted,
+  /// single-line label instead of a chain of tappable crumbs (there's no
+  /// in-page breadcrumb pattern on mobile; the back button covers "Home").
+  String get _breadcrumbLabel {
+    if (widget.isGiftMode) return _pageTitle;
+    final gender = widget.gender.isEmpty
+        ? 'All'
+        : widget.gender[0].toUpperCase() + widget.gender.substring(1);
+    final hasSubcategory = widget.slug.isNotEmpty && widget.slug != widget.gender;
+    if (!hasSubcategory) return gender;
+    final category = widget.slug[0].toUpperCase() + widget.slug.substring(1);
+    return '$gender  ›  $category';
+  }
+
   int get _activeFilterCount => _filterState.activeCount;
 
   bool get _sortActive => _sortBy != 'featured';
@@ -214,8 +230,10 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
                     .where((p) => p.category.toLowerCase() == _selectedSubCategory.toLowerCase())
                     .toList();
             final products = _filterAndSort(state.products);
-            // Title (gender/category/gift) lives in the AppHeader now; the page
-            // leads straight into the refine bar so products appear higher.
+            // The AppHeader carries the title too (shared app-wide chrome with
+            // search/wishlist/cart); the refine bar's own title/count line is
+            // the demoted secondary line from the web-parity consolidation
+            // below, kept so the page doesn't only rely on the app bar.
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -310,8 +328,12 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     );
   }
 
-  /// Refine bar: sibling-subcategory chips on top, then the result count with
-  /// Filter (active-count badge) and Sort (current selection) controls.
+  /// Refine bar. Consolidated (matches web's CategoryPage): the breadcrumb-style
+  /// context trail shares one row with the Filter (active-count badge) and Sort
+  /// (current selection) controls. The full page title + item count moved to
+  /// their own secondary line directly below — demoted, not deleted. Sibling
+  /// subcategory chips (a mobile-only affordance, unrelated to this change)
+  /// stay in place beneath that.
   Widget _buildFixedFilterBar(
     int count,
     bool showSubPills,
@@ -327,59 +349,27 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sibling subcategory chips (All / Dresses / Tops ...).
-          if (showSubPills)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: subCategories.map((s) {
-                  final slug = s.toLowerCase();
-                  final selected = _selectedSubCategory == slug;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedSubCategory = slug),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: selected ? AppTheme.primaryColor(context) : AppTheme.backgroundColor(context),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: selected ? AppTheme.primaryColor(context) : fg.withValues(alpha: 0.2),
-                          ),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))],
-                        ),
-                        child: Text(
-                          s,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: selected ? Colors.white : fg.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          // Count + Filter + Sort.
-          Container(
-            decoration: showSubPills
-                ? BoxDecoration(border: Border(top: BorderSide(color: fg.withValues(alpha: 0.1))))
-                : null,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // Consolidated: breadcrumb-style context + Filter + Sort — one row.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    '$count ${count == 1 ? 'item' : 'items'}',
-                    style: TextStyle(fontSize: 14, color: fg.withValues(alpha: 0.6)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text(
+                      _breadcrumbLabel,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
+                        color: fg.withValues(alpha: 0.4),
+                      ),
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 _refinePill(
                   icon: Icons.tune_rounded,
                   label: _activeFilterCount > 0 ? 'Filter · $_activeFilterCount' : 'Filter',
@@ -396,6 +386,69 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
               ],
             ),
           ),
+          // Title + item count — secondary line, directly below the consolidated bar.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Flexible(
+                  child: Text(
+                    _pageTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: fg),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '$count ${count == 1 ? 'item' : 'items'}',
+                  style: TextStyle(fontSize: 13, color: fg.withValues(alpha: 0.5)),
+                ),
+              ],
+            ),
+          ),
+          // Sibling subcategory chips (All / Dresses / Tops ...).
+          if (showSubPills)
+            Container(
+              decoration: BoxDecoration(border: Border(top: BorderSide(color: fg.withValues(alpha: 0.1)))),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: subCategories.map((s) {
+                    final slug = s.toLowerCase();
+                    final selected = _selectedSubCategory == slug;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedSubCategory = slug),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: selected ? AppTheme.primaryColor(context) : AppTheme.backgroundColor(context),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: selected ? AppTheme.primaryColor(context) : fg.withValues(alpha: 0.2),
+                            ),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))],
+                          ),
+                          child: Text(
+                            s,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: selected ? Colors.white : fg.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
         ],
       ),
     );
