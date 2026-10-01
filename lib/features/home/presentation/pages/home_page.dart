@@ -1229,7 +1229,7 @@ class _HomeProductSectionsState extends State<_HomeProductSections> {
           final children = <Widget>[];
           if (s.featuredProducts && state.featured.isNotEmpty) {
             children.addAll([
-              _SectionTitle(title: '✨ Featured', onSeeAll: () => context.push('/all-products')),
+              _SectionTitle(title: 'Featured', onSeeAll: () => context.push('/all-products')),
               _ProductGrid(products: state.featured),
               const SizedBox(height: 16),
               Divider(height: 2, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
@@ -1238,7 +1238,7 @@ class _HomeProductSectionsState extends State<_HomeProductSections> {
           }
           if (s.newArrivals && state.newArrivals.isNotEmpty) {
             children.addAll([
-              _SectionTitle(title: '🆕 New Arrivals', onSeeAll: () => context.push('/new-arrivals')),
+              _SectionTitle(title: 'New Arrivals', onSeeAll: () => context.push('/new-arrivals')),
               _ProductGrid(products: state.newArrivals),
               const SizedBox(height: 16),
               Divider(height: 2, color: AppTheme.foregroundColor(context).withValues(alpha: 0.05)),
@@ -1247,7 +1247,7 @@ class _HomeProductSectionsState extends State<_HomeProductSections> {
           }
           if (s.bestSellers && state.sale.isNotEmpty) {
             children.addAll([
-              _SectionTitle(title: '🔥 On Sale', onSeeAll: () => context.push('/sale')),
+              _SectionTitle(title: 'On Sale', onSeeAll: () => context.push('/sale')),
               _ProductGrid(products: state.sale),
             ]);
           }
@@ -1264,13 +1264,13 @@ class _HomeProductSectionsState extends State<_HomeProductSections> {
   Widget _buildLoadingSections(BuildContext context, dynamic s) {
     final children = <Widget>[];
     if (s.featuredProducts) {
-      children.addAll([const _SectionTitle(title: '✨ Featured'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
+      children.addAll([const _SectionTitle(title: 'Featured'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
     }
     if (s.newArrivals) {
-      children.addAll([const _SectionTitle(title: '🆕 New Arrivals'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
+      children.addAll([const _SectionTitle(title: 'New Arrivals'), const ProductGridSkeleton(itemCount: 4), const SizedBox(height: 24)]);
     }
     if (s.bestSellers) {
-      children.addAll([const _SectionTitle(title: '🔥 On Sale'), const ProductGridSkeleton(itemCount: 4)]);
+      children.addAll([const _SectionTitle(title: 'On Sale'), const ProductGridSkeleton(itemCount: 4)]);
     }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),

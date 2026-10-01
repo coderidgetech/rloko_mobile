@@ -36,6 +36,7 @@ class CategoryProductsPage extends StatefulWidget {
 class _CategoryProductsPageState extends State<CategoryProductsPage> {
   String _sortBy = 'featured';
   String _selectedSubCategory = 'all';
+  bool _showFeaturedOnly = false;
   CategoryFilterState _filterState = const CategoryFilterState();
   // Products the filter facets are derived from (subcategory-scoped, pre-filter).
   List<ProductEntity> _facetSource = const [];
@@ -96,6 +97,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
     if (_selectedSubCategory != 'all') {
       list = list.where((p) =>
           p.category.toLowerCase() == _selectedSubCategory.toLowerCase()).toList();
+    }
+    if (_showFeaturedOnly) {
+      list = list.where((p) => p.featured).toList();
     }
     list = applyCategoryFilters(list, _filterState, priceOf: priceSelector(india: _isIndia));
     list = List.from(list);
@@ -349,41 +353,51 @@ class _CategoryProductsPageState extends State<CategoryProductsPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Consolidated: breadcrumb-style context + Filter + Sort — one row.
+          // Consolidated: breadcrumb-style context + Featured + Filter + Sort —
+          // one scrollable row, so on a narrow screen nothing gets silently
+          // squeezed/hidden with no way to reach it (the whole row scrolls
+          // instead of the breadcrumb losing a fight for space against the
+          // pills).
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Text(
-                      _breadcrumbLabel,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
-                        color: fg.withValues(alpha: 0.4),
-                      ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _breadcrumbLabel,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
+                      color: fg.withValues(alpha: 0.4),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                _refinePill(
-                  icon: Icons.tune_rounded,
-                  label: _activeFilterCount > 0 ? 'Filter · $_activeFilterCount' : 'Filter',
-                  active: _activeFilterCount > 0,
-                  onTap: _showFilterSheet,
-                ),
-                const SizedBox(width: 8),
-                _refinePill(
-                  icon: Icons.swap_vert_rounded,
-                  label: _sortLabel,
-                  active: _sortActive,
-                  onTap: _showSortSheet,
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  _refinePill(
+                    icon: Icons.tune_rounded,
+                    label: _activeFilterCount > 0 ? 'Filter · $_activeFilterCount' : 'Filter',
+                    active: _activeFilterCount > 0,
+                    onTap: _showFilterSheet,
+                  ),
+                  const SizedBox(width: 8),
+                  _refinePill(
+                    icon: Icons.swap_vert_rounded,
+                    label: _sortLabel,
+                    active: _sortActive,
+                    onTap: _showSortSheet,
+                  ),
+                  const SizedBox(width: 8),
+                  _refinePill(
+                    icon: Icons.star_rounded,
+                    label: 'Featured Only',
+                    active: _showFeaturedOnly,
+                    onTap: () => setState(() => _showFeaturedOnly = !_showFeaturedOnly),
+                  ),
+                ],
+              ),
             ),
           ),
           // Title + item count — secondary line, directly below the consolidated bar.

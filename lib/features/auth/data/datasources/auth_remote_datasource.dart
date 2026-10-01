@@ -258,7 +258,6 @@ class AuthRemoteDataSource {
     required String phone,
     required String code,
     required String email,
-    required String password,
     required String name,
   }) async {
     return _postAuthExchange(
@@ -266,7 +265,6 @@ class AuthRemoteDataSource {
         'phone': phone,
         'code': code,
         'email': email,
-        'password': password,
         'name': name,
       },
       '/auth/register-otp/complete',

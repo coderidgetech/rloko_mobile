@@ -17,7 +17,7 @@ import '../bloc/auth_bloc.dart';
 import '../widgets/google_g_logo.dart';
 import '../widgets/phone_country_row.dart';
 
-/// Signup page matching React MobileSignupPage: name, email, phone, password, terms → OTP → verify & register.
+/// Customer signup: name, email, phone and terms → OTP → verify and register.
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key, this.initialPhoneLocal});
 
@@ -31,7 +31,6 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   String _phoneLocal = '';
   DialCountry _country = kDialCountries[1];
   bool _agreeTerms = false;
@@ -57,7 +56,6 @@ class _SignupPageState extends State<SignupPage> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _passwordController.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -102,14 +100,6 @@ class _SignupPageState extends State<SignupPage> {
       );
       return;
     }
-    if (_passwordController.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Password must be at least 6 characters'),
-        ),
-      );
-      return;
-    }
     setState(() => _loading = true);
     try {
       await sl<AuthRemoteDataSource>().sendRegistrationOtp(phone);
@@ -147,7 +137,6 @@ class _SignupPageState extends State<SignupPage> {
         phone: _apiPhone,
         code: otpValue,
         email: _emailController.text.trim(),
-        password: _passwordController.text,
         name: _nameController.text.trim(),
       );
       if (!mounted) return;
@@ -291,17 +280,6 @@ class _SignupPageState extends State<SignupPage> {
           onLocalPhoneChanged: (v) => setState(() => _phoneLocal = v),
           selectedCountry: _country,
           onSelectCountry: (c) => setState(() => _country = c),
-        ),
-        const SizedBox(height: 16),
-        _label(context, 'Password'),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _passwordController,
-          obscureText: true,
-          decoration: _inputDecoration(
-            hint: FormHints.password,
-            icon: Icons.lock_outline,
-          ),
         ),
         const SizedBox(height: 16),
         Row(

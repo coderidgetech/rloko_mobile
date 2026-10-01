@@ -29,8 +29,8 @@ class DioClient {
       _errorInterceptor(dio),
     ]);
     _dio = dio;
-    // Separate Dio for token refresh — no auth interceptor so the expired
-    // Bearer token is not re-attached to the refresh request itself.
+    // Separate Dio prevents refresh recursion; _refreshToken explicitly sends
+    // the signed expired token that the backend validates during renewal.
     _refreshDio = Dio(BaseOptions(
       baseUrl: kBaseUrl,
       connectTimeout: Duration(seconds: kTimeoutSeconds),
@@ -153,7 +153,12 @@ class DioClient {
 
   Future<bool> _refreshToken() async {
     try {
-      final response = await _refreshDio.post<Map<String, dynamic>>('/auth/refresh');
+      final currentToken = await getToken();
+      if (currentToken == null || currentToken.isEmpty) return false;
+      final response = await _refreshDio.post<Map<String, dynamic>>(
+        '/auth/refresh',
+        options: Options(headers: {'Authorization': 'Bearer $currentToken'}),
+      );
       final data = response.data;
       if (data != null && data['token'] != null) {
         await saveToken(data['token'] as String);

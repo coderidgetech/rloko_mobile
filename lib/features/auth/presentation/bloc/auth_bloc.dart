@@ -54,8 +54,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       if (kDebugMode) {
         final u = result.user;
         debugPrint('[AuthBloc] Login success');
-        debugPrint('[AuthBloc] Response: id=${u.id}, email=${u.email}, name=${u.name}, role=${u.role}, '
-            'token=${result.token != null ? "${result.token!.substring(0, 30)}..." : null}');
+        debugPrint('[AuthBloc] Response: id=${u.id}, email=${u.email}, name=${u.name}, role=${u.role}');
       }
       emit(AuthAuthenticated(result.user));
     } catch (e, st) {

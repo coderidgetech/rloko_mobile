@@ -1692,7 +1692,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                 context,
                                 title: 'Frequently Bought Together',
                                 subtitle: 'Customers also purchased these',
-                                icon: Icons.shopping_cart_outlined,
                                 products: _apiRecommendations,
                               ),
                             // Recommendations (match React: You May Also Like, Similar, Trending, Complete the Look)
@@ -1745,24 +1744,14 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                                   children: [
                                     _recommendationSection(
                                       context,
-                                      title: 'You May Also Like',
-                                      subtitle:
-                                          'Handpicked recommendations just for you',
-                                      icon: Icons.favorite,
-                                      products: youMayAlsoLike,
-                                    ),
-                                    _recommendationSection(
-                                      context,
                                       title: 'Similar Products',
                                       subtitle: 'Explore similar styles',
-                                      icon: Icons.auto_awesome,
                                       products: similar,
                                     ),
                                     _recommendationSection(
                                       context,
                                       title: 'Trending Now',
                                       subtitle: 'Most loved by our customers',
-                                      icon: Icons.trending_up,
                                       products: trending,
                                     ),
                                     _completeTheLookSection(
@@ -1794,7 +1783,6 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
     BuildContext context, {
     required String title,
     required String subtitle,
-    required IconData icon,
     required List<ProductEntity> products,
     VoidCallback? onViewAll,
   }) {
@@ -1813,25 +1801,13 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Row(
-                        children: [
-                          Icon(
-                            icon,
-                            size: 20,
-                            color: AppTheme.primaryColor(context),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     TextButton(
@@ -2057,22 +2033,12 @@ class _ProductDetailViewState extends State<_ProductDetailView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.auto_awesome,
-                      size: 20,
-                      color: AppTheme.primaryColor(context),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Complete the Look',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                const Text(
+                  'Complete the Look',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(

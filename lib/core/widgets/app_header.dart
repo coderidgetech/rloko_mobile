@@ -75,13 +75,6 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
       centerTitle: false,
       actions: [
         if (extraActions != null) ...extraActions!,
-        IconButton(
-          icon: const Icon(Icons.search, size: 24),
-          onPressed: () => context.safePush('/search'),
-          style: IconButton.styleFrom(
-            foregroundColor: AppTheme.foregroundColor(context).withValues(alpha: 0.8),
-          ),
-        ),
         BlocBuilder<WishlistBloc, WishlistState>(
           builder: (context, state) {
             final count = state is WishlistLoaded ? state.count : 0;
